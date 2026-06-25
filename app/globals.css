@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #e8d9c0;
+  --foreground: #3d3229;
+  --paper: #f4ead8;
+  --accent: #c97b4f;
 }
 
 @theme inline {
@@ -12,15 +14,171 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+}
+
+.portfolio-shell--orbit,
+.portfolio-shell--orbit body {
+  touch-action: none;
+}
+
+.portfolio-shell--scroll {
+  cursor: grab;
+}
+
+.portfolio-shell--scroll:active {
+  cursor: grabbing;
+}
+
+.portfolio-shell {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--background);
+}
+
+.portfolio-shell--loading {
+  display: grid;
+  place-items: center;
+}
+
+.portfolio-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(232, 217, 192, 0.92);
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.portfolio-loader.is-ready {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.portfolio-loader__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  border-radius: 1.25rem;
+  background: var(--paper);
+  box-shadow: 0 12px 40px rgba(61, 50, 41, 0.12);
+  text-align: center;
+}
+
+.portfolio-loader__emoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.portfolio-loader__card p {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.portfolio-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 2.5rem;
+  z-index: 20;
+  transform: translateX(-50%) translateY(12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.portfolio-hint.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.portfolio-hint p {
+  margin: 0;
+  padding: 0.65rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(244, 234, 216, 0.88);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(61, 50, 41, 0.1);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.portfolio-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 1rem 1.25rem;
+  pointer-events: none;
+}
+
+.portfolio-progress__track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(61, 50, 41, 0.12);
+  overflow: hidden;
+}
+
+.portfolio-progress__fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #c97b4f, #e2a06d);
+  transition: transform 0.15s ease-out;
+}
+
+.camera-hud {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 40;
+  max-width: min(92vw, 420px);
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  background: rgba(20, 18, 16, 0.88);
+  color: #f8f1e6;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.camera-hud__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.camera-hud__code {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.camera-hud__hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
 }
