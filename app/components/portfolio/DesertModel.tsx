@@ -5,7 +5,7 @@ import { useLayoutEffect } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "./cameraPath";
 
-const MODEL_PATH = "/Models/Model.glb";
+const MODEL_PATH = "/Models/AuroraModel.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
