@@ -1,15 +1,24 @@
 "use client";
 
 import { useGLTF } from "@react-three/drei";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useMemo } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "./cameraPath";
+import MetroTrainAnimation from "./MetroTrainAnimation";
 
 const MODEL_PATH = "/Models/AuroraModel.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
 };
+
+function buildNodeMap(scene: THREE.Object3D) {
+  const nodes: Record<string, THREE.Object3D> = {};
+  scene.traverse((child) => {
+    if (child.name) nodes[child.name] = child;
+  });
+  return nodes;
+}
 
 function prepareScene(scene: THREE.Object3D) {
   scene.traverse((child) => {
@@ -29,13 +38,19 @@ function prepareScene(scene: THREE.Object3D) {
 
 export default function DesertModel({ onFrameReady }: DesertModelProps) {
   const { scene } = useGLTF(MODEL_PATH);
+  const nodes = useMemo(() => buildNodeMap(scene), [scene]);
 
   useLayoutEffect(() => {
     prepareScene(scene);
     onFrameReady(extractSceneFrame(scene));
   }, [scene, onFrameReady]);
 
-  return <primitive object={scene} />;
+  return (
+    <>
+      <primitive object={scene} />
+      <MetroTrainAnimation scene={scene} nodes={nodes} />
+    </>
+  );
 }
 
 useGLTF.preload(MODEL_PATH);
