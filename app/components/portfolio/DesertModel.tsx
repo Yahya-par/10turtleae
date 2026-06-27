@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "./cameraPath";
 import MetroTrainAnimation from "./MetroTrainAnimation";
 
-const MODEL_PATH = "/Models/AuroraModel.glb";
+const MODEL_PATH = "/Models/NewModel.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
