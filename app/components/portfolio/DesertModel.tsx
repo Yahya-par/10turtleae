@@ -5,8 +5,9 @@ import { useLayoutEffect, useMemo } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "./cameraPath";
 import MetroTrainAnimation from "./MetroTrainAnimation";
+import CarAnimation from "./CarAnimation";
 
-const MODEL_PATH = "/Models/AuroraModel.glb";
+const MODEL_PATH = "/Models/NewModel.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
@@ -49,6 +50,7 @@ export default function DesertModel({ onFrameReady }: DesertModelProps) {
     <>
       <primitive object={scene} />
       <MetroTrainAnimation scene={scene} nodes={nodes} />
+      <CarAnimation scene={scene} nodes={nodes} />
     </>
   );
 }
