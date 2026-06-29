@@ -7,10 +7,12 @@ export const assetNames = {
   metro: {
     /** Runtime name after GLTFLoader (Blender export: Metro.001) */
     train: "Metro001",
-    /** Left metro scene panel (Blender export: metrowithstation1.001) */
-    stationLeft: "metrowithstation1001",
-    /** Right metro scene panel (Blender export: metrowithstation1.002) */
-    stationRight: "metrowithstation1002",
+    /** Left metro station marker (Blender: futuremuseum.001) */
+    stationLeft: "futuremuseum001",
+    /** Right metro station marker (Blender: sheikhzayedroade11.001) */
+    stationRight: "sheikhzayedroade11001",
+    /** Updated metro bridge mesh in the new model */
+    bridge: "METROBRIDGE001",
     sheikhZayedRoad: "SHEIKHZAYEDROAD001",
     futureMuseum: "futuremuseum001",
   },
@@ -19,6 +21,14 @@ export const assetNames = {
     sedan: "Car1001",
     /** Blender: RR.001 */
     rangeRover: "RR001",
+  },
+  clouds: {
+    /** Blender: cloud.001 */
+    one: "cloud001",
+    /** Blender: cloud.002 */
+    two: "cloud002",
+    /** Blender: cloud.003 */
+    three: "cloud003",
   },
   roads: {
     /** Last road segment before Atlantis (Blender: Road.004, ~X -92 to -101) */
@@ -30,6 +40,8 @@ export const assetNames = {
     blenderName: "campfire.001",
   },
   scenes: {
+    /** Opening desert sky panel (Desert_Scene_Floor, ~X 11) */
+    openingDesert: "Desert_Scene_Floor",
     /** One scene left of Dubai Frame (~X -6) */
     floor1: "Desert_Scene_Floor001",
     /** Blender scene 3 — Dubai Frame (Desert_Scene_Floor.002, ~X -22) */
@@ -44,6 +56,13 @@ export const assetNames = {
     museumFloor: "Desert_Scene_Floor003",
     dubaiFrameLandmark: "proper_dubaiframe001",
     alRabLandmark: "burjalarab001",
+    /** Last scene panel (Desert_Scene_Floor.011, ~X -181) */
+    floor11: "Desert_Scene_Floor011",
+  },
+  lastScene: {
+    /** Blender object name: ain */
+    ain: "ain",
+    ainDubaiLegs: "aindubailegs001",
   },
   cameraWaypoints: /^Empty\.\d+$/,
   sceneMeshes:

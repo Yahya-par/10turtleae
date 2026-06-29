@@ -82,10 +82,17 @@ function attachTrainCarrier(train: THREE.Object3D) {
   return carrier;
 }
 
+function getTrainHalfLength(train: THREE.Object3D) {
+  train.updateMatrixWorld(true);
+  const trainBox = new THREE.Box3().setFromObject(train);
+  return (trainBox.max.x - trainBox.min.x) / 2;
+}
+
 // getTrackEndpoints is a function that returns the start and end positions of the train along the track.
 function getTrackEndpoints(
   leftStation: THREE.Object3D,
   rightStation: THREE.Object3D,
+  train: THREE.Object3D,
   carrierY: number,
   carrierZ: number,
 ) {
@@ -95,19 +102,46 @@ function getTrackEndpoints(
   const leftBox = new THREE.Box3().setFromObject(leftStation);
   const rightBox = new THREE.Box3().setFromObject(rightStation);
   const { startInset, endInset } = metroTrainSettings;
+  const trainHalfLength = getTrainHalfLength(train);
 
   const start = new THREE.Vector3(
-    leftBox.min.x + startInset,
+    leftBox.min.x + startInset + trainHalfLength,
     carrierY,
     carrierZ,
   );
   const end = new THREE.Vector3(
-    rightBox.max.x - endInset,
+    rightBox.max.x - endInset - trainHalfLength,
     carrierY,
     carrierZ,
   );
 
   return { start, end, leftBox, rightBox };
+}
+
+function getBridgeTrackEndpoints(
+  bridge: THREE.Object3D,
+  train: THREE.Object3D,
+  carrierY: number,
+  carrierZ: number,
+) {
+  bridge.updateMatrixWorld(true);
+
+  const bridgeBox = new THREE.Box3().setFromObject(bridge);
+  const bridgeInset = metroTrainSettings.bridgeInset;
+  const trainHalfLength = getTrainHalfLength(train);
+
+  const start = new THREE.Vector3(
+    bridgeBox.min.x + bridgeInset + trainHalfLength,
+    carrierY,
+    carrierZ,
+  );
+  const end = new THREE.Vector3(
+    bridgeBox.max.x - bridgeInset - trainHalfLength,
+    carrierY,
+    carrierZ,
+  );
+
+  return { start, end, bridgeBox };
 }
 
 // getPingPongProgress is a function that returns a number between 0 and 1 that represents the progress of the train along the track.
@@ -154,8 +188,9 @@ export default function MetroTrainAnimation({
       nodes,
       metroTrainSettings.stationRight,
     );
+    const bridge = findMetroObject(scene, nodes, metroTrainSettings.bridge);
 
-    if (!train || !leftStation || !rightStation) {
+    if (!train || (!leftStation || !rightStation) && !bridge) {
       if (process.env.NODE_ENV === "development") {
         const metroLike: string[] = [];
         scene.traverse((child) => {
@@ -170,6 +205,8 @@ export default function MetroTrainAnimation({
           leftFound: Boolean(leftStation),
           rightStation: metroTrainSettings.stationRight,
           rightFound: Boolean(rightStation),
+          bridge: metroTrainSettings.bridge,
+          bridgeFound: Boolean(bridge),
           metroLike,
         });
       }
@@ -179,12 +216,28 @@ export default function MetroTrainAnimation({
     if (carrierRef.current) return;
 
     const carrier = attachTrainCarrier(train);
-    const { start, end, leftBox, rightBox } = getTrackEndpoints(
-      leftStation,
-      rightStation,
-      carrier.position.y,
-      carrier.position.z,
-    );
+    const fallbackToBridge = !leftStation || !rightStation;
+    const { start, end, leftBox, rightBox, bridgeBox } = fallbackToBridge
+      ? {
+          ...getBridgeTrackEndpoints(
+            bridge as THREE.Object3D,
+            train,
+            carrier.position.y,
+            carrier.position.z,
+          ),
+          leftBox: null,
+          rightBox: null,
+        }
+      : {
+          ...getTrackEndpoints(
+            leftStation as THREE.Object3D,
+            rightStation as THREE.Object3D,
+            train,
+            carrier.position.y,
+            carrier.position.z,
+          ),
+          bridgeBox: null,
+        };
 
     carrierRef.current = carrier;
     boundsRef.current = { start, end };
@@ -195,8 +248,10 @@ export default function MetroTrainAnimation({
         train: train.name,
         start: start.toArray(),
         end: end.toArray(),
-        leftStationX: [leftBox.min.x, leftBox.max.x],
-        rightStationX: [rightBox.min.x, rightBox.max.x],
+        mode: fallbackToBridge ? "bridge-fallback" : "station-to-station",
+        leftStationX: leftBox ? [leftBox.min.x, leftBox.max.x] : null,
+        rightStationX: rightBox ? [rightBox.min.x, rightBox.max.x] : null,
+        bridgeX: bridgeBox ? [bridgeBox.min.x, bridgeBox.max.x] : null,
       });
     }
   }, [scene, nodes]);
