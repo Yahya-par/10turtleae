@@ -9,6 +9,7 @@ import CarAnimation from "./CarAnimation";
 import CloudAnimation from "./CloudAnimation";
 import AinAnimation from "./AinAnimation";
 import CampfireSmoke from "./CampfireSmoke";
+import SafariCampWind from "./SafariCampWind";
 
 const MODEL_PATH = "/Models/Modelv1.glb?v=3";
 
@@ -56,6 +57,7 @@ export default function DesertModel({ onFrameReady }: DesertModelProps) {
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
       <CampfireSmoke scene={scene} nodes={nodes} />
+      <SafariCampWind scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
     </>
