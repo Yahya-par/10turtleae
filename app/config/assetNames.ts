@@ -24,6 +24,11 @@ export const assetNames = {
     /** Last road segment before Atlantis (Blender: Road.004, ~X -92 to -101) */
     alRabEnd: "Road004",
   },
+  campfire: {
+    /** Blender: campfire.001 */
+    object: "campfire001",
+    blenderName: "campfire.001",
+  },
   scenes: {
     /** One scene left of Dubai Frame (~X -6) */
     floor1: "Desert_Scene_Floor001",

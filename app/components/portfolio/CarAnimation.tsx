@@ -26,6 +26,7 @@ type CarAnimationProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
+// getCarTrack is a function that returns the start and end positions of the cars along the track.
 function getCarTrack(
   sceneStart: THREE.Object3D,
   sceneEnd: THREE.Object3D,
@@ -51,6 +52,7 @@ function getCarTrack(
   return { start, end, startBox, endBox, roadBox };
 }
 
+//getLoopProgress is a function that returns a number between 0 and 1 that represents the progress of the car along the track.
 function getLoopProgress(
   elapsed: number,
   lapDuration: number,
@@ -59,6 +61,7 @@ function getLoopProgress(
   return ((elapsed + phaseOffset) % lapDuration) / lapDuration;
 }
 
+// CarAnimation is a component that animates the cars along the track.
 export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
   const carsRef = useRef<AnimatedCar[]>([]);
   const trackRef = useRef<CarTrack | null>(null);
