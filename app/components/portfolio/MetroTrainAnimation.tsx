@@ -44,6 +44,7 @@ function findMetroObject(
   return match;
 }
 
+// attachTrainCarrier is a function that attaches the train carrier to the train.
 function attachTrainCarrier(train: THREE.Object3D) {
   if (train.parent?.name === "MetroTrainCarrier") {
     return train.parent as THREE.Group;
@@ -87,6 +88,7 @@ function getTrainHalfLength(train: THREE.Object3D) {
   return (trainBox.max.x - trainBox.min.x) / 2;
 }
 
+// getTrackEndpoints is a function that returns the start and end positions of the train along the track.
 function getTrackEndpoints(
   leftStation: THREE.Object3D,
   rightStation: THREE.Object3D,
@@ -142,6 +144,7 @@ function getBridgeTrackEndpoints(
   return { start, end, bridgeBox };
 }
 
+// getPingPongProgress is a function that returns a number between 0 and 1 that represents the progress of the train along the track.
 function getPingPongProgress(
   elapsed: number,
   legDuration: number,
@@ -161,6 +164,7 @@ function getPingPongProgress(
   return moving ? 1 - returnPosition / legDuration : 0;
 }
 
+// MetroTrainAnimation is a component that animates the metro train along the track.
 export default function MetroTrainAnimation({
   scene,
   nodes,

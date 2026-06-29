@@ -34,6 +34,17 @@ export const assetNames = {
     /** Last road segment before Atlantis (Blender: Road.004, ~X -92 to -101) */
     alRabEnd: "Road004",
   },
+  campfire: {
+    /** Blender: campfire.001 */
+    object: "campfire001",
+    blenderName: "campfire.001",
+  },
+  safari: {
+    /** Blender: SafariCamp.001 */
+    camp: "SafariCamp001",
+    campBlender: "SafariCamp.001",
+    campMaterial: "SafariCamp",
+  },
   scenes: {
     /** Opening desert sky panel (Desert_Scene_Floor, ~X 11) */
     openingDesert: "Desert_Scene_Floor",

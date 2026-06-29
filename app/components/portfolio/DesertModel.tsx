@@ -8,8 +8,10 @@ import MetroTrainAnimation from "./MetroTrainAnimation";
 import CarAnimation from "./CarAnimation";
 import CloudAnimation from "./CloudAnimation";
 import AinAnimation from "./AinAnimation";
+import CampfireSmoke from "./CampfireSmoke";
+import SafariCampWind from "./SafariCampWind";
 
-const MODEL_PATH = "/Models/Modelv1%202.glb";
+const MODEL_PATH = "/Models/Modelv1.glb?v=3";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
@@ -22,7 +24,7 @@ function buildNodeMap(scene: THREE.Object3D) {
   });
   return nodes;
 }
-
+// prepareScene is a function that prepares the scene for rendering.
 function prepareScene(scene: THREE.Object3D) {
   scene.traverse((child) => {
     if (!(child as THREE.Mesh).isMesh) return;
@@ -39,6 +41,7 @@ function prepareScene(scene: THREE.Object3D) {
   });
 }
 
+// DesertModel is a component that renders the desert model.
 export default function DesertModel({ onFrameReady }: DesertModelProps) {
   const { scene } = useGLTF(MODEL_PATH);
   const nodes = useMemo(() => buildNodeMap(scene), [scene]);
@@ -53,6 +56,8 @@ export default function DesertModel({ onFrameReady }: DesertModelProps) {
       <primitive object={scene} />
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
+      <CampfireSmoke scene={scene} nodes={nodes} />
+      <SafariCampWind scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
     </>
