@@ -6,6 +6,8 @@ import normalizeWheel from "normalize-wheel";
 
 const BASE_SCROLL_SPEED = 0.0085;
 const LERP_FACTOR = 0.1;
+/** -1: scroll up moves backward through the diorama */
+const SCROLL_DIRECTION = -1;
 
 export function useScrollNavigation(enabled: boolean) {
   const scrollProgress = useRef(0);
@@ -21,7 +23,8 @@ export function useScrollNavigation(enabled: boolean) {
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       const normalized = normalizeWheel(event);
-      targetScrollProgress.current += Math.sign(normalized.pixelY)
+      targetScrollProgress.current += SCROLL_DIRECTION
+        * Math.sign(normalized.pixelY)
         * BASE_SCROLL_SPEED
         * Math.min(Math.abs(normalized.pixelY) / 100, 1);
       targetScrollProgress.current = THREE.MathUtils.clamp(
@@ -41,7 +44,10 @@ export function useScrollNavigation(enabled: boolean) {
       mouseRotationOffset.current.y = mouseX * 0.05;
 
       if (isDragging.current) {
-        targetScrollProgress.current += Math.sign(event.movementY) * BASE_SCROLL_SPEED * 0.2;
+        targetScrollProgress.current += SCROLL_DIRECTION
+          * Math.sign(event.movementY)
+          * BASE_SCROLL_SPEED
+          * 0.2;
         targetScrollProgress.current = THREE.MathUtils.clamp(
           targetScrollProgress.current,
           0,
@@ -66,7 +72,10 @@ export function useScrollNavigation(enabled: boolean) {
     const handleTouchMove = (event: TouchEvent) => {
       if (!isDragging.current || lastTouchY.current === null) return;
       const deltaY = event.touches[0].clientY - lastTouchY.current;
-      targetScrollProgress.current += Math.sign(deltaY) * BASE_SCROLL_SPEED * 0.3;
+      targetScrollProgress.current += SCROLL_DIRECTION
+        * Math.sign(deltaY)
+        * BASE_SCROLL_SPEED
+        * 0.3;
       targetScrollProgress.current = THREE.MathUtils.clamp(
         targetScrollProgress.current,
         0,
