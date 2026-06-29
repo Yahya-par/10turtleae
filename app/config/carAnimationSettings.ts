@@ -6,15 +6,15 @@ export const carAnimationSettings = {
       id: "car1",
       objectName: assetNames.cars.sedan,
       carrierName: "CarCarrier001",
-      lapDuration: 4,
+      lapDuration: 10,
       phaseOffset: 0,
     },
     {
       id: "rr",
       objectName: assetNames.cars.rangeRover,
       carrierName: "CarCarrier002",
-      lapDuration: 5,
-      phaseOffset: 1.5,
+      lapDuration: 15,
+      phaseOffset: 2.5,
     },
   ],
 
