@@ -73,3 +73,22 @@ export function getObjectBounds(object: THREE.Object3D) {
   object.updateMatrixWorld(true);
   return new THREE.Box3().setFromObject(object);
 }
+
+const DIORAMA_FLOOR_PATTERN = /^Desert_Scene_Floor/;
+
+export function getDioramaFloorBounds(scene: THREE.Object3D) {
+  const bounds = new THREE.Box3();
+  let hasFloor = false;
+
+  scene.traverse((child) => {
+    if (!child.name || !DIORAMA_FLOOR_PATTERN.test(child.name)) return;
+
+    const childBounds = getObjectBounds(child);
+    if (childBounds.isEmpty()) return;
+
+    bounds.union(childBounds);
+    hasFloor = true;
+  });
+
+  return hasFloor ? bounds : null;
+}
