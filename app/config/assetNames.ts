@@ -51,6 +51,13 @@ export const assetNames = {
     museumFloor: "Desert_Scene_Floor003",
     dubaiFrameLandmark: "proper_dubaiframe001",
     alRabLandmark: "burjalarab001",
+    /** Last scene panel (Desert_Scene_Floor.011, ~X -181) */
+    floor11: "Desert_Scene_Floor011",
+  },
+  lastScene: {
+    /** Blender object name: ain */
+    ain: "ain",
+    ainDubaiLegs: "aindubailegs001",
   },
   cameraWaypoints: /^Empty\.\d+$/,
   sceneMeshes:

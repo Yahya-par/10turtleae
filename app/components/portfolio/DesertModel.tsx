@@ -7,6 +7,7 @@ import { extractSceneFrame, type SceneFrame } from "./cameraPath";
 import MetroTrainAnimation from "./MetroTrainAnimation";
 import CarAnimation from "./CarAnimation";
 import CloudAnimation from "./CloudAnimation";
+import AinAnimation from "./AinAnimation";
 
 const MODEL_PATH = "/Models/Modelv1%202.glb";
 
@@ -53,6 +54,7 @@ export default function DesertModel({ onFrameReady }: DesertModelProps) {
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
+      <AinAnimation scene={scene} nodes={nodes} />
     </>
   );
 }
