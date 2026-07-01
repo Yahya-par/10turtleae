@@ -14,6 +14,7 @@ type ScrollCameraProps = {
   lerpFactor: number;
 };
 
+// getScrollRange - get the scroll range from the scene frame
 function getScrollRange(sceneFrame: SceneFrame | null) {
   if (sceneFrame?.waypoints.length) {
     const xs = sceneFrame.waypoints.map((waypoint) => waypoint.position.x);
@@ -26,7 +27,7 @@ function getScrollRange(sceneFrame: SceneFrame | null) {
 
   return { min: 4, max: 19 };
 }
-
+// getInitialProgress - get the initial progress from the range
 function getInitialProgress(range: { min: number; max: number }) {
   const { lookAt } = cameraSettings.manual;
   if (range.max <= range.min) return 0;
@@ -38,6 +39,7 @@ function getInitialProgress(range: { min: number; max: number }) {
   );
 }
 
+// ScrollCamera - the scroll camera component
 export default function ScrollCamera({
   sceneFrame,
   scrollProgress,

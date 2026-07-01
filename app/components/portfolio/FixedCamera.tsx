@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { cameraSettings } from "@/app/config/cameraSettings";
 
+// FixedCamera - the fixed camera component
 export default function FixedCamera() {
   const camera = useRef<THREE.PerspectiveCamera>(null);
 

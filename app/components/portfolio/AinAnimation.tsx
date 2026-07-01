@@ -11,6 +11,7 @@ type AinAnimationProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
+// AinAnimation - animation for the Ain object
 export default function AinAnimation({ scene, nodes }: AinAnimationProps) {
   const ainRef = useRef<THREE.Object3D | null>(null);
 

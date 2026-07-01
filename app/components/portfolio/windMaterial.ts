@@ -19,6 +19,7 @@ type WindMaterialOptions = {
   fabricZEnd?: number;
 };
 
+// patchWindMaterial - patch the wind material
 function patchWindMaterial(
   material: THREE.Material,
   uniforms: WindMaterialHandle["uniforms"],
@@ -65,6 +66,7 @@ transformed.z += ripple * uWindStrength * 0.42 * fabricMask;
   material.needsUpdate = true;
 }
 
+// applySoftWindToObject - apply the soft wind to the object
 export function applySoftWindToObject(
   root: THREE.Object3D,
   options: WindMaterialOptions = {},
