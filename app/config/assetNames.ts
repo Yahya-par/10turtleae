@@ -44,6 +44,10 @@ export const assetNames = {
     camp: "SafariCamp001",
     campBlender: "SafariCamp.001",
     campMaterial: "SafariCamp",
+    /** Blender: safariland.001 */
+    land: "safariland001",
+    landBlender: "safariland.001",
+    mountains: "safarimountains001",
   },
   scenes: {
     /** Opening desert sky panel (Desert_Scene_Floor, ~X 11) */
@@ -56,8 +60,10 @@ export const assetNames = {
     alRab: "Desert_Scene_Floor005",
     /** Atlantis panel — NOT the car route end (Desert_Scene_Floor.007, ~X -110) */
     atlantis: "Desert_Scene_Floor007",
-    /** One scene left of Atlantis (~X -127) */
+    /** One scene left of Atlantis (~X -127) — safari scene floor */
     floor8: "Desert_Scene_Floor008",
+    safariFloor: "Desert_Scene_Floor008",
+    safariFloorBlender: "Desert_Scene_Floor.008",
     /** NOT scene 3 — this is the Museum of the Future panel (~X -57) */
     museumFloor: "Desert_Scene_Floor003",
     dubaiFrameLandmark: "proper_dubaiframe001",

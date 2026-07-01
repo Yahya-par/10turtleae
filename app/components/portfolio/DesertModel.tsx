@@ -11,7 +11,7 @@ import AinAnimation from "./AinAnimation";
 import CampfireSmoke from "./CampfireSmoke";
 import SafariCampWind from "./SafariCampWind";
 
-const MODEL_PATH = "/Models/Modelv1.glb?v=3";
+const MODEL_PATH = "/Models/Modelv1.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
