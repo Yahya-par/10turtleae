@@ -2,6 +2,7 @@
 
 import { useGLTF } from "@react-three/drei";
 import { useLayoutEffect, useMemo, type RefObject } from "react";
+import { useLayoutEffect, useMemo, type RefObject } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "./cameraPath";
 import MetroTrainAnimation from "./MetroTrainAnimation";
@@ -12,6 +13,7 @@ import CampfireSmoke from "./CampfireSmoke";
 import SafariCampWind from "./SafariCampWind";
 import CamelWalkAnimation from "./CamelWalkAnimation";
 import SceneObjectLinks from "./SceneObjectLinks";
+import CamelScrollMovement from "./CamelScrollMovement";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -65,6 +67,14 @@ export default function DesertModel({
       <primitive object={scene} />
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
+      <CamelScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+      />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
       <CamelWalkAnimation

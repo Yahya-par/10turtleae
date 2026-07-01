@@ -60,6 +60,28 @@ export const assetNames = {
     rightLegs: ["forwardleg003", "forwardleg004"] as const,
     rightLegsBlender: ["forwardleg.003", "forwardleg.004"] as const,
   },
+  camel: {
+    body: "camel001",
+    bodyBlender: "camel.001",
+    turtle: "turtlechar001",
+    turtleBlender: "turtlechar.001",
+    legs: [
+      "forwardleg001",
+      "forwardleg002",
+      "forwardleg003",
+      "forwardleg004",
+    ],
+    legsBlender: [
+      "forwardleg.001",
+      "forwardleg.002",
+      "forwardleg.003",
+      "forwardleg.004",
+    ],
+  },
+  boat: {
+    object: "boat001",
+    blenderName: "boat.001",
+  },
   perfectBuildings: {
     /** Blender: Perfect_Buildings.001 */
     object: "Perfect_Buildings001",
