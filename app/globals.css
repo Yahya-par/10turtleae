@@ -1,10 +1,14 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
 
 :root {
   --background: #e8d9c0;
   --foreground: #3d3229;
   --paper: #f4ead8;
   --accent: #c97b4f;
+  --font-geist-sans: "Inter Variable", "Segoe UI", sans-serif;
+  --font-geist-mono: "JetBrains Mono Variable", Consolas, monospace;
 }
 
 @theme inline {
