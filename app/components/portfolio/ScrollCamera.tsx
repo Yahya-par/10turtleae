@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { cameraSettings } from "@/app/config/cameraSettings";
-import type { SceneFrame } from "./cameraPath";
+import { getScrollRange, type SceneFrame } from "./cameraPath";
 
 type ScrollCameraProps = {
   sceneFrame: SceneFrame | null;
@@ -14,19 +14,6 @@ type ScrollCameraProps = {
   lerpFactor: number;
 };
 
-// getScrollRange - get the scroll range from the scene frame
-function getScrollRange(sceneFrame: SceneFrame | null) {
-  if (sceneFrame?.waypoints.length) {
-    const xs = sceneFrame.waypoints.map((waypoint) => waypoint.position.x);
-    return { min: Math.min(...xs), max: Math.max(...xs) };
-  }
-
-  if (sceneFrame?.bounds) {
-    return { min: sceneFrame.bounds.min.x, max: sceneFrame.bounds.max.x };
-  }
-
-  return { min: 4, max: 19 };
-}
 // getInitialProgress - get the initial progress from the range
 function getInitialProgress(range: { min: number; max: number }) {
   const { lookAt } = cameraSettings.manual;

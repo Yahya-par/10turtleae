@@ -1,14 +1,17 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { camelWalkSettings } from "@/app/config/camelWalkSettings";
-import { findSceneObject } from "./sceneObjectUtils";
+import { getScrollProgressAtX, getScrollRange, type SceneFrame } from "./cameraPath";
+import { findSceneObject, getObjectBounds } from "./sceneObjectUtils";
 
 type CamelWalkAnimationProps = {
   scene: THREE.Object3D;
   nodes: Record<string, THREE.Object3D>;
+  sceneFrame: SceneFrame | null;
+  scrollProgress: RefObject<number>;
 };
 
 type LegRig = {
@@ -27,7 +30,17 @@ type LegSide = {
 type WalkRig = {
   body: THREE.Object3D | null;
   bodyBaseRotation: THREE.Euler | null;
+  bodyBaseWorld: THREE.Vector3;
   sides: LegSide[];
+  movers: { object: THREE.Object3D; basePosition: THREE.Vector3 }[];
+  track: CamelTrack;
+};
+
+type CamelTrack = {
+  startX: number;
+  endX: number;
+  progressAtStart: number;
+  progressAtEnd: number;
 };
 
 const swingAxisVector = {
@@ -36,6 +49,57 @@ const swingAxisVector = {
   z: new THREE.Vector3(0, 0, 1),
 } as const;
 
+function getCamelTrack(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  sceneFrame: SceneFrame | null,
+) {
+  const sceneStart = findSceneObject(
+    scene,
+    nodes,
+    camelWalkSettings.sceneStart,
+  );
+  const sceneEnd = findSceneObject(scene, nodes, camelWalkSettings.sceneEnd);
+
+  if (!sceneStart) return null;
+
+  const startBox = getObjectBounds(sceneStart);
+  const endBox = sceneEnd ? getObjectBounds(sceneEnd) : null;
+  const { startInset, endInset } = camelWalkSettings;
+  const scrollRange = getScrollRange(sceneFrame);
+
+  const startX = startBox.max.x - startInset;
+  const boundaryX = endBox
+    ? Math.min(startBox.min.x, endBox.max.x)
+    : startBox.min.x;
+  const endX = boundaryX + endInset;
+
+  return {
+    startX,
+    endX,
+    progressAtStart: getScrollProgressAtX(startX, scrollRange),
+    progressAtEnd: getScrollProgressAtX(endX, scrollRange),
+    startBox,
+    endBox,
+    scrollRange,
+  };
+}
+
+function getCamelTravelProgress(track: CamelTrack, scrollValue: number) {
+  const span = track.progressAtStart - track.progressAtEnd;
+  if (span <= 0) return 0;
+
+  return THREE.MathUtils.clamp(
+    (track.progressAtStart - scrollValue) / span,
+    0,
+    1,
+  );
+}
+
+function getCamelTargetWorldX(track: CamelTrack, scrollValue: number) {
+  const travelProgress = getCamelTravelProgress(track, scrollValue);
+  return THREE.MathUtils.lerp(track.startX, track.endX, travelProgress);
+}
 function findLeg(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
@@ -239,11 +303,27 @@ function logMissingAssets(
 function buildWalkRig(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
+  sceneFrame: SceneFrame | null,
 ): WalkRig | null {
   scene.updateMatrixWorld(true);
+  const trackData = getCamelTrack(scene, nodes, sceneFrame);
   const body =
     findSceneObject(scene, nodes, camelWalkSettings.body) ??
     findSceneObject(scene, nodes, camelWalkSettings.bodyBlender);
+
+  if (!trackData || !body) {
+    if (process.env.NODE_ENV === "development") {
+      logMissingAssets(scene, nodes);
+    }
+    return null;
+  }
+
+  const track: CamelTrack = {
+    startX: trackData.startX,
+    endX: trackData.endX,
+    progressAtStart: trackData.progressAtStart,
+    progressAtEnd: trackData.progressAtEnd,
+  };
 
   const leftSide = buildLegSide(
     scene,
@@ -289,9 +369,25 @@ function buildWalkRig(
     return null;
   }
 
+  const turtle =
+    findSceneObject(scene, nodes, camelWalkSettings.turtle) ??
+    findSceneObject(scene, nodes, camelWalkSettings.turtleBlender);
+
+  const bodyBaseWorld = new THREE.Vector3();
+  body.getWorldPosition(bodyBaseWorld);
+
+  const moverSet = new Set<THREE.Object3D>();
+  moverSet.add(body);
+  if (turtle) moverSet.add(turtle);
+  const movers = [...moverSet].map((object) => ({
+    object,
+    basePosition: object.position.clone(),
+  }));
+
   if (process.env.NODE_ENV === "development") {
     console.info("[CamelWalkAnimation] Ready:", {
       body: body.name,
+      turtle: turtle?.name ?? null,
       leftLegs: leftSide?.legs.map(({ leg, pivotInParent, hipLocal }) => ({
         name: leg.name,
         pivot: pivotInParent.toArray(),
@@ -305,21 +401,44 @@ function buildWalkRig(
       swingAxis: camelWalkSettings.swingAxis,
       swingAngle: camelWalkSettings.swingAngle,
       swingSpeed: camelWalkSettings.swingSpeed,
+      track: {
+        startX: track.startX,
+        endX: track.endX,
+        progressAtStart: track.progressAtStart,
+        progressAtEnd: track.progressAtEnd,
+      },
+      sceneStartX: trackData.startBox
+        ? [trackData.startBox.min.x, trackData.startBox.max.x]
+        : null,
+      sceneEndX: trackData.endBox
+        ? [trackData.endBox.min.x, trackData.endBox.max.x]
+        : null,
     });
   }
 
   return {
     body,
     bodyBaseRotation: body.rotation.clone(),
+    bodyBaseWorld,
     sides,
+    movers,
+    track,
   };
 }
 
 function isWalkRig(value: unknown): value is WalkRig {
   const rig = value as WalkRig;
-  if (!rig || !Array.isArray(rig.sides) || !rig.sides.length) return false;
+  if (
+    !rig ||
+    !Array.isArray(rig.sides) ||
+    !rig.sides.length ||
+    !Array.isArray(rig.movers) ||
+    !rig.movers.length
+  ) {
+    return false;
+  }
 
-  return rig.sides.every(
+  const sidesValid = rig.sides.every(
     (side) =>
       Array.isArray(side?.legs) &&
       side.legs.length > 0 &&
@@ -332,12 +451,26 @@ function isWalkRig(value: unknown): value is WalkRig {
           entry.hipLocal instanceof THREE.Vector3,
       ),
   );
+  const moversValid = rig.movers.every(
+    (mover) =>
+      mover?.object instanceof THREE.Object3D &&
+      mover.basePosition instanceof THREE.Vector3,
+  );
+  const trackValid =
+    typeof rig.track?.startX === "number" &&
+    typeof rig.track?.endX === "number" &&
+    typeof rig.track?.progressAtStart === "number" &&
+    typeof rig.track?.progressAtEnd === "number" &&
+    rig.bodyBaseWorld instanceof THREE.Vector3;
+
+  return sidesValid && moversValid && trackValid;
 }
 
 function applyLegPendulum(
   legRig: LegRig,
   sideSwing: number,
   axis: THREE.Vector3,
+  forwardOffset: THREE.Vector3,
 ) {
   const swingQ = new THREE.Quaternion().setFromAxisAngle(axis, sideSwing);
   const quaternion = swingQ.clone().multiply(legRig.baseQuaternion);
@@ -346,45 +479,80 @@ function applyLegPendulum(
 
   legRig.leg.scale.copy(legRig.baseScale);
   legRig.leg.quaternion.copy(quaternion);
-  legRig.leg.position.copy(legRig.pivotInParent).sub(rotatedHip);
+  legRig.leg.position.copy(legRig.pivotInParent).add(forwardOffset).sub(rotatedHip);
 }
 
-function applySwing(rig: WalkRig, swing: number) {
+function getForwardOffset(rig: WalkRig, scrollValue: number) {
+  const targetWorld = rig.bodyBaseWorld.clone();
+  targetWorld.x = getCamelTargetWorldX(rig.track, scrollValue);
+
+  const parent = rig.body?.parent;
+  if (!parent) {
+    return targetWorld.sub(rig.bodyBaseWorld);
+  }
+
+  const targetLocal = parent.worldToLocal(targetWorld.clone());
+  const baseLocal = parent.worldToLocal(rig.bodyBaseWorld.clone());
+  return targetLocal.sub(baseLocal);
+}
+
+function applyForwardTravel(rig: WalkRig, offset: THREE.Vector3) {
+  for (const mover of rig.movers) {
+    mover.object.position.copy(mover.basePosition).add(offset);
+  }
+}
+
+function applySwing(
+  rig: WalkRig,
+  walkPhase: number,
+  scrollValue: number,
+  isWalking: boolean,
+) {
   const axis = swingAxisVector[camelWalkSettings.swingAxis];
+  const forwardOffset = getForwardOffset(rig, scrollValue);
 
   for (const side of rig.sides) {
-    const sideSwing =
-      Math.sin(swing + side.phaseOffset) * camelWalkSettings.swingAngle;
+    const sideSwing = isWalking
+      ? Math.sin(walkPhase + side.phaseOffset) * camelWalkSettings.swingAngle
+      : 0;
 
     for (const legRig of side.legs) {
-      applyLegPendulum(legRig, sideSwing, axis);
+      applyLegPendulum(legRig, sideSwing, axis, forwardOffset);
     }
   }
 
   if (rig.body && rig.bodyBaseRotation) {
-    const rock = Math.sin(swing) * camelWalkSettings.bodyRockAngle;
+    const rock = isWalking
+      ? Math.sin(walkPhase) * camelWalkSettings.bodyRockAngle
+      : 0;
     rig.body.rotation.x = rig.bodyBaseRotation.x;
     rig.body.rotation.y = rig.bodyBaseRotation.y;
     rig.body.rotation.z = rig.bodyBaseRotation.z + rock;
   }
+
+  applyForwardTravel(rig, forwardOffset);
 }
 
 export default function CamelWalkAnimation({
   scene,
   nodes,
+  sceneFrame,
+  scrollProgress,
 }: CamelWalkAnimationProps) {
   const rigRef = useRef<WalkRig | null>(null);
-  const timeRef = useRef(0);
+  const walkPhaseRef = useRef(0);
+  const lastTravelProgressRef = useRef<number | null>(null);
   const retryTimerRef = useRef(0);
   const mountAttemptsRef = useRef(0);
   const warnedRef = useRef(false);
 
   useLayoutEffect(() => {
     rigRef.current = null;
-    timeRef.current = 0;
+    walkPhaseRef.current = 0;
+    lastTravelProgressRef.current = null;
     mountAttemptsRef.current = 0;
     warnedRef.current = false;
-  }, [scene, nodes]);
+  }, [scene, nodes, sceneFrame]);
 
   useFrame((_, delta) => {
     const mounted = rigRef.current;
@@ -401,7 +569,7 @@ export default function CamelWalkAnimation({
       mountAttemptsRef.current += 1;
       scene.updateMatrixWorld(true);
 
-      const rig = buildWalkRig(scene, nodes);
+      const rig = buildWalkRig(scene, nodes, sceneFrame);
       if (!rig) {
         if (
           process.env.NODE_ENV === "development" &&
@@ -418,12 +586,33 @@ export default function CamelWalkAnimation({
       }
 
       rigRef.current = rig;
+      lastTravelProgressRef.current = getCamelTravelProgress(
+        rig.track,
+        scrollProgress.current,
+      );
       return;
     }
 
-    timeRef.current += delta;
-    const swing = timeRef.current * Math.PI * 2 * camelWalkSettings.swingSpeed;
-    applySwing(rigRef.current, swing);
+    const rig = rigRef.current;
+    const travelProgress = getCamelTravelProgress(
+      rig.track,
+      scrollProgress.current,
+    );
+    const lastTravelProgress = lastTravelProgressRef.current ?? travelProgress;
+    const travelDelta = travelProgress - lastTravelProgress;
+    lastTravelProgressRef.current = travelProgress;
+
+    const isWalking =
+      Math.abs(travelDelta) > camelWalkSettings.scrollIdleThreshold;
+    if (isWalking) {
+      walkPhaseRef.current +=
+        Math.abs(travelDelta) *
+        camelWalkSettings.walkCyclesPerScene *
+        Math.PI *
+        2;
+    }
+
+    applySwing(rig, walkPhaseRef.current, scrollProgress.current, isWalking);
   });
 
   return null;

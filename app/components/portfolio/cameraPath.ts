@@ -144,6 +144,27 @@ export function createDioramaCurve(frame: SceneFrame) {
   return new THREE.CatmullRomCurve3(points, false, "centripetal");
 }
 
+export function getScrollRange(sceneFrame: SceneFrame | null) {
+  if (sceneFrame?.waypoints.length) {
+    const xs = sceneFrame.waypoints.map((waypoint) => waypoint.position.x);
+    return { min: Math.min(...xs), max: Math.max(...xs) };
+  }
+
+  if (sceneFrame?.bounds) {
+    return { min: sceneFrame.bounds.min.x, max: sceneFrame.bounds.max.x };
+  }
+
+  return { min: 4, max: 19 };
+}
+
+export function getScrollProgressAtX(
+  x: number,
+  range: { min: number; max: number },
+) {
+  if (range.max <= range.min) return 0;
+  return THREE.MathUtils.clamp((x - range.min) / (range.max - range.min), 0, 1);
+}
+
 // getDioramaPose - get the diorama pose from the curve and the look at center
 export function getDioramaPose(
   curve: THREE.CatmullRomCurve3,

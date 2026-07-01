@@ -20,4 +20,17 @@ export const camelWalkSettings = {
   rightPhaseOffset: Math.PI,
   /** Subtle body rock synced with the leg cycle. */
   bodyRockAngle: 0.04,
+  /** Full leg cycles across scene 1 travel distance. */
+  walkCyclesPerScene: 5,
+  /** Ignore tiny scroll drift while camera settles. */
+  scrollIdleThreshold: 0.00008,
+
+  /** Scene 1 — opening desert panel (Desert_Scene_Floor, ~X 11). */
+  sceneStart: assetNames.scenes.openingDesert,
+  /** Scene 2 start — next panel (Desert_Scene_Floor.001, ~X -6). */
+  sceneEnd: assetNames.scenes.floor1,
+  /** Inset from scene 1 entrance edge (high X). */
+  startInset: 1.2,
+  /** Inset from scene 1 exit / scene 2 start boundary (low X). */
+  endInset: 1.2,
 };

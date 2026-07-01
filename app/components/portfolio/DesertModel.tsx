@@ -1,7 +1,7 @@
 "use client";
 
 import { useGLTF } from "@react-three/drei";
-import { useLayoutEffect, useMemo } from "react";
+import { useLayoutEffect, useMemo, type RefObject } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "./cameraPath";
 import MetroTrainAnimation from "./MetroTrainAnimation";
@@ -17,6 +17,8 @@ const MODEL_PATH = "/Models/Modelv1.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
+  sceneFrame: SceneFrame | null;
+  scrollProgress: RefObject<number>;
 };
 
 // buildNodeMap - build a map of the nodes in the scene
@@ -45,7 +47,11 @@ function prepareScene(scene: THREE.Object3D) {
 }
 
 // DesertModel is a component that renders the desert model.
-export default function DesertModel({ onFrameReady }: DesertModelProps) {
+export default function DesertModel({
+  onFrameReady,
+  sceneFrame,
+  scrollProgress,
+}: DesertModelProps) {
   const { scene } = useGLTF(MODEL_PATH);
   const nodes = useMemo(() => buildNodeMap(scene), [scene]);
 
@@ -61,7 +67,12 @@ export default function DesertModel({ onFrameReady }: DesertModelProps) {
       <CarAnimation scene={scene} nodes={nodes} />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
-      <CamelWalkAnimation scene={scene} nodes={nodes} />
+      <CamelWalkAnimation
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+      />
       <SceneObjectLinks scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />

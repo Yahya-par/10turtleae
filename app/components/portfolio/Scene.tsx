@@ -82,7 +82,11 @@ export default function Scene({
 
       <Suspense fallback={null}>
         <LoadingTracker onReady={onReady} />
-        <DesertModel onFrameReady={handleFrameReady} />
+        <DesertModel
+          onFrameReady={handleFrameReady}
+          sceneFrame={sceneFrame}
+          scrollProgress={scrollProgress}
+        />
       </Suspense>
     </>
   );
