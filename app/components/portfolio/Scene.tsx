@@ -86,6 +86,8 @@ export default function Scene({
           onFrameReady={handleFrameReady}
           sceneFrame={sceneFrame}
           scrollProgress={scrollProgress}
+          targetScrollProgress={targetScrollProgress}
+          lerpFactor={lerpFactor}
         />
       </Suspense>
     </>

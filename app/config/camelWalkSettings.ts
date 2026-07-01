@@ -20,4 +20,8 @@ export const camelWalkSettings = {
   rightPhaseOffset: Math.PI,
   /** Subtle body rock synced with the leg cycle. */
   bodyRockAngle: 0.04,
+  /** Full leg cycles across scene 1 travel distance. */
+  walkCyclesPerScene: 5,
+  /** Ignore tiny scroll drift while camera settles. */
+  scrollIdleThreshold: 0.00008,
 };
