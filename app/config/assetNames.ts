@@ -45,6 +45,12 @@ export const assetNames = {
     campBlender: "SafariCamp.001",
     campMaterial: "SafariCamp",
   },
+  perfectBuildings: {
+    /** Blender: Perfect_Buildings.001 */
+    object: "Perfect_Buildings001",
+    blenderName: "Perfect_Buildings.001",
+    material: "Perfect_Buildings",
+  },
   scenes: {
     /** Opening desert sky panel (Desert_Scene_Floor, ~X 11) */
     openingDesert: "Desert_Scene_Floor",

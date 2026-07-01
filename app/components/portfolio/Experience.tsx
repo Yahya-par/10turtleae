@@ -13,6 +13,7 @@ import CameraHud from "./CameraHud";
 const isOrbitMode = cameraSettings.mode === "orbit";
 const isScrollMode = cameraSettings.mode === "scroll";
 
+// Experience - the experience component is responsible for the experience of the scene
 export default function Experience() {
   const navigation = useScrollNavigation(
     cameraSettings.mode === "scroll",

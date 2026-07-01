@@ -9,6 +9,7 @@ type OverlayProps = {
   mode: CameraMode;
 };
 
+// Overlay - the overlay component is responsible for the overlay UI of the scene
 export default function Overlay({ isReady, progress, mode }: OverlayProps) {
   const [visible, setVisible] = useState(true);
   const [percent, setPercent] = useState(0);

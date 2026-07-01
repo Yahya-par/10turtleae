@@ -23,10 +23,12 @@ const FALLBACK_BOUNDS = new THREE.Box3(
 
 const tempVertex = new THREE.Vector3();
 
+// isSceneMesh - check if the mesh is a scene mesh
 function isSceneMesh(name: string) {
   return SCENE_MESH_PATTERN.test(name);
 }
 
+// expandBoundsFromMesh - expand the bounds of the scene from a mesh
 function expandBoundsFromMesh(bounds: THREE.Box3, mesh: THREE.Mesh) {
   const position = mesh.geometry.getAttribute("position");
   if (!position) return;
@@ -57,6 +59,7 @@ function expandBoundsFromMesh(bounds: THREE.Box3, mesh: THREE.Mesh) {
   }
 }
 
+// sanitizeBounds - sanitize the bounds of the scene
 function sanitizeBounds(bounds: THREE.Box3) {
   if (bounds.isEmpty()) {
     return FALLBACK_BOUNDS.clone();
@@ -77,6 +80,7 @@ function sanitizeBounds(bounds: THREE.Box3) {
   return bounds;
 }
 
+// extractSceneFrame - extract the scene frame from the root object
 export function extractSceneFrame(root: THREE.Object3D): SceneFrame {
   const bounds = new THREE.Box3();
   const waypoints: CameraWaypoint[] = [];
@@ -111,6 +115,7 @@ export function extractSceneFrame(root: THREE.Object3D): SceneFrame {
   };
 }
 
+// createDioramaCurve - create a diorama curve from the scene frame
 export function createDioramaCurve(frame: SceneFrame) {
   const { waypoints, lookAtCenter, cameraZ, bounds } = frame;
   const size = bounds.getSize(new THREE.Vector3());
@@ -139,6 +144,7 @@ export function createDioramaCurve(frame: SceneFrame) {
   return new THREE.CatmullRomCurve3(points, false, "centripetal");
 }
 
+// getDioramaPose - get the diorama pose from the curve and the look at center
 export function getDioramaPose(
   curve: THREE.CatmullRomCurve3,
   lookAtCenter: THREE.Vector3,

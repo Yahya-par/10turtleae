@@ -1,5 +1,6 @@
 import { assetNames } from "./assetNames";
 
+// safariCampWindSettings - settings for the safari camp wind effect
 export const safariCampWindSettings = {
   objectName: assetNames.safari.camp,
   blenderObjectName: assetNames.safari.campBlender,

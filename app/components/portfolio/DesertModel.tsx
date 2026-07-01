@@ -10,6 +10,7 @@ import CloudAnimation from "./CloudAnimation";
 import AinAnimation from "./AinAnimation";
 import CampfireSmoke from "./CampfireSmoke";
 import SafariCampWind from "./SafariCampWind";
+import SceneObjectLinks from "./SceneObjectLinks";
 
 const MODEL_PATH = "/Models/Modelv1.glb?v=3";
 
@@ -17,6 +18,7 @@ type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
 };
 
+// buildNodeMap - build a map of the nodes in the scene
 function buildNodeMap(scene: THREE.Object3D) {
   const nodes: Record<string, THREE.Object3D> = {};
   scene.traverse((child) => {
@@ -58,6 +60,7 @@ export default function DesertModel({ onFrameReady }: DesertModelProps) {
       <CarAnimation scene={scene} nodes={nodes} />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
+      <SceneObjectLinks scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
     </>

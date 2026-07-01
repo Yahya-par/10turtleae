@@ -8,6 +8,7 @@ function format(value: number) {
   return value.toFixed(2);
 }
 
+// CameraHud - display the camera position and look at values
 export default function CameraHud({ position, lookAt, fov }: CameraHudProps) {
   return (
     <div className="camera-hud">

@@ -26,6 +26,7 @@ type CloudAnimationProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
+// getLoopProgress - get the loop progress
 function getLoopProgress(
   elapsed: number,
   lapDuration: number,
@@ -34,6 +35,7 @@ function getLoopProgress(
   return ((elapsed + phaseOffset) % lapDuration) / lapDuration;
 }
 
+// getCloudTrack - get the cloud track
 function getCloudTrack(dioramaBounds: THREE.Box3) {
   const { startMargin, endMargin } = cloudAnimationSettings;
 
@@ -45,6 +47,7 @@ function getCloudTrack(dioramaBounds: THREE.Box3) {
   };
 }
 
+// CloudAnimation - the cloud animation component
 export default function CloudAnimation({ scene, nodes }: CloudAnimationProps) {
   const cloudsRef = useRef<AnimatedCloud[]>([]);
   const trackRef = useRef<CloudTrack | null>(null);

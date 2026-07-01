@@ -20,6 +20,7 @@ type CameraRigProps = {
   lerpFactor: number;
 };
 
+// getManualPose - get the manual pose from the camera settings
 function getManualPose() {
   const { position, lookAt } = cameraSettings.manual;
   return {
@@ -28,6 +29,7 @@ function getManualPose() {
   };
 }
 
+// CameraRig - the camera rig for the scene
 export default function CameraRig({
   sceneFrame,
   scrollProgress,

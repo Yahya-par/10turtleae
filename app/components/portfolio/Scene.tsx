@@ -19,6 +19,7 @@ type SceneProps = ReturnType<typeof useScrollNavigation> & {
   }) => void;
 };
 
+// LoadingTracker - the loading tracker component is responsible for the loading tracker UI of the scene
 function LoadingTracker({ onReady }: { onReady: () => void }) {
   const { active } = useProgress();
 

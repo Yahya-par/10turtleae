@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { safariCampWindSettings } from "@/app/config/safariCampWindSettings";
 import { findSceneObject, normalizeObjectName } from "./sceneObjectUtils";
-import {
+import {   
   applySoftWindToObject,
   type WindMaterialHandle,
 } from "./windMaterial";
@@ -15,6 +15,7 @@ type SafariCampWindProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
+// findSafariCamp - find the safari camp object in the scene
 function findSafariCamp(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
@@ -55,6 +56,7 @@ function findSafariCamp(
   return byMaterial;
 }
 
+// SafariCampWind - the safari camp wind component
 export default function SafariCampWind({ scene, nodes }: SafariCampWindProps) {
   const windRef = useRef<WindMaterialHandle | null>(null);
   const retryTimerRef = useRef(0);

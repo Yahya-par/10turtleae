@@ -15,6 +15,7 @@ type OrbitCameraProps = {
   }) => void;
 };
 
+// OrbitCamera - the orbit camera component
 export default function OrbitCamera({ onPoseChange }: OrbitCameraProps) {
   const camera = useRef<THREE.PerspectiveCamera>(null);
   const controls = useRef<OrbitControlsType>(null);

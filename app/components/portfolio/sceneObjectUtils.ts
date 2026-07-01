@@ -4,6 +4,7 @@ export function normalizeObjectName(name: string) {
   return name.replace(/\./g, "").toLowerCase();
 }
 
+// findSceneObject - find the scene object in the scene by name
 export function findSceneObject(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D> | undefined,
@@ -29,6 +30,7 @@ export function findSceneObject(
   return match;
 }
 
+// attachAnimationCarrier - attach the animation carrier to the object 
 export function attachAnimationCarrier(
   object: THREE.Object3D,
   carrierName: string,
@@ -69,6 +71,7 @@ export function attachAnimationCarrier(
   return carrier;
 }
 
+// getObjectBounds - get the bounds of the object
 export function getObjectBounds(object: THREE.Object3D) {
   object.updateMatrixWorld(true);
   return new THREE.Box3().setFromObject(object);
@@ -76,6 +79,7 @@ export function getObjectBounds(object: THREE.Object3D) {
 
 const DIORAMA_FLOOR_PATTERN = /^Desert_Scene_Floor/;
 
+// getDioramaFloorBounds - get the bounds of the diorama floor
 export function getDioramaFloorBounds(scene: THREE.Object3D) {
   const bounds = new THREE.Box3();
   let hasFloor = false;

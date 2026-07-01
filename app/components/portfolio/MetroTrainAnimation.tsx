@@ -15,10 +15,12 @@ type MetroTrainAnimationProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
+// normalizeObjectName - normalize the name of the object
 function normalizeObjectName(name: string) {
   return name.replace(/\./g, "").toLowerCase();
 }
 
+// findMetroObject - find the metro object in the scene
 function findMetroObject(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D> | undefined,
