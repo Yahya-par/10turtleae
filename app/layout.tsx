@@ -1,37 +1,46 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import InspectProtection from "./components/InspectProtection";
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+} from "@remix-run/react";
+import type { LinksFunction } from "@remix-run/node";
+import stylesheet from "./globals.css?url";
+import { useInspectProtection } from "@features/portfolio/hooks/useInspectProtection";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: stylesheet },
+];
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+function InspectProtection() {
+  useInspectProtection();
+  return null;
+}
 
-export const metadata: Metadata = {
-  title: "Desert Portfolio",
-  description: "A scroll-driven 3D portfolio experience",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
       <body className="min-h-full">
-        <InspectProtection />
         {children}
+        <ScrollRestoration />
+        <Scripts />
       </body>
     </html>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <>
+      <InspectProtection />
+      <Outlet />
+    </>
   );
 }

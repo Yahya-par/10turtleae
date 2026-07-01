@@ -1,5 +1,14 @@
-import Experience from "./components/portfolio/Experience";
+import type { MetaFunction } from "@remix-run/node";
+import Experience from "@features/portfolio/components/Experience";
 
-export default function Home() {
+export const meta: MetaFunction = () => [
+  { title: "Desert Portfolio" },
+  {
+    name: "description",
+    content: "A scroll-driven 3D portfolio experience",
+  },
+];
+
+export default function Page() {
   return <Experience />;
 }
