@@ -71,6 +71,30 @@ export function attachAnimationCarrier(
   return carrier;
 }
 
+// attachObjectToCarrier - reparent while preserving world transform relative to carrier
+export function attachObjectToCarrier(
+  carrier: THREE.Group,
+  object: THREE.Object3D,
+) {
+  if (object.parent === carrier) return;
+
+  object.updateMatrixWorld(true);
+  carrier.updateMatrixWorld(true);
+
+  const parent = object.parent;
+  if (!parent) {
+    throw new Error(`${object.name} must have a parent in the scene graph`);
+  }
+
+  const worldMatrix = object.matrixWorld.clone();
+  parent.remove(object);
+  carrier.add(object);
+
+  const carrierInverse = new THREE.Matrix4().copy(carrier.matrixWorld).invert();
+  const localMatrix = worldMatrix.premultiply(carrierInverse);
+  localMatrix.decompose(object.position, object.quaternion, object.scale);
+}
+
 // getObjectBounds - get the bounds of the object
 export function getObjectBounds(object: THREE.Object3D) {
   object.updateMatrixWorld(true);

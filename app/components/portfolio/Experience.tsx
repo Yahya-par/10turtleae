@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { cameraSettings } from "@/app/config/cameraSettings";
 import { rendererSettings } from "@/app/config/rendererSettings";
 import { useScrollNavigation } from "@/app/hooks/useScrollNavigation";
+import { useInspectProtection, blockInspectContextMenu } from "@/app/hooks/useInspectProtection";
 import Scene from "./Scene";
 import Overlay from "./Overlay";
 import CameraHud from "./CameraHud";
@@ -15,6 +16,8 @@ const isScrollMode = cameraSettings.mode === "scroll";
 
 // Experience - the experience component is responsible for the experience of the scene
 export default function Experience() {
+  useInspectProtection(true);
+
   const navigation = useScrollNavigation(
     cameraSettings.mode === "scroll",
   );
@@ -28,15 +31,21 @@ export default function Experience() {
   return (
     <div
       className={`portfolio-shell ${isOrbitMode ? "portfolio-shell--orbit" : ""} ${isScrollMode ? "portfolio-shell--scroll" : ""}`}
+      onContextMenu={blockInspectContextMenu}
     >
       <Canvas
         shadows
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: false }}
+        onContextMenu={blockInspectContextMenu}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = rendererSettings.exposure;
           gl.outputColorSpace = THREE.SRGBColorSpace;
+          gl.domElement.oncontextmenu = (event) => {
+            event.preventDefault();
+            return false;
+          };
         }}
       >
         <Scene
