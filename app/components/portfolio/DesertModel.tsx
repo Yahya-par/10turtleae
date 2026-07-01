@@ -7,6 +7,7 @@ import { extractSceneFrame, type SceneFrame } from "./cameraPath";
 import MetroTrainAnimation from "./MetroTrainAnimation";
 import CarAnimation from "./CarAnimation";
 import CloudAnimation from "./CloudAnimation";
+import BirdAnimation from "./BirdAnimation";
 import AinAnimation from "./AinAnimation";
 import CampfireSmoke from "./CampfireSmoke";
 import SafariCampWind from "./SafariCampWind";
@@ -88,6 +89,7 @@ export default function DesertModel({
       />
       <SceneObjectLinks scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
+      <BirdAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
     </>
   );
