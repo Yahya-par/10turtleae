@@ -10,6 +10,7 @@ import CloudAnimation from "./CloudAnimation";
 import AinAnimation from "./AinAnimation";
 import CampfireSmoke from "./CampfireSmoke";
 import SafariCampWind from "./SafariCampWind";
+import CamelWalkAnimation from "./CamelWalkAnimation";
 import SceneObjectLinks from "./SceneObjectLinks";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
@@ -60,6 +61,7 @@ export default function DesertModel({ onFrameReady }: DesertModelProps) {
       <CarAnimation scene={scene} nodes={nodes} />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
+      <CamelWalkAnimation scene={scene} nodes={nodes} />
       <SceneObjectLinks scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />

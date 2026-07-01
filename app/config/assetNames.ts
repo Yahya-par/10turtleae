@@ -49,6 +49,17 @@ export const assetNames = {
     landBlender: "safariland.001",
     mountains: "safarimountains001",
   },
+  camel: {
+    /** Blender: camel.001 — opening scene camel with turtle rider */
+    body: "camel001",
+    bodyBlender: "camel.001",
+    turtle: "turtlechar001",
+    turtleBlender: "turtlechar.001",
+    leftLegs: ["forwardleg001", "forwardleg002"] as const,
+    leftLegsBlender: ["forwardleg.001", "forwardleg.002"] as const,
+    rightLegs: ["forwardleg003", "forwardleg004"] as const,
+    rightLegsBlender: ["forwardleg.003", "forwardleg.004"] as const,
+  },
   perfectBuildings: {
     /** Blender: Perfect_Buildings.001 */
     object: "Perfect_Buildings001",
