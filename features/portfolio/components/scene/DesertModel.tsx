@@ -59,6 +59,7 @@ export default function DesertModel({
   const { scene } = useGLTF(MODEL_PATH);
   const nodes = useMemo(() => buildNodeMap(scene), [scene]);
   const turtleOnBoatRef = useRef(false);
+  const boatTravelProgressRef = useRef(0);
 
   useLayoutEffect(() => {
     prepareScene(scene);
@@ -78,6 +79,7 @@ export default function DesertModel({
         targetScrollProgress={targetScrollProgress}
         lerpFactor={lerpFactor}
         turtleOnBoatRef={turtleOnBoatRef}
+        boatTravelProgressRef={boatTravelProgressRef}
       />
       <BoatScrollMovement
         scene={scene}
@@ -87,6 +89,7 @@ export default function DesertModel({
         targetScrollProgress={targetScrollProgress}
         lerpFactor={lerpFactor}
         turtleOnBoatRef={turtleOnBoatRef}
+        boatTravelProgressRef={boatTravelProgressRef}
       />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />

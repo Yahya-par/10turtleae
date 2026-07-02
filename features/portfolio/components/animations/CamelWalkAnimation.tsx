@@ -487,6 +487,7 @@ export default function CamelWalkAnimation({
   const rigRef = useRef<WalkRig | null>(null);
   const walkPhaseRef = useRef(0);
   const lastDesertProgressRef = useRef<number | null>(null);
+  const lastCarrierXRef = useRef<number | null>(null);
   const retryTimerRef = useRef(0);
   const mountAttemptsRef = useRef(0);
   const warnedRef = useRef(false);
@@ -495,6 +496,7 @@ export default function CamelWalkAnimation({
     rigRef.current = null;
     walkPhaseRef.current = 0;
     lastDesertProgressRef.current = null;
+    lastCarrierXRef.current = null;
     mountAttemptsRef.current = 0;
     warnedRef.current = false;
   }, [scene, nodes, sceneFrame]);
@@ -559,7 +561,15 @@ export default function CamelWalkAnimation({
     const desertDelta = desertProgress - lastDesertProgress;
     lastDesertProgressRef.current = desertProgress;
 
+    const carrier = findSceneObject(scene, nodes, camelScrollSettings.carrierName);
+    const carrierX = carrier?.position.x ?? 0;
+    const lastCarrierX = lastCarrierXRef.current;
+    const carrierMoved =
+      lastCarrierX !== null && Math.abs(carrierX - lastCarrierX) > 0.00001;
+    lastCarrierXRef.current = carrierX;
+
     const isWalking =
+      carrierMoved &&
       Math.abs(desertDelta) > camelWalkSettings.scrollIdleThreshold;
     if (isWalking) {
       walkPhaseRef.current +=

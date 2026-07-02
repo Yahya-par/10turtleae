@@ -32,6 +32,7 @@ type BoatScrollMovementProps = {
   targetScrollProgress: RefObject<number>;
   lerpFactor: number;
   turtleOnBoatRef: RefObject<boolean>;
+  boatTravelProgressRef: RefObject<number>;
 };
 
 function getScene2Track(
@@ -168,6 +169,7 @@ export default function BoatScrollMovement({
   targetScrollProgress,
   lerpFactor,
   turtleOnBoatRef,
+  boatTravelProgressRef,
 }: BoatScrollMovementProps) {
   const rigRef = useRef<BoatRig | null>(null);
 
@@ -196,6 +198,7 @@ export default function BoatScrollMovement({
     if (!turtleOnBoatRef.current) {
       rig.boardScene2T = null;
       rig.boatProgress = 0;
+      boatTravelProgressRef.current = 0;
       rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
       return;
     }
@@ -227,6 +230,7 @@ export default function BoatScrollMovement({
       rig.baseY,
       rig.baseZ,
     );
+    boatTravelProgressRef.current = rig.boatProgress;
   });
 
   return null;
