@@ -1,5 +1,5 @@
 import { useGLTF } from "@react-three/drei";
-import { useLayoutEffect, useMemo, type RefObject } from "react";
+import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "@features/portfolio/components/camera/CameraPath";
 import MetroTrainAnimation from "../animations/MetroTrainAnimation";
@@ -12,6 +12,7 @@ import CamelWalkAnimation from "../animations/CamelWalkAnimation";
 import SceneObjectLinks from "./SceneObjectLinks";
 import CamelScrollMovement from "../animations/CamelScrollMovement";
 import BirdAnimation from "../animations/BirdAnimation";
+import BoatScrollMovement from "../animations/BoatScrollMovement";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -57,6 +58,7 @@ export default function DesertModel({
 }: DesertModelProps) {
   const { scene } = useGLTF(MODEL_PATH);
   const nodes = useMemo(() => buildNodeMap(scene), [scene]);
+  const turtleOnBoatRef = useRef(false);
 
   useLayoutEffect(() => {
     prepareScene(scene);
@@ -75,6 +77,16 @@ export default function DesertModel({
         scrollProgress={scrollProgress}
         targetScrollProgress={targetScrollProgress}
         lerpFactor={lerpFactor}
+        turtleOnBoatRef={turtleOnBoatRef}
+      />
+      <BoatScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnBoatRef={turtleOnBoatRef}
       />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />

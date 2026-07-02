@@ -18,6 +18,14 @@ export function useScrollNavigation(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
 
+    // Always start from scene 1 on hard refresh/remount.
+    scrollProgress.current = 0;
+    targetScrollProgress.current = 0;
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo(0, 0);
+
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       const normalized = normalizeWheel(event);
