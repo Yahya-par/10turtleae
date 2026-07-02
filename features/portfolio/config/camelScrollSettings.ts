@@ -20,6 +20,11 @@ export const camelScrollSettings = {
   /** Finish transfer when camel gets this close (X) to boat. */
   transferEndDistanceX: 2.8,
   transferArcHeight: 0.9,
-  /** Final turtle seat offset from boat top surface (negative is lower). */
-  turtleBoatSeatYOffset: -1.55,
+  /**
+   * Final turtle seat offsets from boat center/top in boat local space.
+   * Tune these manually to nudge seat placement.
+   */
+  turtleBoatSeatOffsetX: -15,
+  turtleBoatSeatOffsetY: -9.55,
+  turtleBoatSeatOffsetZ: 5,
 } as const;

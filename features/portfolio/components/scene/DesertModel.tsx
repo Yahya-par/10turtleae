@@ -23,6 +23,7 @@ type DesertModelProps = {
   lerpFactor: number;
 };
 
+// buildNodeMap - build a map of the nodes in the scene
 function buildNodeMap(scene: THREE.Object3D) {
   const nodes: Record<string, THREE.Object3D> = {};
   scene.traverse((child) => {

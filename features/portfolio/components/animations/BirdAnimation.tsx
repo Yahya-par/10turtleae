@@ -229,7 +229,7 @@ export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
       boundsRef.current = null;
     };
   }, [scene, nodes]);
-
+// useFrame - update the bird animation passing state and delta for the animation of the birds. state represents the current state of the scene and delta represents the time since the last frame.
   useFrame((state, delta) => {
     const bounds = boundsRef.current;
     const birds = birdsRef.current;
