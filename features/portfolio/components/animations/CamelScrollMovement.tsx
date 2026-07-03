@@ -37,11 +37,10 @@ type CamelRig = {
   heldCamelX: number | null;
   /** Camel X when turtle boarded — held until turtle remounts. */
   handoffCamelX: number | null;
-  /** After reverse remount, move camel only by scroll delta from this anchor. */
-  camelRemountAnchorX: number | null;
-  camelRemountAnchorProgress: number;
   /** Prevents immediate re-transfer to boat while still at the handoff. */
   suppressForwardTransfer: boolean;
+  reverseScrollHold: number;
+  forwardScrollHold: number;
   lastScrollProgress: number;
 };
 
@@ -151,33 +150,12 @@ function getDesertProgress(
   );
 }
 
-function getTargetCamelX(
-  rig: CamelRig,
-  scrollProgress: number,
-) {
-  const desertProgress = getDesertProgress(
-    scrollProgress,
-    rig.desertScrollStart,
-    rig.desertScrollEnd,
-  );
-  return THREE.MathUtils.lerp(
-    rig.trackStartX,
-    rig.trackEndX,
-    desertProgress,
-  );
-}
-
 function resolveCamelX(
   rig: CamelRig,
-  scrollProgress: number,
   targetCamelX: number,
 ) {
   if (rig.handoffCamelX !== null) return rig.handoffCamelX;
   if (rig.heldCamelX !== null) return rig.heldCamelX;
-  if (rig.camelRemountAnchorX !== null) {
-    const anchorTargetX = getTargetCamelX(rig, rig.camelRemountAnchorProgress);
-    return rig.camelRemountAnchorX + (targetCamelX - anchorTargetX);
-  }
   return targetCamelX;
 }
 
@@ -328,8 +306,9 @@ function beginForwardTransfer(rig: CamelRig, scene: THREE.Object3D) {
   rig.mount = "transfer";
   rig.transferMode = "toBoat";
   rig.transferProgress = 0;
-  rig.camelRemountAnchorX = null;
   rig.suppressForwardTransfer = false;
+  rig.reverseScrollHold = 0;
+  rig.forwardScrollHold = 0;
 }
 
 function beginReverseTransfer(rig: CamelRig, scene: THREE.Object3D) {
@@ -344,6 +323,7 @@ function beginReverseTransfer(rig: CamelRig, scene: THREE.Object3D) {
   rig.mount = "transfer";
   rig.transferMode = "toCamel";
   rig.transferProgress = 1;
+  rig.onBoat = false;
 }
 
 function updateTurtleTransferArc(rig: CamelRig, transferT: number) {
@@ -469,9 +449,9 @@ function buildRig(
     desertScrollEnd: track.desertScrollEnd,
     heldCamelX: null,
     handoffCamelX: null,
-    camelRemountAnchorX: null,
-    camelRemountAnchorProgress: 0,
     suppressForwardTransfer: false,
+    reverseScrollHold: 0,
+    forwardScrollHold: 0,
     lastScrollProgress: 0,
   };
 }
@@ -511,24 +491,43 @@ export default function CamelScrollMovement({
       rigRef.current = rig;
     }
 
-    const progress = THREE.MathUtils.lerp(
-      scrollProgress.current,
-      targetScrollProgress.current,
-      lerpFactor,
-    );
+    const progress = scrollProgress.current;
+    const {
+      scrollIntentThreshold,
+      reverseTransferScrollHold,
+      forwardTransferScrollHold,
+    } = camelScrollSettings;
 
     const desertProgress = getDesertProgress(
       progress,
       rig.desertScrollStart,
       rig.desertScrollEnd,
     );
-    const scrollingBack = progress > rig.lastScrollProgress + 0.00001;
+    const progressDelta = progress - rig.lastScrollProgress;
+    const scrollingBack = progressDelta > scrollIntentThreshold;
+    const scrollingForwardToScene2 = progressDelta < -scrollIntentThreshold;
+
+    if (scrollingBack) {
+      rig.reverseScrollHold += delta;
+      rig.forwardScrollHold = 0;
+    } else if (scrollingForwardToScene2) {
+      rig.forwardScrollHold += delta;
+      rig.reverseScrollHold = 0;
+    } else {
+      rig.reverseScrollHold = Math.max(0, rig.reverseScrollHold - delta * 2);
+      rig.forwardScrollHold = Math.max(0, rig.forwardScrollHold - delta * 2);
+    }
+
     const targetCamelX = THREE.MathUtils.lerp(
       rig.trackStartX,
       rig.trackEndX,
       desertProgress,
     );
-    const camelX = resolveCamelX(rig, progress, targetCamelX);
+    const camelLocked =
+      rig.handoffCamelX !== null || rig.heldCamelX !== null;
+    const camelX = camelLocked
+      ? resolveCamelX(rig, targetCamelX)
+      : targetCamelX;
 
     rig.carrier.position.set(camelX, rig.baseY, rig.baseZ);
     rig.carrier.updateMatrixWorld(true);
@@ -548,6 +547,13 @@ export default function CamelScrollMovement({
     const boatHasMoved = boatTravelProgressRef.current > 0.03;
     const transferStep = delta / camelScrollSettings.transferDuration;
 
+    if (rig.mount === "boat" && !rig.onBoat && transferTriggerT > 0 && !boatHasMoved) {
+      rig.onBoat = true;
+    }
+    if (rig.mount === "camel" && rig.onBoat && rig.transferMode === "idle") {
+      rig.onBoat = false;
+    }
+
     if (rig.onBoat && boatHasMoved) {
       if (rig.handoffCamelX === null) {
         rig.handoffCamelX = rig.carrier.position.x;
@@ -558,8 +564,16 @@ export default function CamelScrollMovement({
       return;
     }
 
-    if (rig.suppressForwardTransfer && transferTriggerT <= 0) {
+    if (rig.suppressForwardTransfer && rig.forwardScrollHold >= forwardTransferScrollHold) {
       rig.suppressForwardTransfer = false;
+    }
+
+    if (
+      rig.transferMode === "idle" &&
+      rig.mount === "transfer" &&
+      rig.turtle.parent === rig.transferCarrier
+    ) {
+      mountTurtleOnCamel(rig, true);
     }
 
     if (
@@ -575,9 +589,10 @@ export default function CamelScrollMovement({
       rig.transferMode === "idle" &&
       rig.onBoat &&
       !boatHasMoved &&
-      scrollingBack
+      rig.reverseScrollHold >= reverseTransferScrollHold
     ) {
       beginReverseTransfer(rig, scene);
+      turtleOnBoatRef.current = false;
     }
 
     if (rig.transferMode === "toBoat") {
@@ -610,15 +625,11 @@ export default function CamelScrollMovement({
         mountTurtleOnCamel(rig, true);
         rig.onBoat = false;
         rig.transferMode = "idle";
-        const frozenCamelX = rig.handoffCamelX ?? rig.carrier.position.x;
-        rig.camelRemountAnchorX = frozenCamelX;
-        rig.camelRemountAnchorProgress = progress;
         rig.suppressForwardTransfer = true;
+        rig.reverseScrollHold = 0;
+        rig.forwardScrollHold = 0;
         rig.handoffCamelX = null;
         rig.heldCamelX = null;
-        const settledCamelX = resolveCamelX(rig, progress, targetCamelX);
-        rig.carrier.position.set(settledCamelX, rig.baseY, rig.baseZ);
-        rig.carrier.updateMatrixWorld(true);
         turtleOnBoatRef.current = false;
       }
       rig.lastScrollProgress = progress;
@@ -630,6 +641,14 @@ export default function CamelScrollMovement({
         rig.handoffCamelX = rig.carrier.position.x;
       }
       mountTurtleOnBoat(rig);
+      turtleOnBoatRef.current = true;
+      rig.lastScrollProgress = progress;
+      return;
+    }
+
+    if (rig.mount === "boat") {
+      mountTurtleOnBoat(rig);
+      rig.onBoat = true;
       turtleOnBoatRef.current = true;
       rig.lastScrollProgress = progress;
       return;

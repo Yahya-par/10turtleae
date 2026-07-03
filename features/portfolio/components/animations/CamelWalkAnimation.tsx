@@ -533,11 +533,9 @@ export default function CamelWalkAnimation({
       }
 
       rigRef.current = rig;
-      const scrollValue = THREE.MathUtils.lerp(
-        scrollProgress.current,
-        targetScrollProgress.current,
-        lerpFactor,
-      );
+      const initCarrier = findSceneObject(scene, nodes, camelScrollSettings.carrierName);
+      lastCarrierXRef.current = initCarrier?.position.x ?? null;
+      const scrollValue = scrollProgress.current;
       lastDesertProgressRef.current = getDesertProgress(
         scrollValue,
         rig.desertScrollStart,
@@ -547,11 +545,7 @@ export default function CamelWalkAnimation({
     }
 
     const rig = rigRef.current;
-    const scrollValue = THREE.MathUtils.lerp(
-      scrollProgress.current,
-      targetScrollProgress.current,
-      lerpFactor,
-    );
+    const scrollValue = scrollProgress.current;
     const desertProgress = getDesertProgress(
       scrollValue,
       rig.desertScrollStart,

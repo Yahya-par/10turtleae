@@ -189,11 +189,7 @@ export default function BoatScrollMovement({
       rigRef.current = rig;
     }
 
-    const progress = THREE.MathUtils.lerp(
-      scrollProgress.current,
-      targetScrollProgress.current,
-      lerpFactor,
-    );
+    const progress = scrollProgress.current;
 
     if (!turtleOnBoatRef.current) {
       rig.boardScene2T = null;

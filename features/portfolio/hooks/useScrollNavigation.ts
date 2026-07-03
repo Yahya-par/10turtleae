@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import normalizeWheel from "normalize-wheel";
 
-const BASE_SCROLL_SPEED = 0.0085;
-const LERP_FACTOR = 0.1;
+const BASE_SCROLL_SPEED = 0.0048;
+const LERP_FACTOR = 0.12;
 /** -1: scroll up moves backward through the diorama */
 const SCROLL_DIRECTION = -1;
 

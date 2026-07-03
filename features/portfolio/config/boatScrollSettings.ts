@@ -10,8 +10,8 @@ export const boatScrollSettings = {
   pathInset: 1.2,
 
   /** >1 = boat advances more gently through scene 2 scroll. */
-  travelExponent: 1.45,
+  travelExponent: 1.55,
 
   /** Smooth follow toward scroll-mapped target (lower = slower). */
-  followLerp: 0.14,
+  followLerp: 0.1,
 } as const;

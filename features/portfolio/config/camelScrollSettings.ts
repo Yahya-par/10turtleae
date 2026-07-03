@@ -21,7 +21,13 @@ export const camelScrollSettings = {
   transferEndDistanceX: 2.8,
   transferArcHeight: 0.9,
   /** Seconds for turtle arc from camel to boat. */
-  transferDuration: 1.35,
+  transferDuration: 1.9,
+  /** Progress delta per frame to count as scroll intent. */
+  scrollIntentThreshold: 0.000025,
+  /** Sustained reverse scroll before turtle returns from boat. */
+  reverseTransferScrollHold: 0.15,
+  /** Sustained forward scroll before re-boarding after remount. */
+  forwardTransferScrollHold: 0.12,
   /**
    * Cushion height as a fraction of boat height above hull bottom.
    */
