@@ -9,6 +9,7 @@ import {
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
   getScrollRange,
+  scrollProgressToPathX,
   type SceneFrame,
 } from "@features/portfolio/components/camera/CameraPath";
 
@@ -22,6 +23,7 @@ type BoatRig = {
   scene2ScrollEnd: number;
   boardScene2T: number | null;
   boatProgress: number;
+  dockedAtEnd: boolean;
 };
 
 type BoatScrollMovementProps = {
@@ -32,6 +34,7 @@ type BoatScrollMovementProps = {
   targetScrollProgress: RefObject<number>;
   lerpFactor: number;
   turtleOnBoatRef: RefObject<boolean>;
+  turtleOnCarRef: RefObject<boolean>;
   boatTravelProgressRef: RefObject<number>;
 };
 
@@ -158,6 +161,7 @@ function buildRig(
     scene2ScrollEnd: track.scene2ScrollEnd,
     boardScene2T: null,
     boatProgress: 0,
+    dockedAtEnd: false,
   };
 }
 
@@ -169,6 +173,7 @@ export default function BoatScrollMovement({
   targetScrollProgress,
   lerpFactor,
   turtleOnBoatRef,
+  turtleOnCarRef,
   boatTravelProgressRef,
 }: BoatScrollMovementProps) {
   const rigRef = useRef<BoatRig | null>(null);
@@ -181,7 +186,7 @@ export default function BoatScrollMovement({
     };
   }, [scene, nodes, sceneFrame]);
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     let rig = rigRef.current;
     if (!rig) {
       rig = buildRig(scene, nodes, sceneFrame);
@@ -189,13 +194,38 @@ export default function BoatScrollMovement({
       rigRef.current = rig;
     }
 
-    const progress = scrollProgress.current;
+    const progress = THREE.MathUtils.lerp(
+      scrollProgress.current,
+      targetScrollProgress.current,
+      lerpFactor,
+    );
 
     if (!turtleOnBoatRef.current) {
-      rig.boardScene2T = null;
-      rig.boatProgress = 0;
-      boatTravelProgressRef.current = 0;
-      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+      if (rig.dockedAtEnd || turtleOnCarRef.current) {
+        rig.boatProgress = 1;
+        boatTravelProgressRef.current = 1;
+        rig.carrier.position.set(
+          THREE.MathUtils.lerp(rig.restX, rig.trackEndX, 1),
+          rig.baseY,
+          rig.baseZ,
+        );
+        return;
+      }
+
+      if (progress > rig.scene2ScrollEnd + 0.008) {
+        rig.dockedAtEnd = false;
+        rig.boardScene2T = null;
+        rig.boatProgress = 0;
+        boatTravelProgressRef.current = 0;
+        rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+        return;
+      }
+
+      rig.carrier.position.set(
+        THREE.MathUtils.lerp(rig.restX, rig.trackEndX, rig.boatProgress),
+        rig.baseY,
+        rig.baseZ,
+      );
       return;
     }
 
@@ -215,17 +245,19 @@ export default function BoatScrollMovement({
       rig.scene2ScrollEnd,
     );
 
-    rig.boatProgress = THREE.MathUtils.lerp(
-      rig.boatProgress,
-      targetProgress,
-      boatScrollSettings.followLerp * delta * 60,
-    );
+    rig.boatProgress = targetProgress;
 
-    rig.carrier.position.set(
-      THREE.MathUtils.lerp(rig.restX, rig.trackEndX, rig.boatProgress),
-      rig.baseY,
-      rig.baseZ,
-    );
+    if (rig.boatProgress >= 0.94) {
+      rig.dockedAtEnd = true;
+    }
+
+    const inScene2 =
+      progress >= rig.scene2ScrollStart && progress <= rig.scene2ScrollEnd;
+    const nextX = inScene2
+      ? scrollProgressToPathX(progress, sceneFrame)
+      : THREE.MathUtils.lerp(rig.restX, rig.trackEndX, rig.boatProgress);
+
+    rig.carrier.position.set(nextX, rig.baseY, rig.baseZ);
     boatTravelProgressRef.current = rig.boatProgress;
   });
 

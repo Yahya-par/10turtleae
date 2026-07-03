@@ -157,6 +157,15 @@ export function getScrollRange(sceneFrame: SceneFrame | null) {
   return { min: 4, max: 19 };
 }
 
+/** World X that matches ScrollCamera lookAt for a given scroll progress. */
+export function scrollProgressToPathX(
+  progress: number,
+  sceneFrame: SceneFrame | null,
+) {
+  const range = getScrollRange(sceneFrame);
+  return THREE.MathUtils.lerp(range.min, range.max, progress);
+}
+
 // getDioramaPose - get the diorama pose from the curve and the look at center
 export function getDioramaPose(
   curve: THREE.CatmullRomCurve3,
