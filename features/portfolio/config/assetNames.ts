@@ -21,6 +21,15 @@ export const assetNames = {
     sedan: "Car1001",
     /** Blender: RR.001 */
     rangeRover: "RR001",
+    /** Blender: carboady.001 (export typo for car body) */
+    body: "carboady001",
+    bodyBlender: "carboady.001",
+    /** Blender: aagadnutyre.001 (front tyre) */
+    frontWheel: "aagadnutyre001",
+    frontWheelBlender: "aagadnutyre.001",
+    /** Blender: paachadnutyre.001 (back tyre) */
+    backWheel: "paachadnutyre001",
+    backWheelBlender: "paachadnutyre.001",
   },
   clouds: {
     /** Blender: cloud.001 */
@@ -33,6 +42,12 @@ export const assetNames = {
   roads: {
     /** Last road segment before Atlantis (Blender: Road.004, ~X -92 to -101) */
     alRabEnd: "Road004",
+    /** Blender: Roadthatpart.001 */
+    thatPart: "roadthatpart001",
+    thatPartBlender: "Roadthatpart.001",
+    /** Blender: RoadStreched.001 */
+    stretched: "roadstreched001",
+    stretchedBlender: "RoadStreched.001",
   },
   campfire: {
     /** Blender: campfire.001 */
@@ -76,6 +91,12 @@ export const assetNames = {
     object: "boat001",
     blenderName: "boat.001",
   },
+  yacht: {
+    object: "yacht001",
+    blenderName: "yacht.001",
+    water: "shinywater001",
+    waterBlender: "shinywater.001",
+  },
   perfectBuildings: {
     /** Blender: Perfect_Buildings.001 */
     object: "Perfect_Buildings001",
@@ -87,12 +108,14 @@ export const assetNames = {
     openingDesert: "Desert_Scene_Floor",
     /** One scene left of Dubai Frame (~X -6) */
     floor1: "Desert_Scene_Floor001",
+    floor1Blender: "Desert_Scene_Floor.001",
     /** Blender scene 3 — Dubai Frame (Desert_Scene_Floor.002, ~X -22) */
     dubaiFrame: "Desert_Scene_Floor002",
     /** Blender scene 7 — Burj Al Arab (Desert_Scene_Floor.005, ~X -92) */
     alRab: "Desert_Scene_Floor005",
-    /** Atlantis panel — NOT the car route end (Desert_Scene_Floor.007, ~X -110) */
+    /** Atlantis panel (Desert_Scene_Floor.007, ~X -110) */
     atlantis: "Desert_Scene_Floor007",
+    atlantisBlender: "Desert_Scene_Floor.007",
     /** One scene left of Atlantis (~X -127) — safari scene floor */
     floor8: "Desert_Scene_Floor008",
     safariFloor: "Desert_Scene_Floor008",

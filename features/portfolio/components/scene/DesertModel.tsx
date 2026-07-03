@@ -13,6 +13,8 @@ import SceneObjectLinks from "./SceneObjectLinks";
 import CamelScrollMovement from "../animations/CamelScrollMovement";
 import BirdAnimation from "../animations/BirdAnimation";
 import BoatScrollMovement from "../animations/BoatScrollMovement";
+import CarBodyAnimation from "../animations/CarBodyAnimation";
+import YachtScrollMovement from "../animations/YachtScrollMovement";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -90,6 +92,38 @@ export default function DesertModel({
         lerpFactor={lerpFactor}
         turtleOnBoatRef={turtleOnBoatRef}
         boatTravelProgressRef={boatTravelProgressRef}
+      />
+      <CarBodyAnimation scene={scene} nodes={nodes} />
+      // YachtScrollMovement component - yacht scroll movement takes these props: scene, nodes, sceneFrame, scrollProgress, targetScrollProgress, lerpFactor
+      <YachtScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        // turtleOnBoatRef={turtleOnBoatRef}
+        // boatTravelProgressRef={boatTravelProgressRef}
+      />
+      <BoatScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnBoatRef={turtleOnBoatRef}
+        boatTravelProgressRef={boatTravelProgressRef}
+      />
+      <CarBodyAnimation scene={scene} nodes={nodes} />
+      // YachtScrollMovement component - yacht scroll movement takes these props: scene, nodes, sceneFrame, scrollProgress, targetScrollProgress, lerpFactor
+      <YachtScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
       />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />

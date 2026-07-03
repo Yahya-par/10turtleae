@@ -41,4 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 
 
-public/Models/*
+public/Models/Model6.blend
+public/Models/Modelv1 2.glb
+public/Models/NewModel.glb

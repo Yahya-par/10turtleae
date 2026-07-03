@@ -24,6 +24,18 @@ type CarAnimationProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
+function resolveObject(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  runtimeName: string,
+  blenderName?: string,
+) {
+  return (
+    findSceneObject(scene, nodes, runtimeName) ??
+    (blenderName ? findSceneObject(scene, nodes, blenderName) : null)
+  );
+}
+
 // getCarTrack is a function that returns the start and end positions of the cars along the track.
 function getCarTrack(
   sceneStart: THREE.Object3D,
@@ -72,29 +84,36 @@ export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
 
     scene.updateMatrixWorld(true);
 
-    const sceneStart = findSceneObject(
+    const sceneStart = resolveObject(
       scene,
       nodes,
       carAnimationSettings.sceneStart,
+      carAnimationSettings.sceneStartBlender,
     );
-    const sceneEnd = findSceneObject(
+    const sceneEnd = resolveObject(
       scene,
       nodes,
       carAnimationSettings.sceneEnd,
+      carAnimationSettings.sceneEndBlender,
     );
-    const roadEnd = findSceneObject(
+    const roadEnd = resolveObject(
       scene,
       nodes,
       carAnimationSettings.roadEnd,
+      carAnimationSettings.roadEndBlender,
     );
 
     if (!sceneStart || !sceneEnd) {
       if (process.env.NODE_ENV === "development") {
-        console.warn("[CarAnimation] Missing scene panels:", {
+        console.warn("[CarAnimation] Missing track markers:", {
           sceneStart: carAnimationSettings.sceneStart,
+          sceneStartBlender: carAnimationSettings.sceneStartBlender,
           startFound: Boolean(sceneStart),
           sceneEnd: carAnimationSettings.sceneEnd,
+          sceneEndBlender: carAnimationSettings.sceneEndBlender,
           endFound: Boolean(sceneEnd),
+          roadEnd: carAnimationSettings.roadEnd,
+          roadFound: Boolean(roadEnd),
         });
       }
       return;
