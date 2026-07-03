@@ -15,6 +15,7 @@ import BirdAnimation from "../animations/BirdAnimation";
 import BoatScrollMovement from "../animations/BoatScrollMovement";
 import CarBodyAnimation from "../animations/CarBodyAnimation";
 import YachtScrollMovement from "../animations/YachtScrollMovement";
+import LanternAnimation from "../animations/LanternAnimation";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -94,29 +95,6 @@ export default function DesertModel({
         boatTravelProgressRef={boatTravelProgressRef}
       />
       <CarBodyAnimation scene={scene} nodes={nodes} />
-      // YachtScrollMovement component - yacht scroll movement takes these props: scene, nodes, sceneFrame, scrollProgress, targetScrollProgress, lerpFactor
-      <YachtScrollMovement
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-        // turtleOnBoatRef={turtleOnBoatRef}
-        // boatTravelProgressRef={boatTravelProgressRef}
-      />
-      <BoatScrollMovement
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-        turtleOnBoatRef={turtleOnBoatRef}
-        boatTravelProgressRef={boatTravelProgressRef}
-      />
-      <CarBodyAnimation scene={scene} nodes={nodes} />
-      // YachtScrollMovement component - yacht scroll movement takes these props: scene, nodes, sceneFrame, scrollProgress, targetScrollProgress, lerpFactor
       <YachtScrollMovement
         scene={scene}
         nodes={nodes}
@@ -127,6 +105,7 @@ export default function DesertModel({
       />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
+      <LanternAnimation scene={scene} nodes={nodes} />
       <CamelWalkAnimation
         scene={scene}
         nodes={nodes}
