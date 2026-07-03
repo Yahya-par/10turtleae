@@ -18,12 +18,15 @@ export const carAnimationSettings = {
     },
   ],
 
-  /** Scene 3 — Dubai Frame (Desert_Scene_Floor.002, ~X -22). */
-  sceneStart: assetNames.scenes.dubaiFrame,
-  /** Scene 7 — Burj Al Arab (Desert_Scene_Floor.005). */
-  sceneEnd: assetNames.scenes.alRab,
-  /** Last road mesh — caps end X so cars stay on pavement. */
-  roadEnd: assetNames.roads.alRabEnd,
+  /** Dubai Frame landmark (~X -22) — Modelv1 has no Desert_Scene_Floor.002 panel. */
+  sceneStart: assetNames.scenes.dubaiFrameLandmark,
+  sceneStartBlender: "proper_dubaiframe.001",
+  /** Burj Al Arab landmark (~X -92) — Modelv1 has no Desert_Scene_Floor.005 panel. */
+  sceneEnd: assetNames.scenes.alRabLandmark,
+  sceneEndBlender: "burjalarab.001",
+  /** Last road mesh on this route in Modelv1.glb. */
+  roadEnd: assetNames.roads.stretched,
+  roadEndBlender: assetNames.roads.stretchedBlender,
 
   /** Inset from Dubai Frame entrance edge (high X, toward scene 1). */
   startInset: 1.5,

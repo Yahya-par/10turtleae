@@ -12,6 +12,8 @@ import CamelWalkAnimation from "../animations/CamelWalkAnimation";
 import SceneObjectLinks from "./SceneObjectLinks";
 import CamelScrollMovement from "../animations/CamelScrollMovement";
 import BirdAnimation from "../animations/BirdAnimation";
+import CarBodyAnimation from "../animations/CarBodyAnimation";
+import YachtScrollMovement from "../animations/YachtScrollMovement";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -69,6 +71,16 @@ export default function DesertModel({
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
       <CamelScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+      />
+      <CarBodyAnimation scene={scene} nodes={nodes} />
+      // YachtScrollMovement component - yacht scroll movement takes these props: scene, nodes, sceneFrame, scrollProgress, targetScrollProgress, lerpFactor
+      <YachtScrollMovement
         scene={scene}
         nodes={nodes}
         sceneFrame={sceneFrame}
