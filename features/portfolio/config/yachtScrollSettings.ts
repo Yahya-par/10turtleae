@@ -1,49 +1,103 @@
 import { assetNames } from "./assetNames";
 
-export const yachtScrollSettings = {
+export type YachtScrollSettings = {
+  label: string;
+  yacht: string;
+  yachtBlender: string;
+  water: string;
+  waterBlender: string;
+  carrierName: string;
+  sceneStart: string;
+  sceneStartBlender: string;
+  sceneEnd: string;
+  sceneEndBlender: string;
+  trackEnd: string;
+  trackEndBlender: string;
+  /** Optional second water mesh at the destination scene (e.g. marina after mosque river). */
+  waterEnd?: string;
+  waterEndBlender?: string;
+  /**
+   * stopBeforeNextScene — cap at panel edge (Atlantis).
+   * throughNextScene — sail into the next panel (mosque → marina).
+   */
+  trackEndMode: "stopBeforeNextScene" | "throughNextScene";
+  pathInset: number;
+  useAuthoredStart: boolean;
+  startOffsetX: number;
+  endOffsetX: number;
+  positionOffset: { x: number; y: number; z: number };
+  scrollStart: number | null;
+  scrollEnd: number | null;
+  scrollFallback: { scrollStart: number; scrollEnd: number };
+  /** Extra nudge on route start (x/y/z). Only used when set — see mosqueYachtScrollSettings. */
+  manualStartPosition?: { x: number; y: number; z: number };
+  /** Extra nudge on route end (x/y/z). Only used when set — see mosqueYachtScrollSettings. */
+  manualEndPosition?: { x: number; y: number; z: number };
+};
+
+/** Atlantis / Palm Jumeirah — yacht.001 on shinywater.001 */
+export const atlantisYachtScrollSettings: YachtScrollSettings = {
+  label: "Atlantis",
   yacht: assetNames.yacht.object,
   yachtBlender: assetNames.yacht.blenderName,
   water: assetNames.yacht.water,
   waterBlender: assetNames.yacht.waterBlender,
   carrierName: "YachtScrollCarrier001",
-
-  /** Atlantis scene panel — yacht animates only while camera is here. */
   sceneStart: assetNames.scenes.atlantis,
   sceneStartBlender: assetNames.scenes.atlantisBlender,
-  /** Same panel — scroll window ends when camera leaves Atlantis (not safari). */
   sceneEnd: assetNames.scenes.atlantis,
   sceneEndBlender: assetNames.scenes.atlantisBlender,
-
-  /**
-   * Mesh that caps the destination (safari is at lower X — do not use floor8).
-   * Stops at the Atlantis panel edge so the yacht stays on the water scene.
-   */
   trackEnd: assetNames.scenes.atlantis,
   trackEndBlender: assetNames.scenes.atlantisBlender,
-
-  /** Inset from water / panel edges along the travel axis. */
+  trackEndMode: "stopBeforeNextScene",
   pathInset: 1.5,
-
-  /** Start from the yacht's authored GLB position instead of the water edge. */
   useAuthoredStart: true,
-
-  /** Extra nudge on start X (positive = further right / toward Dubai). */
   startOffsetX: 0,
-  /**
-   * Extra nudge on end X from the track-end marker edge.
-   * Positive = stop further right (safer). Negative = toward safari/desert.
-   */
   endOffsetX: 0,
-
-  /** Nudge applied every frame on top of the track position. */
   positionOffset: { x: 0, y: 0.3, z: 0 },
+  scrollStart: null,
+  scrollEnd: null,
+  scrollFallback: { scrollStart: 0.12, scrollEnd: 0 },
+};
+
+/** Abu Dhabi Mosque → Dubai Marina → Blue Waters — yacht.002 */
+export const mosqueYachtScrollSettings: YachtScrollSettings = {
+  label: "Mosque → Marina → Blue Waters",
+  yacht: assetNames.yacht.mosqueYacht,
+  yachtBlender: assetNames.yacht.mosqueYachtBlender,
+  water: assetNames.yacht.mosqueRiver,
+  waterBlender: assetNames.yacht.mosqueRiverBlender,
+  waterEnd: assetNames.yacht.mgrWater,
+  waterEndBlender: assetNames.yacht.mgrWaterBlender,
+  carrierName: "YachtScrollCarrier002",
+  sceneStart: assetNames.scenes.abuDhabiMosque,
+  sceneStartBlender: assetNames.scenes.abuDhabiMosqueBlender,
+  sceneEnd: assetNames.scenes.floor11,
+  sceneEndBlender: assetNames.scenes.floor11Blender,
+  trackEnd: assetNames.scenes.floor11,
+  trackEndBlender: assetNames.scenes.floor11Blender,
+  trackEndMode: "throughNextScene",
+  pathInset: 1.5,
+  useAuthoredStart: true,
+  startOffsetX: 0,
+  endOffsetX: 0,
+  positionOffset: { x: 0, y: 0, z: 0 },
+  scrollStart: null,
+  scrollEnd: null,
+  scrollFallback: { scrollStart: 0.08, scrollEnd: 0 },
 
   /**
-   * Manual scroll window (0–1). Set both to control when the yacht moves.
-   * scrollStart: progress when yacht is at start (higher = enters scene earlier).
-   * scrollEnd: progress when yacht reaches end (lower = must scroll further to finish).
-   * Example: { scrollStart: 0.12, scrollEnd: 0 } — full sail as you scroll to the left.
+   * yacht.002 position — edit these only.
+   * x: left (−) / right (+)   y: down (−) / up (+)   z: back (−) / forward (+)
    */
-  scrollStart: null as number | null,
-  scrollEnd: null as number | null,
-} as const;
+  manualStartPosition: { x: 0, y: 0.45, z: -1 },
+  manualEndPosition: { x: 0, y: 0.45, z: -1 },
+};
+
+export const yachtScrollConfigs = [
+  atlantisYachtScrollSettings,
+  mosqueYachtScrollSettings,
+] as const;
+
+/** @deprecated Use atlantisYachtScrollSettings */
+export const yachtScrollSettings = atlantisYachtScrollSettings;

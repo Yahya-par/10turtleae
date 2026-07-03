@@ -1,10 +1,11 @@
 import { Canvas } from "@react-three/fiber";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import * as THREE from "three";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
 import { renderSettings } from "@features/portfolio/config/renderSettings";
 import { useScrollNavigation } from "@features/portfolio/hooks/useScrollNavigation";
 import { useInspectProtection, blockInspectContextMenu } from "@features/portfolio/hooks/useInspectProtection";
+import PortfolioLoader from "@features/portfolio/components/loading/PortfolioLoader";
 import Scene from "./scene/Scene";
 import Overlay from "./scene/Overlay";
 import CameraHud from "./camera/CameraHud";
@@ -20,6 +21,8 @@ export default function Experience() {
     cameraSettings.mode === "scroll",
   );
   const [isReady, setIsReady] = useState(false);
+  const [loaderDone, setLoaderDone] = useState(false);
+  const handleLoaderComplete = useCallback(() => setLoaderDone(true), []);
   const [orbitPose, setOrbitPose] = useState({
     position: { ...cameraSettings.orbit.position },
     lookAt: { ...cameraSettings.orbit.target },
@@ -52,12 +55,18 @@ export default function Experience() {
           onOrbitPoseChange={setOrbitPose}
         />
       </Canvas>
+      {!loaderDone && (
+        <PortfolioLoader
+          isAssetsReady={isReady}
+          onComplete={handleLoaderComplete}
+        />
+      )}
       <Overlay
-        isReady={isReady}
+        isReady={loaderDone}
         progress={navigation.targetScrollProgress}
         mode={cameraSettings.mode}
       />
-      {isOrbitMode && isReady && <CameraHud {...orbitPose} />}
+      {isOrbitMode && loaderDone && isReady && <CameraHud {...orbitPose} />}
     </div>
   );
 }

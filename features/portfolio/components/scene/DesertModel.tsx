@@ -2,6 +2,7 @@ import { useGLTF } from "@react-three/drei";
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "@features/portfolio/components/camera/CameraPath";
+import { yachtScrollConfigs } from "@features/portfolio/config/yachtScrollSettings";
 import MetroTrainAnimation from "../animations/MetroTrainAnimation";
 import CarAnimation from "../animations/CarAnimation";
 import CloudAnimation from "../animations/CloudAnimation";
@@ -26,7 +27,6 @@ type DesertModelProps = {
   lerpFactor: number;
 };
 
-// buildNodeMap - build a map of the nodes in the scene
 function buildNodeMap(scene: THREE.Object3D) {
   const nodes: Record<string, THREE.Object3D> = {};
   scene.traverse((child) => {
@@ -94,37 +94,18 @@ export default function DesertModel({
         boatTravelProgressRef={boatTravelProgressRef}
       />
       <CarBodyAnimation scene={scene} nodes={nodes} />
-      // YachtScrollMovement component - yacht scroll movement takes these props: scene, nodes, sceneFrame, scrollProgress, targetScrollProgress, lerpFactor
-      <YachtScrollMovement
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-        // turtleOnBoatRef={turtleOnBoatRef}
-        // boatTravelProgressRef={boatTravelProgressRef}
-      />
-      <BoatScrollMovement
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-        turtleOnBoatRef={turtleOnBoatRef}
-        boatTravelProgressRef={boatTravelProgressRef}
-      />
-      <CarBodyAnimation scene={scene} nodes={nodes} />
-      // YachtScrollMovement component - yacht scroll movement takes these props: scene, nodes, sceneFrame, scrollProgress, targetScrollProgress, lerpFactor
-      <YachtScrollMovement
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-      />
+      {yachtScrollConfigs.map((settings) => (
+        <YachtScrollMovement
+          key={settings.carrierName}
+          settings={settings}
+          scene={scene}
+          nodes={nodes}
+          sceneFrame={sceneFrame}
+          scrollProgress={scrollProgress}
+          targetScrollProgress={targetScrollProgress}
+          lerpFactor={lerpFactor}
+        />
+      ))}
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
       <CamelWalkAnimation
