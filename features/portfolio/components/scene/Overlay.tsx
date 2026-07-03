@@ -31,13 +31,6 @@ export default function Overlay({ isReady, progress, mode }: OverlayProps) {
 
   return (
     <>
-      <div className={`portfolio-loader ${isReady ? "is-ready" : ""}`}>
-        <div className="portfolio-loader__card">
-          <span className="portfolio-loader__emoji">🏜️</span>
-          <p>{isReady ? "Entering the scene..." : "Loading your world..."}</p>
-        </div>
-      </div>
-
       {mode === "orbit" && isReady && (
         <div className="portfolio-hint is-visible">
           <p>left-drag orbit · scroll zoom · right-drag pan</p>

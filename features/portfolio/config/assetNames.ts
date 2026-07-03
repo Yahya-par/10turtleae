@@ -97,6 +97,14 @@ export const assetNames = {
     blenderName: "yacht.001",
     water: "shinywater001",
     waterBlender: "shinywater.001",
+    mosqueYacht: "yacht002",
+    mosqueYachtBlender: "yacht.002",
+    mosqueRiver: "mosqueriver001",
+    mosqueRiverBlender: "mosqueriver.001",
+    marinaWater: "water002",
+    marinaWaterBlender: "water.002",
+    mgrWater: "mgrwater001",
+    mgrWaterBlender: "mgrwater.001",
   },
   perfectBuildings: {
     /** Blender: Perfect_Buildings.001 */
@@ -125,8 +133,15 @@ export const assetNames = {
     museumFloor: "Desert_Scene_Floor003",
     dubaiFrameLandmark: "proper_dubaiframe001",
     alRabLandmark: "burjalarab001",
+    /** Abu Dhabi Grand Mosque panel (Desert_Scene_Floor.009, ~X -145) */
+    abuDhabiMosque: "Desert_Scene_Floor009",
+    abuDhabiMosqueBlender: "Desert_Scene_Floor.009",
+    /** Scene after mosque (Desert_Scene_Floor.010, ~X -163) */
+    floor10: "Desert_Scene_Floor010",
+    floor10Blender: "Desert_Scene_Floor.010",
     /** Last scene panel (Desert_Scene_Floor.011, ~X -181) */
     floor11: "Desert_Scene_Floor011",
+    floor11Blender: "Desert_Scene_Floor.011",
   },
   lastScene: {
     /** Blender object name: ain */
