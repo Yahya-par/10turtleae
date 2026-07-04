@@ -33,6 +33,13 @@ export type YachtScrollSettings = {
   manualStartPosition?: { x: number; y: number; z: number };
   /** Extra nudge on route end (x/y/z). Only used when set — see mosqueYachtScrollSettings. */
   manualEndPosition?: { x: number; y: number; z: number };
+  turtleSeatOffsetX?: number;
+  turtleSeatOffsetY?: number;
+  turtleSeatOffsetZ?: number;
+  turtleDeckHeightFactor?: number;
+  transferArcHeight?: number;
+  transferDuration?: number;
+  reverseTransferScrollHold?: number;
 };
 
 /** Atlantis / Palm Jumeirah — yacht.001 on shinywater.001 */
@@ -58,6 +65,14 @@ export const atlantisYachtScrollSettings: YachtScrollSettings = {
   scrollStart: null,
   scrollEnd: null,
   scrollFallback: { scrollStart: 0.12, scrollEnd: 0 },
+
+  turtleSeatOffsetX: 0.20,
+  turtleSeatOffsetY: -0.05,
+  turtleSeatOffsetZ: 0.55,
+  turtleDeckHeightFactor: 0.62,
+  transferArcHeight: 0.9,
+  transferDuration: 1.85,
+  reverseTransferScrollHold: 0.15,
 };
 
 /** Abu Dhabi Mosque → Dubai Marina → Blue Waters — yacht.002 */
