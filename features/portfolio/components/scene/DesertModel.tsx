@@ -65,6 +65,7 @@ export default function DesertModel({
   const boatTravelProgressRef = useRef(0);
   const turtleOnCarRef = useRef(false);
   const carTravelProgressRef = useRef(0);
+  const turtleReturnedFromCarRef = useRef(false);
 
   useLayoutEffect(() => {
     prepareScene(scene);
@@ -76,6 +77,17 @@ export default function DesertModel({
       <primitive object={scene} />
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
+      <CarScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnCarRef={turtleOnCarRef}
+        turtleOnBoatRef={turtleOnBoatRef}
+        carTravelProgressRef={carTravelProgressRef}
+      />
       <CamelScrollMovement
         scene={scene}
         nodes={nodes}
@@ -87,6 +99,7 @@ export default function DesertModel({
         boatTravelProgressRef={boatTravelProgressRef}
         turtleOnCarRef={turtleOnCarRef}
         carTravelProgressRef={carTravelProgressRef}
+        turtleReturnedFromCarRef={turtleReturnedFromCarRef}
       />
       <BoatScrollMovement
         scene={scene}
@@ -98,16 +111,7 @@ export default function DesertModel({
         turtleOnBoatRef={turtleOnBoatRef}
         boatTravelProgressRef={boatTravelProgressRef}
         turtleOnCarRef={turtleOnCarRef}
-      />
-      <CarScrollMovement
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-        turtleOnCarRef={turtleOnCarRef}
-        carTravelProgressRef={carTravelProgressRef}
+        turtleReturnedFromCarRef={turtleReturnedFromCarRef}
       />
       {yachtScrollConfigs.map((settings) => (
         <YachtScrollMovement

@@ -12,7 +12,6 @@ import {
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
   getScrollRange,
-  scrollProgressToPathX,
   type SceneFrame,
 } from "@features/portfolio/components/camera/CameraPath";
 
@@ -45,6 +44,7 @@ type CarScrollMovementProps = {
   targetScrollProgress: RefObject<number>;
   lerpFactor: number;
   turtleOnCarRef: RefObject<boolean>;
+  turtleOnBoatRef: RefObject<boolean>;
   carTravelProgressRef: RefObject<number>;
 };
 
@@ -109,6 +109,34 @@ function getCarScrollWindow(
     carScrollStart,
     carScrollEnd: Math.min(carScrollStart, carScrollEnd),
   };
+}
+
+export function resolveCarScrollWindow(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  sceneFrame: SceneFrame | null,
+) {
+  const {
+    body,
+    bodyBlender,
+    road,
+    roadBlender,
+    scene2Floor,
+    scene2FloorBlender,
+    startInset,
+    endInset,
+    roadOffset,
+  } = carScrollSettings;
+
+  const roadMesh = resolveObject(scene, nodes, road, roadBlender);
+  const floor2 = resolveObject(scene, nodes, scene2Floor, scene2FloorBlender);
+
+  if (!roadMesh || !floor2) {
+    return { carScrollStart: 1, carScrollEnd: 0 };
+  }
+
+  const track = getRoadTrack(roadMesh, startInset, endInset, roadOffset);
+  return getCarScrollWindow(floor2, track.endX, getScrollRange(sceneFrame));
 }
 
 function getCarTravelProgress(
@@ -323,9 +351,11 @@ export default function CarScrollMovement({
   targetScrollProgress,
   lerpFactor,
   turtleOnCarRef,
+  turtleOnBoatRef,
   carTravelProgressRef,
 }: CarScrollMovementProps) {
   const rigRef = useRef<CarRig | null>(null);
+  const carSessionActiveRef = useRef(false);
 
   useLayoutEffect(() => {
     rigRef.current = buildRig(scene, nodes, sceneFrame);
@@ -350,7 +380,20 @@ export default function CarScrollMovement({
       lerpFactor,
     );
 
-    if (!turtleOnCarRef.current) {
+    if (turtleOnCarRef.current) {
+      carSessionActiveRef.current = true;
+    }
+
+    if (turtleOnBoatRef.current && !turtleOnCarRef.current) {
+      carSessionActiveRef.current = false;
+      rig.carProgress = 0;
+      carTravelProgressRef.current = 0;
+      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+      rig.lastX = rig.restX;
+      return;
+    }
+
+    if (!turtleOnCarRef.current && !carSessionActiveRef.current) {
       rig.carProgress = 0;
       carTravelProgressRef.current = 0;
       rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
@@ -364,14 +407,11 @@ export default function CarScrollMovement({
       rig.carScrollEnd,
     );
 
-    let nextX: number;
-    if (progress > rig.carScrollStart) {
-      nextX = rig.restX;
-    } else if (progress < rig.carScrollEnd) {
-      nextX = rig.trackEndX;
-    } else {
-      nextX = scrollProgressToPathX(progress, sceneFrame);
-    }
+    const nextX = THREE.MathUtils.lerp(
+      rig.restX,
+      rig.trackEndX,
+      rig.carProgress,
+    );
 
     rig.carrier.position.set(nextX, rig.baseY, rig.baseZ);
     carTravelProgressRef.current = rig.carProgress;
