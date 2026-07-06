@@ -120,6 +120,11 @@ export const assetNames = {
     floor1Blender: "Desert_Scene_Floor.001",
     /** Blender scene 3 — Dubai Frame (Desert_Scene_Floor.002, ~X -22) */
     dubaiFrame: "Desert_Scene_Floor002",
+    /** Blender scene 5 — Dubai Mall (Desert_Scene_Floor.004, ~X -74) */
+    dubaiMallFloor: "Desert_Scene_Floor004",
+    /** Blender scene 5 — Burj Khalifa cutout (anotherasset.003) */
+    burjKhalifa: "anotherasset003",
+    burjKhalifaBlender: "anotherasset.003",
     /** Blender scene 7 — Burj Al Arab (Desert_Scene_Floor.005, ~X -92) */
     alRab: "Desert_Scene_Floor005",
     /** Atlantis panel (Desert_Scene_Floor.007, ~X -110) */
