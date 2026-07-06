@@ -45,6 +45,8 @@ type CarScrollMovementProps = {
   lerpFactor: number;
   turtleOnCarRef: RefObject<boolean>;
   turtleOnBoatRef: RefObject<boolean>;
+  turtleOnJetskiRef: RefObject<boolean>;
+  turtleOnYachtRef: RefObject<boolean>;
   carTravelProgressRef: RefObject<number>;
 };
 
@@ -352,6 +354,8 @@ export default function CarScrollMovement({
   lerpFactor,
   turtleOnCarRef,
   turtleOnBoatRef,
+  turtleOnJetskiRef,
+  turtleOnYachtRef,
   carTravelProgressRef,
 }: CarScrollMovementProps) {
   const rigRef = useRef<CarRig | null>(null);
@@ -390,6 +394,23 @@ export default function CarScrollMovement({
       carTravelProgressRef.current = 0;
       rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
       rig.lastX = rig.restX;
+      return;
+    }
+
+    const atJetskiHandoff = carTravelProgressRef.current >= 0.94;
+    const parkAtJetskiHandoff =
+      !turtleOnCarRef.current &&
+      !turtleOnBoatRef.current &&
+      (turtleOnJetskiRef.current ||
+        turtleOnYachtRef.current ||
+        atJetskiHandoff);
+
+    if (parkAtJetskiHandoff) {
+      carSessionActiveRef.current = false;
+      rig.carProgress = 1;
+      carTravelProgressRef.current = 1;
+      rig.carrier.position.set(rig.trackEndX, rig.baseY, rig.baseZ);
+      rig.lastX = rig.trackEndX;
       return;
     }
 

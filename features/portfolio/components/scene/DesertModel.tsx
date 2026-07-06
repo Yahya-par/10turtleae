@@ -2,7 +2,7 @@ import { useGLTF } from "@react-three/drei";
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "@features/portfolio/components/camera/CameraPath";
-import { yachtScrollConfigs } from "@features/portfolio/config/yachtScrollSettings";
+import { yachtScrollConfigs, atlantisYachtScrollSettings } from "@features/portfolio/config/yachtScrollSettings";
 import MetroTrainAnimation from "../animations/MetroTrainAnimation";
 import CarAnimation from "../animations/CarAnimation";
 import CloudAnimation from "../animations/CloudAnimation";
@@ -15,7 +15,9 @@ import CamelScrollMovement from "../animations/CamelScrollMovement";
 import BirdAnimation from "../animations/BirdAnimation";
 import BoatScrollMovement from "../animations/BoatScrollMovement";
 import CarScrollMovement from "../animations/CarScrollMovement";
+import JetskiScrollMovement from "../animations/JetskiScrollMovement";
 import YachtScrollMovement from "../animations/YachtScrollMovement";
+import PlaneScrollMovement from "../animations/PlaneScrollMovement";
 import LanternAnimation from "../animations/LanternAnimation";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
 import DesertSafariVideoOverlay from "../animations/DesertSafariVideoOverlay";
@@ -68,6 +70,12 @@ export default function DesertModel({
   const turtleOnCarRef = useRef(false);
   const carTravelProgressRef = useRef(0);
   const turtleReturnedFromCarRef = useRef(false);
+  const turtleOnJetskiRef = useRef(false);
+  const jetskiTravelProgressRef = useRef(0);
+  const turtleReturnedFromJetskiRef = useRef(false);
+  const turtleOnYachtRef = useRef(false);
+  const yachtTravelProgressRef = useRef(0);
+  const turtleReturnedFromYachtRef = useRef(false);
 
   useLayoutEffect(() => {
     prepareScene(scene);
@@ -88,7 +96,21 @@ export default function DesertModel({
         lerpFactor={lerpFactor}
         turtleOnCarRef={turtleOnCarRef}
         turtleOnBoatRef={turtleOnBoatRef}
+        turtleOnJetskiRef={turtleOnJetskiRef}
+        turtleOnYachtRef={turtleOnYachtRef}
         carTravelProgressRef={carTravelProgressRef}
+      />
+      <JetskiScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnJetskiRef={turtleOnJetskiRef}
+        turtleOnCarRef={turtleOnCarRef}
+        turtleOnYachtRef={turtleOnYachtRef}
+        jetskiTravelProgressRef={jetskiTravelProgressRef}
       />
       <CamelScrollMovement
         scene={scene}
@@ -102,6 +124,12 @@ export default function DesertModel({
         turtleOnCarRef={turtleOnCarRef}
         carTravelProgressRef={carTravelProgressRef}
         turtleReturnedFromCarRef={turtleReturnedFromCarRef}
+        turtleOnJetskiRef={turtleOnJetskiRef}
+        turtleOnYachtRef={turtleOnYachtRef}
+        jetskiTravelProgressRef={jetskiTravelProgressRef}
+        turtleReturnedFromJetskiRef={turtleReturnedFromJetskiRef}
+        yachtTravelProgressRef={yachtTravelProgressRef}
+        turtleReturnedFromYachtRef={turtleReturnedFromYachtRef}
       />
       <BoatScrollMovement
         scene={scene}
@@ -114,6 +142,8 @@ export default function DesertModel({
         boatTravelProgressRef={boatTravelProgressRef}
         turtleOnCarRef={turtleOnCarRef}
         turtleReturnedFromCarRef={turtleReturnedFromCarRef}
+        turtleOnJetskiRef={turtleOnJetskiRef}
+        turtleOnYachtRef={turtleOnYachtRef}
       />
       {yachtScrollConfigs.map((settings) => (
         <YachtScrollMovement
@@ -125,8 +155,26 @@ export default function DesertModel({
           scrollProgress={scrollProgress}
           targetScrollProgress={targetScrollProgress}
           lerpFactor={lerpFactor}
+          travelProgressRef={
+            settings.carrierName === atlantisYachtScrollSettings.carrierName
+              ? yachtTravelProgressRef
+              : undefined
+          }
+          turtleOnYachtRef={
+            settings.carrierName === atlantisYachtScrollSettings.carrierName
+              ? turtleOnYachtRef
+              : undefined
+          }
         />
       ))}
+      <PlaneScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+      />
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
       <LanternAnimation scene={scene} nodes={nodes} />

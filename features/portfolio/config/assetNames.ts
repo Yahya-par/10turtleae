@@ -95,6 +95,16 @@ export const assetNames = {
     object: "boat001",
     blenderName: "boat.001",
   },
+  jetski: {
+    object: "jetski001",
+    blenderName: "jetski.001",
+    driver: "jetskidriver001",
+    driverBlender: "jetskidriver.001",
+  },
+  plane: {
+    object: "planewithtext001",
+    blenderName: "planewithtext.001",
+  },
   yacht: {
     object: "yacht001",
     blenderName: "yacht.001",

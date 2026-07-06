@@ -34,6 +34,8 @@ type BoatScrollMovementProps = {
   lerpFactor: number;
   turtleOnBoatRef: RefObject<boolean>;
   turtleOnCarRef: RefObject<boolean>;
+  turtleOnJetskiRef: RefObject<boolean>;
+  turtleOnYachtRef: RefObject<boolean>;
   boatTravelProgressRef: RefObject<number>;
   turtleReturnedFromCarRef: RefObject<boolean>;
 };
@@ -179,6 +181,8 @@ export default function BoatScrollMovement({
   lerpFactor,
   turtleOnBoatRef,
   turtleOnCarRef,
+  turtleOnJetskiRef,
+  turtleOnYachtRef,
   boatTravelProgressRef,
   turtleReturnedFromCarRef,
 }: BoatScrollMovementProps) {
@@ -216,12 +220,17 @@ export default function BoatScrollMovement({
       }
     }
 
-    if (turtleOnCarRef.current) {
+    if (turtleOnCarRef.current || turtleOnJetskiRef.current || turtleOnYachtRef.current) {
       carReturnSetupDoneRef.current = false;
     }
 
     if (!turtleOnBoatRef.current) {
-      if (rig.dockedAtEnd || turtleOnCarRef.current) {
+      if (
+        rig.dockedAtEnd ||
+        turtleOnCarRef.current ||
+        turtleOnJetskiRef.current ||
+        turtleOnYachtRef.current
+      ) {
         rig.boatProgress = 1;
         boatTravelProgressRef.current = 1;
         rig.carrier.position.set(

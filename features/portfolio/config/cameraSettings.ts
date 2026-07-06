@@ -24,9 +24,9 @@ export const cameraSettings = {
   },
 
   manual: {
-    position: { x: 11.08, y: 6.17, z: -10.03 },
-    lookAt: { x: 11.09, y: 5.93, z: -6.33 },
-    fov: 23,
+    position: { x: 11.08, y: 6.755, z: -10.03 },
+    lookAt: { x: 11.09, y: 6.53, z: -6.33 },
+    fov: 15,
     near: 0.1,
     far: 300,
   },

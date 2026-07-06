@@ -20,6 +20,9 @@ type YachtScrollMovementProps = {
   scrollProgress: RefObject<number>;
   targetScrollProgress: RefObject<number>;
   lerpFactor: number;
+  travelProgressRef?: RefObject<number>;
+  /** When set, yacht only sails after the turtle has mounted. */
+  turtleOnYachtRef?: RefObject<boolean>;
 };
 
 type YachtRig = {
@@ -29,6 +32,26 @@ type YachtRig = {
 };
 
 const tempPosition = new THREE.Vector3();
+const tempYachtSize = new THREE.Vector3();
+
+export function getYachtSeatWorld(
+  yacht: THREE.Object3D,
+  settings: YachtScrollSettings,
+  target = new THREE.Vector3(),
+) {
+  const bounds = getObjectBounds(yacht);
+  const center = bounds.getCenter(new THREE.Vector3());
+  const size = bounds.getSize(tempYachtSize);
+  const deckFactor = settings.turtleDeckHeightFactor ?? 0.62;
+
+  target.set(
+    center.x + (settings.turtleSeatOffsetX ?? 0),
+    bounds.min.y + size.y * deckFactor + (settings.turtleSeatOffsetY ?? 0),
+    center.z + (settings.turtleSeatOffsetZ ?? 0),
+  );
+
+  return target;
+}
 
 function resolveObject(
   scene: THREE.Object3D,
@@ -230,6 +253,8 @@ export default function YachtScrollMovement({
   scrollProgress,
   targetScrollProgress,
   lerpFactor,
+  travelProgressRef,
+  turtleOnYachtRef,
 }: YachtScrollMovementProps) {
   const rigRef = useRef<YachtRig | null>(null);
   const waterRef = useRef<THREE.Object3D | null>(null);
@@ -405,17 +430,24 @@ export default function YachtScrollMovement({
     const inWindow = isInScrollWindow(progress, winStart, winEnd);
     rig.carrier.visible = true;
 
-    if (!inWindow) {
-      const parkedAtStart = winEnd < winStart
-        ? progress > winStart
-        : progress < winStart;
+    const turtleBoarded = !turtleOnYachtRef || turtleOnYachtRef.current;
+
+    if (!inWindow || !turtleBoarded) {
+      const parkedAtStart =
+        !turtleBoarded || (winEnd < winStart ? progress > winStart : progress < winStart);
       tempPosition.copy(parkedAtStart ? start : end);
       rig.carrier.position.copy(tempPosition);
       rig.lastX = tempPosition.x;
+      if (travelProgressRef) {
+        travelProgressRef.current = parkedAtStart ? 0 : 1;
+      }
       return;
     }
 
     const trackProgress = getTrackProgress(progress, winStart, winEnd);
+    if (travelProgressRef) {
+      travelProgressRef.current = trackProgress;
+    }
     tempPosition.copy(start).lerp(end, trackProgress);
     rig.carrier.position.copy(tempPosition);
     rig.lastX = tempPosition.x;
