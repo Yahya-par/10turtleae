@@ -2,7 +2,6 @@
 
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
-import { decompressFrames, parseGIF, type ParsedFrame } from "gifuct-js";
 import * as THREE from "three";
 import { burjKhalifaVideoSettings } from "@features/portfolio/config/burjKhalifaVideoSettings";
 import { findSceneObject } from "@features/portfolio/utils/sceneObjectUtils";
@@ -12,63 +11,49 @@ type BurjKhalifaVideoOverlayProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
-type GifFrame = ParsedFrame;
-
-type GifPlayback = {
-  texture: THREE.CanvasTexture;
-  referenceMap: THREE.Texture;
-  redrawCurrentFrame: () => void;
-  tick: (deltaSeconds: number) => void;
+type VideoPlayback = {
+  texture: THREE.VideoTexture;
+  video: HTMLVideoElement;
+  play: () => void;
   dispose: () => void;
 };
 
-type TexturedMaterial = THREE.Material & {
-  map: THREE.Texture | null;
-  transparent: boolean;
-  opacity: number;
-  depthWrite: boolean;
-  depthTest: boolean;
-  needsUpdate: boolean;
-};
+const videoVertexShader = /* glsl */ `
+  varying vec2 vUv;
 
-const ORIGINAL_MAP_KEY = "burjKhalifaOriginalMap";
-const ORIGINAL_POSITION_KEY = "burjKhalifaOriginalPosition";
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
 
-function isTexturedMaterial(
-  material: THREE.Material,
-): material is TexturedMaterial {
-  return "map" in material;
-}
+const videoFragmentShader = /* glsl */ `
+  uniform sampler2D map;
+  uniform float alphaCutoff;
+  varying vec2 vUv;
 
-function getOriginalMap(mesh: THREE.Mesh, currentMap: THREE.Texture | null) {
-  const stored = mesh.userData[ORIGINAL_MAP_KEY] as THREE.Texture | undefined;
-  if (stored) return stored;
-  if (!currentMap) return null;
-  mesh.userData[ORIGINAL_MAP_KEY] = currentMap;
-  return currentMap;
-}
+  void main() {
+    vec4 color = texture2D(map, vUv);
+    if (color.r + color.g + color.b < alphaCutoff) discard;
+    gl_FragColor = color;
+  }
+`;
 
-function getOriginalPosition(mesh: THREE.Mesh) {
-  const stored = mesh.userData[ORIGINAL_POSITION_KEY] as THREE.Vector3 | undefined;
-  if (stored) return stored;
-
-  const position = mesh.position.clone();
-  mesh.userData[ORIGINAL_POSITION_KEY] = position;
-  return position;
-}
-
-function applyPositionOffset(mesh: THREE.Mesh) {
-  const base = getOriginalPosition(mesh);
-  const { positionOffset } = burjKhalifaVideoSettings;
-
-  mesh.position.set(
-    base.x + positionOffset.x,
-    base.y + positionOffset.y,
-    base.z + positionOffset.z,
+function resolveBurjMesh(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+) {
+  return (
+    findSceneObject(scene, nodes, burjKhalifaVideoSettings.objectName) ??
+    findSceneObject(scene, nodes, burjKhalifaVideoSettings.blenderObjectName)
   );
 }
 
-function copyMapTransform(target: THREE.Texture, source: THREE.Texture) {
+function copyTextureSettings(
+  target: THREE.Texture,
+  source: THREE.Texture | null,
+) {
+  if (!source) return;
   target.flipY = source.flipY;
   target.wrapS = source.wrapS;
   target.wrapT = source.wrapT;
@@ -78,204 +63,82 @@ function copyMapTransform(target: THREE.Texture, source: THREE.Texture) {
   target.rotation = source.rotation;
 }
 
-function applyMapTuning(texture: THREE.Texture, reference: THREE.Texture) {
-  copyMapTransform(texture, reference);
-
-  const { textureOffset, textureScale } = burjKhalifaVideoSettings;
-
-  texture.repeat.x /= textureScale.u;
-  texture.repeat.y /= textureScale.v;
-  texture.offset.x += (1 - 1 / textureScale.u) * 0.5 + textureOffset.u;
-  texture.offset.y += (1 - 1 / textureScale.v) * 0.5 + textureOffset.v;
+function createVideoMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: null as THREE.Texture | null },
+      alphaCutoff: { value: burjKhalifaVideoSettings.alphaCutoff },
+    },
+    vertexShader: videoVertexShader,
+    fragmentShader: videoFragmentShader,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    toneMapped: false,
+  });
 }
 
-function blitFrame(
-  targetContext: CanvasRenderingContext2D,
-  frame: GifFrame,
-  sourceWidth: number,
-  sourceHeight: number,
-  destWidth: number,
-  destHeight: number,
-  mirrorX: boolean,
-) {
-  const scratch = document.createElement("canvas");
-  scratch.width = sourceWidth;
-  scratch.height = sourceHeight;
-  const scratchContext = scratch.getContext("2d", { alpha: true });
-  if (!scratchContext) return;
-
-  const imageData = new ImageData(
-    new Uint8ClampedArray(frame.patch),
-    frame.dims.width,
-    frame.dims.height,
-  );
-  scratchContext.clearRect(0, 0, sourceWidth, sourceHeight);
-  scratchContext.putImageData(imageData, frame.dims.left, frame.dims.top);
-
-  targetContext.clearRect(0, 0, destWidth, destHeight);
-  targetContext.save();
-
-  if (mirrorX) {
-    targetContext.translate(destWidth, 0);
-    targetContext.scale(-1, 1);
-  }
-
-  targetContext.drawImage(scratch, 0, 0, destWidth, destHeight);
-  targetContext.restore();
-}
-
-async function createGifPlayback(
+function createVideoPlayback(
   url: string,
-  referenceMap: THREE.Texture,
-): Promise<GifPlayback> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(
-      `[BurjKhalifaVideoOverlay] Failed to fetch GIF (${response.status}): ${url}`,
-    );
-  }
+  referenceMap: THREE.Texture | null,
+): VideoPlayback {
+  const video = document.createElement("video");
+  video.src = url;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.style.display = "none";
+  document.body.appendChild(video);
 
-  const buffer = await response.arrayBuffer();
-  const gif = parseGIF(buffer);
-  const frames = decompressFrames(gif, true) as GifFrame[];
-
-  if (frames.length === 0) {
-    throw new Error(`[BurjKhalifaVideoOverlay] GIF has no frames: ${url}`);
-  }
-
-  const sourceWidth = gif.lsd.width;
-  const sourceHeight = gif.lsd.height;
-  const maxEdge = burjKhalifaVideoSettings.textureMaxEdge;
-  const scale = Math.min(
-    1,
-    maxEdge / Math.max(sourceWidth, sourceHeight),
-  );
-  const width = Math.max(1, Math.round(sourceWidth * scale));
-  const height = Math.max(1, Math.round(sourceHeight * scale));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext("2d", { alpha: true, willReadFrequently: true });
-  if (!context) {
-    throw new Error("[BurjKhalifaVideoOverlay] Canvas 2D context unavailable");
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
+  const texture = new THREE.VideoTexture(video);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.premultiplyAlpha = false;
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
-  applyMapTuning(texture, referenceMap);
+  copyTextureSettings(texture, referenceMap);
 
-  let frameIndex = 0;
-  let elapsedMs = 0;
-
-  const renderFrame = (frame: GifFrame) => {
-    blitFrame(
-      context,
-      frame,
-      sourceWidth,
-      sourceHeight,
-      width,
-      height,
-      burjKhalifaVideoSettings.mirrorX,
-    );
-    texture.needsUpdate = true;
+  const play = () => {
+    if (video.paused) {
+      void video.play().catch(() => {
+        // Autoplay may be blocked until the user interacts with the page.
+      });
+    }
   };
 
-  renderFrame(frames[0]!);
+  video.addEventListener("loadeddata", play);
+  window.addEventListener("pointerdown", play, { once: true });
+  window.addEventListener("wheel", play, { once: true });
 
   return {
     texture,
-    referenceMap,
-    redrawCurrentFrame: () => {
-      const frame = frames[frameIndex];
-      if (frame) renderFrame(frame);
-    },
-    tick: (deltaSeconds: number) => {
-      const frame = frames[frameIndex];
-      if (!frame) return;
-
-      elapsedMs += deltaSeconds * 1000;
-      const delayMs = Math.max(frame.delay || 100, 20);
-
-      if (elapsedMs < delayMs) return;
-
-      elapsedMs = 0;
-      frameIndex = (frameIndex + 1) % frames.length;
-      renderFrame(frames[frameIndex]!);
-    },
+    video,
+    play,
     dispose: () => {
+      video.removeEventListener("loadeddata", play);
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+      video.remove();
       texture.dispose();
     },
   };
-}
-
-function isWithinSceneBounds(mesh: THREE.Mesh) {
-  const { minX, maxX } = burjKhalifaVideoSettings.sceneBounds;
-  const world = new THREE.Vector3();
-  mesh.getWorldPosition(world);
-  return world.x >= minX && world.x <= maxX;
-}
-
-function buildSetupKey() {
-  const {
-    objectName,
-    blenderObjectName,
-    mediaUrl,
-    textureMaxEdge,
-    sceneBounds,
-  } = burjKhalifaVideoSettings;
-
-  return [
-    objectName,
-    blenderObjectName,
-    mediaUrl,
-    textureMaxEdge,
-    sceneBounds.minX,
-    sceneBounds.maxX,
-  ].join("|");
-}
-
-function buildTuningKey() {
-  const { positionOffset, textureOffset, textureScale, mirrorX } =
-    burjKhalifaVideoSettings;
-
-  return [
-    positionOffset.x,
-    positionOffset.y,
-    positionOffset.z,
-    textureOffset.u,
-    textureOffset.v,
-    textureScale.u,
-    textureScale.v,
-    mirrorX,
-  ].join("|");
 }
 
 export default function BurjKhalifaVideoOverlay({
   scene,
   nodes,
 }: BurjKhalifaVideoOverlayProps) {
-  const playbackRef = useRef<GifPlayback | null>(null);
-  const meshRef = useRef<THREE.Mesh | null>(null);
-  const setupKey = buildSetupKey();
-  const tuningKey = buildTuningKey();
+  const playbackRef = useRef<VideoPlayback | null>(null);
+  const overlayRef = useRef<THREE.Mesh | null>(null);
+  const materialRef = useRef<THREE.ShaderMaterial | null>(null);
 
   useLayoutEffect(() => {
-    let cancelled = false;
-
     scene.updateMatrixWorld(true);
 
-    const burjMesh = findSceneObject(
-      scene,
-      nodes,
-      burjKhalifaVideoSettings.objectName,
-    ) ?? findSceneObject(scene, nodes, burjKhalifaVideoSettings.blenderObjectName);
-
-    if (!burjMesh || !(burjMesh as THREE.Mesh).isMesh) {
+    const sourceMesh = resolveBurjMesh(scene, nodes);
+    if (!sourceMesh || !(sourceMesh as THREE.Mesh).isMesh) {
       if (process.env.NODE_ENV === "development") {
         console.warn(
           "[BurjKhalifaVideoOverlay] Missing asset:",
@@ -285,120 +148,58 @@ export default function BurjKhalifaVideoOverlay({
       return;
     }
 
-    const mesh = burjMesh as THREE.Mesh;
-
-    if (!isWithinSceneBounds(mesh)) {
-      if (process.env.NODE_ENV === "development") {
-        const world = new THREE.Vector3();
-        mesh.getWorldPosition(world);
-        console.warn("[BurjKhalifaVideoOverlay] Mesh outside scene 6 bounds:", {
-          mesh: mesh.name,
-          worldX: world.x,
-        });
-      }
-      return;
-    }
-
-    meshRef.current = mesh;
-    getOriginalPosition(mesh);
-    applyPositionOffset(mesh);
-
+    const burjMesh = sourceMesh as THREE.Mesh;
     const sourceMaterial = (
-      Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
-    ) as THREE.Material;
+      Array.isArray(burjMesh.material) ? burjMesh.material[0] : burjMesh.material
+    ) as THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
+    const referenceMap = sourceMaterial?.map ?? null;
 
-    if (!isTexturedMaterial(sourceMaterial)) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn(
-          "[BurjKhalifaVideoOverlay] Mesh has no textured material:",
-          mesh.name,
-        );
-      }
-      return;
-    }
+    const playback = createVideoPlayback(
+      burjKhalifaVideoSettings.videoUrl,
+      referenceMap,
+    );
 
-    const originalMap = getOriginalMap(mesh, sourceMaterial.map);
-    if (!originalMap) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn(
-          "[BurjKhalifaVideoOverlay] Mesh has no base map:",
-          mesh.name,
-        );
-      }
-      return;
-    }
+    const material = createVideoMaterial();
+    copyTextureSettings(playback.texture, referenceMap);
+    material.uniforms.map.value = playback.texture;
 
-    const savedTransparent = sourceMaterial.transparent;
-    const savedOpacity = sourceMaterial.opacity;
-    const savedDepthWrite = sourceMaterial.depthWrite;
-    const savedDepthTest = sourceMaterial.depthTest;
+    const overlay = burjMesh.clone();
+    overlay.name = burjKhalifaVideoSettings.overlayName;
+    overlay.material = material;
+    overlay.renderOrder = 2;
 
-    void createGifPlayback(burjKhalifaVideoSettings.mediaUrl, originalMap)
-      .then((playback) => {
-        if (cancelled) {
-          playback.dispose();
-          return;
-        }
+    burjMesh.parent?.add(overlay);
+    burjMesh.visible = false;
 
-        sourceMaterial.map = playback.texture;
-        sourceMaterial.transparent = true;
-        sourceMaterial.opacity = 1;
-        sourceMaterial.depthWrite = savedDepthWrite;
-        sourceMaterial.depthTest = savedDepthTest;
-        sourceMaterial.needsUpdate = true;
-        playbackRef.current = playback;
+    playbackRef.current = playback;
+    overlayRef.current = overlay;
+    materialRef.current = material;
+    playback.play();
 
-        if (process.env.NODE_ENV === "development") {
-          const world = new THREE.Vector3();
-          mesh.getWorldPosition(world);
-          console.info("[BurjKhalifaVideoOverlay] Ready:", {
-            mesh: mesh.name,
-            scene: burjKhalifaVideoSettings.sceneLabel,
-            worldX: +world.x.toFixed(2),
-            media: burjKhalifaVideoSettings.mediaUrl,
-            tuning: buildTuningKey(),
-          });
-        }
-      })
-      .catch((error: unknown) => {
-        if (process.env.NODE_ENV === "development") {
-          console.error("[BurjKhalifaVideoOverlay] Setup failed:", error);
-        }
+    if (process.env.NODE_ENV === "development") {
+      console.info("[BurjKhalifaVideoOverlay] Ready:", {
+        source: burjMesh.name,
+        overlay: overlay.name,
       });
+    }
 
     return () => {
-      cancelled = true;
-      sourceMaterial.map = originalMap;
-      sourceMaterial.transparent = savedTransparent;
-      sourceMaterial.opacity = savedOpacity;
-      sourceMaterial.depthWrite = savedDepthWrite;
-      sourceMaterial.depthTest = savedDepthTest;
-      sourceMaterial.needsUpdate = true;
-
-      const basePosition = mesh.userData[ORIGINAL_POSITION_KEY] as
-        | THREE.Vector3
-        | undefined;
-      if (basePosition) mesh.position.copy(basePosition);
-
-      playbackRef.current?.dispose();
+      burjMesh.visible = true;
+      overlay.parent?.remove(overlay);
+      material.dispose();
+      playback.dispose();
       playbackRef.current = null;
-      meshRef.current = null;
+      overlayRef.current = null;
+      materialRef.current = null;
     };
-  }, [scene, nodes, setupKey]);
+  }, [scene, nodes]);
 
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (mesh) applyPositionOffset(mesh);
-
+  useFrame(() => {
     const playback = playbackRef.current;
     if (!playback) return;
-
-    applyMapTuning(playback.texture, playback.referenceMap);
-    playback.redrawCurrentFrame();
-  }, [tuningKey]);
-
-  useFrame((_, delta) => {
-    playbackRef.current?.tick(delta);
+    if (playback.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      playback.texture.needsUpdate = true;
+    }
   });
 
   return null;
