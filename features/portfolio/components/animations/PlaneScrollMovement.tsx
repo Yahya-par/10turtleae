@@ -8,6 +8,8 @@ import {
 } from "@features/portfolio/components/camera/CameraPath";
 import {
   attachAnimationCarrier,
+  findAlRabScenePanel,
+  findObjectByNamePattern,
   findSceneObject,
   getObjectBounds,
 } from "@features/portfolio/utils/sceneObjectUtils";
@@ -194,24 +196,14 @@ export default function PlaneScrollMovement({
       sceneEndBlender,
     } = planeScrollSettings;
 
-    const trackEndObject = resolveObject(
-      scene,
-      nodes,
-      trackEnd,
-      trackEndBlender,
-    );
-    const sceneStartObject = resolveObject(
-      scene,
-      nodes,
-      sceneStart,
-      sceneStartBlender,
-    );
-    const sceneEndObject = resolveObject(
-      scene,
-      nodes,
-      sceneEnd,
-      sceneEndBlender,
-    );
+    const alRabPanel = findAlRabScenePanel(scene, nodes);
+
+    const trackEndObject =
+      resolveObject(scene, nodes, trackEnd, trackEndBlender) ?? alRabPanel;
+    const sceneStartObject =
+      resolveObject(scene, nodes, sceneStart, sceneStartBlender) ?? alRabPanel;
+    const sceneEndObject =
+      resolveObject(scene, nodes, sceneEnd, sceneEndBlender) ?? alRabPanel;
 
     if (!rigRef.current) {
       rigRef.current = buildRig(scene, nodes);

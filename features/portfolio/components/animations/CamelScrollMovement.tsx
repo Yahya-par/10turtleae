@@ -11,11 +11,15 @@ import { getYachtSeatWorld } from "@features/portfolio/components/animations/Yac
 import {
   attachAnimationCarrier,
   attachObjectToCarrier,
+  findOpeningDesertFloor,
   findSceneObject,
   getObjectBounds,
+  resolveScene1CamelTrack,
+  clampScene1WorldX,
+  getScene1TravelProgress,
+  setObjectWorldPosition,
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
-  scrollProgressToPathX,
   type SceneFrame,
 } from "@features/portfolio/components/camera/CameraPath";
 
@@ -57,8 +61,12 @@ type CamelRig = {
   turtleFootLift: number;
   baseY: number;
   baseZ: number;
-  trackStartX: number;
-  trackEndX: number;
+  baseWorldY: number;
+  baseWorldZ: number;
+  startX: number;
+  endX: number;
+  progressAtStart: number;
+  progressAtEnd: number;
   desertScrollStart: number;
   desertScrollEnd: number;
   carScrollStart: number;
@@ -132,58 +140,47 @@ function resolveTurtle(
   return null;
 }
 
-function getScrollRange(sceneFrame: SceneFrame | null) {
-  if (sceneFrame?.waypoints.length) {
-    const xs = sceneFrame.waypoints.map((waypoint) => waypoint.position.x);
-    return { min: Math.min(...xs), max: Math.max(...xs) };
-  }
-
-  if (sceneFrame?.bounds) {
-    return { min: sceneFrame.bounds.min.x, max: sceneFrame.bounds.max.x };
-  }
-
-  return { min: 4, max: 19 };
-}
-
-function getDesertTrack(
-  floor: THREE.Object3D,
-  carrierY: number,
-  carrierZ: number,
-  scrollRange: { min: number; max: number },
-) {
-  const floorBounds = getObjectBounds(floor);
-  const { pathInset } = camelScrollSettings;
-
-  const trackStartX = floorBounds.min.x + pathInset;
-  const trackEndX = floorBounds.max.x - pathInset;
-  const scrollSpan = scrollRange.max - scrollRange.min;
-
-  const desertScrollStart =
-    scrollSpan > 0
-      ? (floorBounds.min.x - scrollRange.min) / scrollSpan
-      : 0;
-  const desertScrollEnd =
-    scrollSpan > 0
-      ? (floorBounds.max.x - scrollRange.min) / scrollSpan
-      : 1;
-
-  return {
-    trackStartX,
-    trackEndX,
-    baseY: carrierY,
-    baseZ: carrierZ,
-    desertScrollStart: THREE.MathUtils.clamp(desertScrollStart, 0, 1),
-    desertScrollEnd: THREE.MathUtils.clamp(desertScrollEnd, 0, 1),
-  };
-}
-
 function resolveCamelX(
   rig: CamelRig,
   targetCamelX: number,
 ) {
-  if (rig.handoffCamelX !== null) return rig.handoffCamelX;
-  if (rig.heldCamelX !== null) return rig.heldCamelX;
-  return targetCamelX;
+  const raw =
+    rig.handoffCamelX !== null
+      ? rig.handoffCamelX
+      : rig.heldCamelX !== null
+        ? rig.heldCamelX
+        : targetCamelX;
+
+  return clampScene1WorldX(raw, rig);
+}
+
+function getCarrierWorldX(carrier: THREE.Group) {
+  carrier.updateMatrixWorld(true);
+  return carrier.getWorldPosition(tempVec3).x;
+}
+
+function setHandoffCamelX(rig: CamelRig) {
+  if (rig.handoffCamelX === null) {
+    rig.handoffCamelX = clampScene1WorldX(
+      getCarrierWorldX(rig.carrier),
+      rig,
+    );
+  }
+}
+
+/** Map scroll progress to camel world X — scene 1 entrance → scene 2 boundary only. */
+function getCamelTrackWorldX(
+  progress: number,
+  rig: Pick<CamelRig, "startX" | "endX" | "progressAtStart" | "progressAtEnd">,
+) {
+  return clampScene1WorldX(
+    THREE.MathUtils.lerp(
+      rig.startX,
+      rig.endX,
+      getScene1TravelProgress(progress, rig),
+    ),
+    rig,
+  );
 }
 
 function easeInOutCubic(t: number) {
@@ -378,6 +375,7 @@ function mountTurtleOnYacht(rig: CamelRig) {
 function beginForwardTransfer(rig: CamelRig, scene: THREE.Object3D) {
   if (!rig.turtle) return;
 
+  setHandoffCamelX(rig);
   getTurtleWorldOnCamel(rig, rig.transferStartWorld);
   detachToTransferCarrier(rig.turtle, rig.transferCarrier, scene);
   rig.transferCarrier.position.copy(rig.transferStartWorld);
@@ -393,7 +391,7 @@ function beginReverseTransfer(rig: CamelRig, scene: THREE.Object3D) {
   if (!rig.turtle || !rig.boat) return;
 
   if (rig.handoffCamelX === null) {
-    rig.handoffCamelX = rig.carrier.position.x;
+    rig.handoffCamelX = getCarrierWorldX(rig.carrier);
   }
   getBoatSeatWorld(rig.boat, rig.turtleFootLift, rig.transferEndWorld);
   detachToTransferCarrier(rig.turtle, rig.transferCarrier, scene);
@@ -565,18 +563,23 @@ function isTurtleInYachtPhase(
   );
 }
 
+function getTransferArcHeight(mode: TransferMode) {
+  if (mode === "toCar" || mode === "toBoatFromCar") {
+    return carScrollSettings.transferArcHeight;
+  }
+  if (mode === "toJetski" || mode === "toCarFromJetski") {
+    return jetskiScrollSettings.transferArcHeight;
+  }
+  if (mode === "toYacht" || mode === "toJetskiFromYacht") {
+    return atlantisYachtScrollSettings.transferArcHeight ?? 0.9;
+  }
+  return camelScrollSettings.transferArcHeight;
+}
+
 function updateTurtleTransferArc(rig: CamelRig, transferT: number) {
   if (!rig.turtle) return;
 
-  const arcHeight =
-    rig.transferMode === "toCar" ||
-    rig.transferMode === "toBoatFromCar" ||
-    rig.transferMode === "toJetski" ||
-    rig.transferMode === "toCarFromJetski" ||
-    rig.transferMode === "toYacht" ||
-    rig.transferMode === "toJetskiFromYacht"
-      ? carScrollSettings.transferArcHeight
-      : camelScrollSettings.transferArcHeight;
+  const arcHeight = getTransferArcHeight(rig.transferMode);
   const easedT = easeInOutCubic(transferT);
 
   if (rig.transferMode === "toBoat") {
@@ -652,13 +655,23 @@ function buildRig(
     camelScrollSettings.camel,
     camelScrollSettings.camelBlender,
   );
-  const floor = findSceneObject(
-    scene,
-    nodes,
-    camelScrollSettings.openingFloor,
-  );
+  const floor = findOpeningDesertFloor(scene, nodes);
+  const scene1Track = resolveScene1CamelTrack(scene, nodes, sceneFrame, {
+    startInset: camelScrollSettings.startInset,
+    endInset: camelScrollSettings.endInset,
+  });
 
-  if (!camel || !floor) return null;
+  if (!camel || !floor || !scene1Track) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[CamelScrollMovement] Setup failed:", {
+        camel: camel?.name ?? null,
+        floor: floor?.name ?? null,
+        scene1Track: scene1Track !== null,
+        openingFloor: camelScrollSettings.openingFloor,
+      });
+    }
+    return null;
+  }
 
   const carrier = attachAnimationCarrier(camel, camelScrollSettings.carrierName);
 
@@ -722,19 +735,16 @@ function buildRig(
 
   const turtleFootLift = turtle ? getTurtleFootLift(turtle) : 0.25;
 
-  const track = getDesertTrack(
-    floor,
-    carrier.position.y,
-    carrier.position.z,
-    getScrollRange(sceneFrame),
-  );
+  carrier.updateMatrixWorld(true);
+  const carrierWorld = new THREE.Vector3();
+  carrier.getWorldPosition(carrierWorld);
   const carScroll = resolveCarScrollWindow(scene, nodes, sceneFrame);
   const jetskiScroll = resolveJetskiScrollWindow(scene, nodes, sceneFrame);
 
   if (process.env.NODE_ENV === "development") {
     console.info("[CamelScrollMovement] Ready:", {
-      track: [track.trackStartX, track.trackEndX],
-      desertScroll: [track.desertScrollStart, track.desertScrollEnd],
+      scene1: [scene1Track.startX, scene1Track.endX],
+      desertScroll: [scene1Track.desertScrollStart, scene1Track.desertScrollEnd],
       turtle: turtle?.name ?? null,
       boat: boat?.name ?? null,
       car: car?.name ?? null,
@@ -767,12 +777,16 @@ function buildRig(
     turtleQuaternionOnCarrier,
     turtleScaleOnCarrier,
     turtleFootLift,
-    baseY: track.baseY,
-    baseZ: track.baseZ,
-    trackStartX: track.trackStartX,
-    trackEndX: track.trackEndX,
-    desertScrollStart: track.desertScrollStart,
-    desertScrollEnd: track.desertScrollEnd,
+    baseY: carrier.position.y,
+    baseZ: carrier.position.z,
+    baseWorldY: carrierWorld.y,
+    baseWorldZ: carrierWorld.z,
+    startX: scene1Track.startX,
+    endX: scene1Track.endX,
+    progressAtStart: scene1Track.progressAtStart,
+    progressAtEnd: scene1Track.progressAtEnd,
+    desertScrollStart: scene1Track.desertScrollStart,
+    desertScrollEnd: scene1Track.desertScrollEnd,
     carScrollStart: carScroll.carScrollStart,
     carScrollEnd: carScroll.carScrollEnd,
     jetskiScrollStart: jetskiScroll.jetskiScrollStart,
@@ -868,6 +882,67 @@ export default function CamelScrollMovement({
       targetScrollProgress.current,
       lerpFactor,
     );
+
+    const scene1Track = resolveScene1CamelTrack(scene, nodes, sceneFrame, {
+      startInset: camelScrollSettings.startInset,
+      endInset: camelScrollSettings.endInset,
+    });
+    if (scene1Track) {
+      rig.startX = scene1Track.startX;
+      rig.endX = scene1Track.endX;
+      rig.progressAtStart = scene1Track.progressAtStart;
+      rig.progressAtEnd = scene1Track.progressAtEnd;
+      rig.desertScrollStart = scene1Track.desertScrollStart;
+      rig.desertScrollEnd = scene1Track.desertScrollEnd;
+    }
+
+    if (sceneFrame) {
+      if (!rig.boat) {
+        rig.boat =
+          resolveObject(
+            scene,
+            nodes,
+            camelScrollSettings.boat,
+            camelScrollSettings.boatBlender,
+          ) ?? rig.boat;
+      }
+      if (!rig.car) {
+        rig.car =
+          resolveObject(
+            scene,
+            nodes,
+            carScrollSettings.body,
+            carScrollSettings.bodyBlender,
+          ) ?? rig.car;
+      }
+      if (!rig.jetskiDriver) {
+        rig.jetskiDriver =
+          resolveObject(
+            scene,
+            nodes,
+            jetskiScrollSettings.driver,
+            jetskiScrollSettings.driverBlender,
+          ) ?? rig.jetskiDriver;
+      }
+      if (!rig.yacht) {
+        rig.yacht =
+          resolveObject(
+            scene,
+            nodes,
+            atlantisYachtScrollSettings.yacht,
+            atlantisYachtScrollSettings.yachtBlender,
+          ) ?? rig.yacht;
+      }
+
+      const carScroll = resolveCarScrollWindow(scene, nodes, sceneFrame);
+      rig.carScrollStart = carScroll.carScrollStart;
+      rig.carScrollEnd = carScroll.carScrollEnd;
+
+      const jetskiScroll = resolveJetskiScrollWindow(scene, nodes, sceneFrame);
+      rig.jetskiScrollStart = jetskiScroll.jetskiScrollStart;
+      rig.jetskiScrollEnd = jetskiScroll.jetskiScrollEnd;
+    }
+
     const {
       scrollIntentThreshold,
       reverseTransferScrollHold,
@@ -889,23 +964,15 @@ export default function CamelScrollMovement({
       rig.forwardScrollHold = Math.max(0, rig.forwardScrollHold - delta * 2);
     }
 
-    const inDesertWindow =
-      progress >= rig.desertScrollStart && progress <= rig.desertScrollEnd;
-    let targetCamelX: number;
-    if (inDesertWindow) {
-      targetCamelX = scrollProgressToPathX(progress, sceneFrame);
-    } else if (progress < rig.desertScrollStart) {
-      targetCamelX = rig.trackStartX;
-    } else {
-      targetCamelX = rig.trackEndX;
-    }
+    const targetCamelX = getCamelTrackWorldX(progress, rig);
     const camelLocked =
       rig.handoffCamelX !== null || rig.heldCamelX !== null;
     const camelX = camelLocked
       ? resolveCamelX(rig, targetCamelX)
       : targetCamelX;
 
-    rig.carrier.position.set(camelX, rig.baseY, rig.baseZ);
+    tempVec3.set(camelX, rig.baseWorldY, rig.baseWorldZ);
+    setObjectWorldPosition(rig.carrier, tempVec3);
     rig.carrier.updateMatrixWorld(true);
 
     if (!rig.turtle) {
@@ -1320,9 +1387,7 @@ export default function CamelScrollMovement({
         yachtTravelProgressRef,
       )
     ) {
-      if (rig.handoffCamelX === null) {
-        rig.handoffCamelX = rig.carrier.position.x;
-      }
+      setHandoffCamelX(rig);
       mountTurtleOnBoat(rig);
       turtleOnBoatRef.current = true;
       rig.lastScrollProgress = progress;
@@ -1363,7 +1428,10 @@ export default function CamelScrollMovement({
     if (rig.transferMode === "toBoat") {
       if (transferTriggerT <= 0) {
         if (rig.heldCamelX === null) {
-          rig.heldCamelX = rig.carrier.position.x;
+          rig.heldCamelX = clampScene1WorldX(
+            getCarrierWorldX(rig.carrier),
+            rig,
+          );
         }
         rig.transferMode = "toCamel";
       } else {
@@ -1374,7 +1442,10 @@ export default function CamelScrollMovement({
           mountTurtleOnBoat(rig);
           rig.onBoat = true;
           rig.transferMode = "idle";
-          rig.handoffCamelX = rig.carrier.position.x;
+          rig.handoffCamelX = clampScene1WorldX(
+            getCarrierWorldX(rig.carrier),
+            rig,
+          );
           turtleOnBoatRef.current = true;
         }
         rig.lastScrollProgress = progress;
@@ -1402,9 +1473,7 @@ export default function CamelScrollMovement({
     }
 
     if (rig.onBoat) {
-      if (rig.handoffCamelX === null) {
-        rig.handoffCamelX = rig.carrier.position.x;
-      }
+      setHandoffCamelX(rig);
       mountTurtleOnBoat(rig);
       turtleOnBoatRef.current = true;
       rig.lastScrollProgress = progress;

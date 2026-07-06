@@ -3,7 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
-import { findSceneObject } from "@features/portfolio/utils/sceneObjectUtils";
+import { findObjectByNamePattern, findSceneObject } from "@features/portfolio/utils/sceneObjectUtils";
 
 export type VideoOverlaySettings = {
   objectName: string;
@@ -61,8 +61,18 @@ function resolveSourceMesh(
   settings: VideoOverlaySettings,
 ) {
   return (
-    findSceneObject(scene, nodes, settings.objectName) ??
-    findSceneObject(scene, nodes, settings.blenderObjectName)
+    findSceneObject(
+      scene,
+      nodes,
+      settings.objectName,
+      settings.blenderObjectName,
+    ) ??
+    findObjectByNamePattern(
+      scene,
+      settings.objectName.includes("anotherasset")
+        ? /anotherasset/i
+        : /lahbbab/i,
+    )
   );
 }
 

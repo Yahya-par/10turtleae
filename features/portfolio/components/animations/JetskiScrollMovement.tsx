@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { jetskiScrollSettings } from "@features/portfolio/config/jetskiScrollSettings";
 import {
   attachAnimationCarrier,
+  findAlRabScenePanel,
   findSceneObject,
   getObjectBounds,
 } from "@features/portfolio/utils/sceneObjectUtils";
@@ -18,6 +19,7 @@ type JetskiRig = {
   carrier: THREE.Group;
   driver: THREE.Object3D;
   jetski: THREE.Object3D | null;
+  sceneFloor: THREE.Object3D;
   restX: number;
   trackEndX: number;
   baseY: number;
@@ -68,12 +70,12 @@ function getJetskiScrollWindow(
   trackEndX: number,
   scrollRange: { min: number; max: number },
 ) {
-  const jetskiScrollStart = xToScrollProgress(restX, scrollRange);
-  const jetskiScrollEnd = xToScrollProgress(trackEndX, scrollRange);
+  const eastX = Math.max(restX, trackEndX);
+  const westX = Math.min(restX, trackEndX);
 
   return {
-    jetskiScrollStart,
-    jetskiScrollEnd: Math.min(jetskiScrollStart, jetskiScrollEnd),
+    jetskiScrollStart: xToScrollProgress(eastX, scrollRange),
+    jetskiScrollEnd: xToScrollProgress(westX, scrollRange),
   };
 }
 
@@ -110,7 +112,9 @@ export function resolveJetskiScrollWindow(
   } = jetskiScrollSettings;
 
   const driverMesh = resolveObject(scene, nodes, driver, driverBlender);
-  const floor = resolveObject(scene, nodes, sceneFloor, sceneFloorBlender);
+  const floor =
+    findAlRabScenePanel(scene, nodes) ??
+    resolveObject(scene, nodes, sceneFloor, sceneFloorBlender);
 
   if (!driverMesh || !floor) {
     return { jetskiScrollStart: 1, jetskiScrollEnd: 0 };
@@ -162,7 +166,9 @@ function buildRig(
 
   const driverMesh = resolveObject(scene, nodes, driver, driverBlender);
   const jetskiMesh = resolveObject(scene, nodes, jetski, jetskiBlender);
-  const floor = resolveObject(scene, nodes, sceneFloor, sceneFloorBlender);
+  const floor =
+    findAlRabScenePanel(scene, nodes) ??
+    resolveObject(scene, nodes, sceneFloor, sceneFloorBlender);
 
   if (!driverMesh?.parent || !floor) {
     return null;
@@ -177,8 +183,10 @@ function buildRig(
     carrier.attach(jetskiMesh);
   }
 
-  const start = getDriverTrackStart(driverMesh, tempOffset);
-  const restX = start.x;
+  carrier.updateMatrixWorld(true);
+  const restWorld = new THREE.Vector3();
+  carrier.getWorldPosition(restWorld);
+  const restX = restWorld.x;
   const trackEndX = getJetskiTrackEndX(floor, pathInset, trackEndOffsetX);
   const scrollWindow = getJetskiScrollWindow(
     restX,
@@ -188,15 +196,15 @@ function buildRig(
 
   carrier.position.set(
     restX + carrierOffset.x,
-    start.y + carrierOffset.y,
-    start.z + carrierOffset.z,
+    restWorld.y + carrierOffset.y,
+    restWorld.z + carrierOffset.z,
   );
 
   if (process.env.NODE_ENV === "development") {
     console.info("[JetskiScrollMovement] Ready:", {
       driver: driverMesh.name,
       jetski: jetskiMesh?.name ?? null,
-      rest: [restX, start.y, start.z],
+      rest: [restX, restWorld.y, restWorld.z],
       trackEndX,
       jetskiScroll: [scrollWindow.jetskiScrollStart, scrollWindow.jetskiScrollEnd],
     });
@@ -206,10 +214,11 @@ function buildRig(
     carrier,
     driver: driverMesh,
     jetski: jetskiMesh,
+    sceneFloor: floor,
     restX: restX + carrierOffset.x,
     trackEndX: trackEndX + carrierOffset.x,
-    baseY: start.y + carrierOffset.y,
-    baseZ: start.z + carrierOffset.z,
+    baseY: restWorld.y + carrierOffset.y,
+    baseZ: restWorld.z + carrierOffset.z,
     jetskiScrollStart: scrollWindow.jetskiScrollStart,
     jetskiScrollEnd: scrollWindow.jetskiScrollEnd,
     jetskiProgress: 0,
@@ -256,6 +265,11 @@ export default function JetskiScrollMovement({
   const jetskiSessionActiveRef = useRef(false);
 
   useLayoutEffect(() => {
+    if (!sceneFrame) {
+      rigRef.current = null;
+      jetskiTravelProgressRef.current = 0;
+      return;
+    }
     rigRef.current = buildRig(scene, nodes, sceneFrame);
     jetskiTravelProgressRef.current = 0;
     return () => {
@@ -265,12 +279,28 @@ export default function JetskiScrollMovement({
   }, [scene, nodes, sceneFrame, jetskiTravelProgressRef]);
 
   useFrame(() => {
+    if (!sceneFrame) return;
+
     let rig = rigRef.current;
     if (!rig) {
       rig = buildRig(scene, nodes, sceneFrame);
       if (!rig) return;
       rigRef.current = rig;
     }
+
+    const trackEndX = getJetskiTrackEndX(
+      rig.sceneFloor,
+      jetskiScrollSettings.pathInset,
+      jetskiScrollSettings.trackEndOffsetX,
+    );
+    rig.trackEndX = trackEndX + jetskiScrollSettings.carrierOffset.x;
+    const scrollWindow = getJetskiScrollWindow(
+      rig.restX,
+      rig.trackEndX,
+      getScrollRange(sceneFrame),
+    );
+    rig.jetskiScrollStart = scrollWindow.jetskiScrollStart;
+    rig.jetskiScrollEnd = scrollWindow.jetskiScrollEnd;
 
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,

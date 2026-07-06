@@ -4,12 +4,13 @@ import normalizeWheel from "normalize-wheel";
 
 const BASE_SCROLL_SPEED = 0.0048;
 const LERP_FACTOR = 0.12;
-/** -1: scroll up moves backward through the diorama */
-const SCROLL_DIRECTION = -1;
+/** 1: scroll up moves forward through the diorama (progress decreases toward deeper scenes) */
+const SCROLL_DIRECTION = 1;
 
 export function useScrollNavigation(enabled: boolean) {
-  const scrollProgress = useRef(0);
-  const targetScrollProgress = useRef(0);
+  /** Start at scene 1 (opening desert) until ScrollCamera refines from waypoints. */
+  const scrollProgress = useRef(1);
+  const targetScrollProgress = useRef(1);
   const mousePositionOffset = useRef(new THREE.Vector3());
   const mouseRotationOffset = useRef(new THREE.Euler());
   const isDragging = useRef(false);
@@ -18,9 +19,6 @@ export function useScrollNavigation(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
 
-    // Always start from scene 1 on hard refresh/remount.
-    scrollProgress.current = 0;
-    targetScrollProgress.current = 0;
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }

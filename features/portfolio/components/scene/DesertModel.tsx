@@ -85,6 +85,33 @@ export default function DesertModel({
   return (
     <>
       <primitive object={scene} />
+      <CamelScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnBoatRef={turtleOnBoatRef}
+        boatTravelProgressRef={boatTravelProgressRef}
+        turtleOnCarRef={turtleOnCarRef}
+        carTravelProgressRef={carTravelProgressRef}
+        turtleReturnedFromCarRef={turtleReturnedFromCarRef}
+        turtleOnJetskiRef={turtleOnJetskiRef}
+        turtleOnYachtRef={turtleOnYachtRef}
+        jetskiTravelProgressRef={jetskiTravelProgressRef}
+        turtleReturnedFromJetskiRef={turtleReturnedFromJetskiRef}
+        yachtTravelProgressRef={yachtTravelProgressRef}
+        turtleReturnedFromYachtRef={turtleReturnedFromYachtRef}
+      />
+      <CamelWalkAnimation
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+      />
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
       <CarScrollMovement
@@ -111,25 +138,6 @@ export default function DesertModel({
         turtleOnCarRef={turtleOnCarRef}
         turtleOnYachtRef={turtleOnYachtRef}
         jetskiTravelProgressRef={jetskiTravelProgressRef}
-      />
-      <CamelScrollMovement
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-        turtleOnBoatRef={turtleOnBoatRef}
-        boatTravelProgressRef={boatTravelProgressRef}
-        turtleOnCarRef={turtleOnCarRef}
-        carTravelProgressRef={carTravelProgressRef}
-        turtleReturnedFromCarRef={turtleReturnedFromCarRef}
-        turtleOnJetskiRef={turtleOnJetskiRef}
-        turtleOnYachtRef={turtleOnYachtRef}
-        jetskiTravelProgressRef={jetskiTravelProgressRef}
-        turtleReturnedFromJetskiRef={turtleReturnedFromJetskiRef}
-        yachtTravelProgressRef={yachtTravelProgressRef}
-        turtleReturnedFromYachtRef={turtleReturnedFromYachtRef}
       />
       <BoatScrollMovement
         scene={scene}
@@ -180,14 +188,6 @@ export default function DesertModel({
       <LanternAnimation scene={scene} nodes={nodes} />
       <BurjKhalifaVideoOverlay scene={scene} nodes={nodes} />
       <DesertSafariVideoOverlay scene={scene} nodes={nodes} />
-      <CamelWalkAnimation
-        scene={scene}
-        nodes={nodes}
-        sceneFrame={sceneFrame}
-        scrollProgress={scrollProgress}
-        targetScrollProgress={targetScrollProgress}
-        lerpFactor={lerpFactor}
-      />
       <SceneObjectLinks scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
       <BirdAnimation scene={scene} nodes={nodes} />

@@ -8,6 +8,7 @@ import {
 } from "@features/portfolio/components/camera/CameraPath";
 import {
   attachAnimationCarrier,
+  findObjectByNamePattern,
   findSceneObject,
   getObjectBounds,
 } from "@features/portfolio/utils/sceneObjectUtils";
@@ -58,10 +59,15 @@ function resolveObject(
   nodes: Record<string, THREE.Object3D>,
   runtimeName: string,
   blenderName?: string,
+  namePattern?: RegExp,
 ) {
   return (
-    findSceneObject(scene, nodes, runtimeName) ??
-    (blenderName ? findSceneObject(scene, nodes, blenderName) : null)
+    findSceneObject(
+      scene,
+      nodes,
+      runtimeName,
+      ...(blenderName ? [blenderName] : []),
+    ) ?? (namePattern ? findObjectByNamePattern(scene, namePattern) : null)
   );
 }
 
@@ -223,7 +229,16 @@ function buildRig(
 
   scene.updateMatrixWorld(true);
 
-  const yachtObject = resolveObject(scene, nodes, yacht, yachtBlender);
+  const yachtPattern = /yacht002|yacht\.002/i.test(yacht)
+    ? /yacht\.?002|yacht002/i
+    : /yacht\.?001|yacht001/i;
+  const yachtObject = resolveObject(
+    scene,
+    nodes,
+    yacht,
+    yachtBlender,
+    yachtPattern,
+  );
   if (!yachtObject?.parent) return null;
 
   const carrier =
@@ -281,13 +296,20 @@ export default function YachtScrollMovement({
       label,
     } = settings;
 
-    const waterObject = resolveObject(scene, nodes, water, waterBlender);
+    const waterObject = resolveObject(
+      scene,
+      nodes,
+      water,
+      waterBlender,
+      /shinywater/i,
+    );
     const waterEndObject = settings.waterEnd
       ? resolveObject(
           scene,
           nodes,
           settings.waterEnd,
           settings.waterEndBlender,
+          /mgrwater|water\.?002/i,
         )
       : null;
     const trackEndObject = resolveObject(
@@ -295,18 +317,25 @@ export default function YachtScrollMovement({
       nodes,
       trackEnd,
       trackEndBlender,
+      /Desert_Scene_Floor0*07|Desert_Scene_Floor\.007/i,
     );
     const sceneStartObject = resolveObject(
       scene,
       nodes,
       sceneStart,
       sceneStartBlender,
+      settings.label === "Atlantis"
+        ? /Desert_Scene_Floor0*07|Desert_Scene_Floor\.007/i
+        : /Desert_Scene_Floor0*09|Desert_Scene_Floor\.009/i,
     );
     const sceneEndObject = resolveObject(
       scene,
       nodes,
       sceneEnd,
       sceneEndBlender,
+      settings.label === "Atlantis"
+        ? /Desert_Scene_Floor0*07|Desert_Scene_Floor\.007/i
+        : /Desert_Scene_Floor0*11|Desert_Scene_Floor\.011/i,
     );
 
     if (!rigRef.current) {

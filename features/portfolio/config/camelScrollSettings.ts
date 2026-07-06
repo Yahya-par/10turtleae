@@ -9,16 +9,21 @@ export const camelScrollSettings = {
   boatBlender: assetNames.boat.blenderName,
   carrierName: "CamelScrollCarrier001",
   openingFloor: assetNames.scenes.openingDesert,
+  /** Scene 2 panel — camel must not cross this boundary. */
+  sceneEndFloor: assetNames.scenes.floor1,
+  sceneEndFloorBlender: assetNames.scenes.floor1Blender,
   legs: assetNames.camel.legs,
   legsBlender: assetNames.camel.legsBlender,
 
-  /** Inset from the opening desert floor edges. */
-  pathInset: 1.2,
+  /** Inset from scene 1 entrance (high X). */
+  startInset: 1.2,
+  /** Inset from scene 1 exit / scene 2 start (low X). */
+  endInset: 1.2,
 
   /** Start transfer when camel is this far (X) from boat. */
-  transferStartDistanceX: 4.1,
+  transferStartDistanceX: 5.8,
   /** Finish transfer when camel gets this close (X) to boat. */
-  transferEndDistanceX: 2.8,
+  transferEndDistanceX: 3.2,
   transferArcHeight: 0.9,
   /** Seconds for turtle arc from camel to boat. */
   transferDuration: 1.9,

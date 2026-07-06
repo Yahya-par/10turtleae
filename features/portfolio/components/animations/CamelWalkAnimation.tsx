@@ -3,8 +3,12 @@ import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { camelScrollSettings } from "@features/portfolio/config/camelScrollSettings";
 import { camelWalkSettings } from "@features/portfolio/config/camelWalkSettings";
-import { getScrollRange, type SceneFrame } from "@features/portfolio/components/camera/CameraPath";
-import { findSceneObject, getObjectBounds } from "@features/portfolio/utils/sceneObjectUtils";
+import { type SceneFrame } from "@features/portfolio/components/camera/CameraPath";
+import {
+  findSceneObject,
+  resolveScene1CamelTrack,
+  type Scene1CamelTrack,
+} from "@features/portfolio/utils/sceneObjectUtils";
 
 type CamelWalkAnimationProps = {
   scene: THREE.Object3D;
@@ -32,8 +36,7 @@ type WalkRig = {
   body: THREE.Object3D | null;
   bodyBaseRotation: THREE.Euler | null;
   sides: LegSide[];
-  desertScrollStart: number;
-  desertScrollEnd: number;
+  scene1Track: Scene1CamelTrack;
 };
 
 const swingWorldAxis = {
@@ -149,51 +152,23 @@ function captureLegRig(leg: THREE.Object3D, body: THREE.Object3D | null): LegRig
   };
 }
 
-function resolveDesertScrollWindow(
+function getCarrierWorldX(carrier: THREE.Object3D) {
+  const world = new THREE.Vector3();
+  carrier.updateMatrixWorld(true);
+  carrier.getWorldPosition(world);
+  return world.x;
+}
+
+function resolveScene1Track(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
   sceneFrame: SceneFrame | null,
 ) {
-  const floor = findSceneObject(scene, nodes, camelScrollSettings.openingFloor);
-  if (!floor) {
-    return { desertScrollStart: 0, desertScrollEnd: 1 };
-  }
-
-  const floorBounds = getObjectBounds(floor);
-  const scrollRange = getScrollRange(sceneFrame);
-  const scrollSpan = scrollRange.max - scrollRange.min;
-
-  const desertScrollStart =
-    scrollSpan > 0
-      ? THREE.MathUtils.clamp(
-          (floorBounds.min.x - scrollRange.min) / scrollSpan,
-          0,
-          1,
-        )
-      : 0;
-  const desertScrollEnd =
-    scrollSpan > 0
-      ? THREE.MathUtils.clamp(
-          (floorBounds.max.x - scrollRange.min) / scrollSpan,
-          0,
-          1,
-        )
-      : 1;
-
-  return { desertScrollStart, desertScrollEnd };
-}
-
-function getDesertProgress(
-  scrollValue: number,
-  desertScrollStart: number,
-  desertScrollEnd: number,
-) {
-  if (desertScrollEnd <= desertScrollStart) return 0;
-
-  return THREE.MathUtils.clamp(
-    (scrollValue - desertScrollStart) / (desertScrollEnd - desertScrollStart),
-    0,
-    1,
+  return (
+    resolveScene1CamelTrack(scene, nodes, sceneFrame, {
+      startInset: camelScrollSettings.startInset,
+      endInset: camelScrollSettings.endInset,
+    }) ?? null
   );
 }
 
@@ -215,7 +190,14 @@ function isCarrierRigReady(
         index
       ] ?? runtimeName;
     const leg = findLeg(scene, nodes, runtimeName, blenderName);
-    return Boolean(leg && leg.parent === carrier);
+    if (!leg) return false;
+
+    let parent: THREE.Object3D | null = leg.parent;
+    while (parent) {
+      if (parent === carrier) return true;
+      parent = parent.parent;
+    }
+    return false;
   });
 }
 
@@ -324,11 +306,14 @@ function buildWalkRig(
   const body =
     findSceneObject(scene, nodes, camelWalkSettings.body) ??
     findSceneObject(scene, nodes, camelWalkSettings.bodyBlender);
-  const { desertScrollStart, desertScrollEnd } = resolveDesertScrollWindow(
-    scene,
-    nodes,
-    sceneFrame,
-  );
+  const scene1Track = resolveScene1Track(scene, nodes, sceneFrame);
+
+  if (!scene1Track) {
+    if (process.env.NODE_ENV === "development") {
+      logMissingAssets(scene, nodes);
+    }
+    return null;
+  }
 
   const leftSide = buildLegSide(
     scene,
@@ -389,7 +374,7 @@ function buildWalkRig(
       })),
       swingAxis: camelWalkSettings.swingAxis,
       swingAngle: camelWalkSettings.swingAngle,
-      desertScroll: [desertScrollStart, desertScrollEnd],
+      scene1: [scene1Track.startX, scene1Track.endX],
     });
   }
 
@@ -397,8 +382,7 @@ function buildWalkRig(
     body,
     bodyBaseRotation: body.rotation.clone(),
     sides,
-    desertScrollStart,
-    desertScrollEnd,
+    scene1Track,
   };
 }
 
@@ -486,8 +470,7 @@ export default function CamelWalkAnimation({
 }: CamelWalkAnimationProps) {
   const rigRef = useRef<WalkRig | null>(null);
   const walkPhaseRef = useRef(0);
-  const lastDesertProgressRef = useRef<number | null>(null);
-  const lastCarrierXRef = useRef<number | null>(null);
+  const lastCarrierWorldXRef = useRef<number | null>(null);
   const retryTimerRef = useRef(0);
   const mountAttemptsRef = useRef(0);
   const warnedRef = useRef(false);
@@ -495,8 +478,7 @@ export default function CamelWalkAnimation({
   useLayoutEffect(() => {
     rigRef.current = null;
     walkPhaseRef.current = 0;
-    lastDesertProgressRef.current = null;
-    lastCarrierXRef.current = null;
+    lastCarrierWorldXRef.current = null;
     mountAttemptsRef.current = 0;
     warnedRef.current = false;
   }, [scene, nodes, sceneFrame]);
@@ -533,41 +515,39 @@ export default function CamelWalkAnimation({
       }
 
       rigRef.current = rig;
-      const initCarrier = findSceneObject(scene, nodes, camelScrollSettings.carrierName);
-      lastCarrierXRef.current = initCarrier?.position.x ?? null;
-      const scrollValue = scrollProgress.current;
-      lastDesertProgressRef.current = getDesertProgress(
-        scrollValue,
-        rig.desertScrollStart,
-        rig.desertScrollEnd,
+      const initCarrier = findSceneObject(
+        scene,
+        nodes,
+        camelScrollSettings.carrierName,
       );
+      lastCarrierWorldXRef.current = initCarrier
+        ? getCarrierWorldX(initCarrier)
+        : null;
       return;
     }
 
     const rig = rigRef.current;
-    const scrollValue = scrollProgress.current;
-    const desertProgress = getDesertProgress(
-      scrollValue,
-      rig.desertScrollStart,
-      rig.desertScrollEnd,
-    );
-    const lastDesertProgress = lastDesertProgressRef.current ?? desertProgress;
-    const desertDelta = desertProgress - lastDesertProgress;
-    lastDesertProgressRef.current = desertProgress;
+    const refreshedTrack = resolveScene1Track(scene, nodes, sceneFrame);
+    if (refreshedTrack) {
+      rig.scene1Track = refreshedTrack;
+    }
 
     const carrier = findSceneObject(scene, nodes, camelScrollSettings.carrierName);
-    const carrierX = carrier?.position.x ?? 0;
-    const lastCarrierX = lastCarrierXRef.current;
-    const carrierMoved =
-      lastCarrierX !== null && Math.abs(carrierX - lastCarrierX) > 0.00001;
-    lastCarrierXRef.current = carrierX;
+    if (!carrier) return;
 
+    const carrierWorldX = getCarrierWorldX(carrier);
+    const lastCarrierWorldX = lastCarrierWorldXRef.current ?? carrierWorldX;
+    const carrierWorldDelta = carrierWorldX - lastCarrierWorldX;
+    lastCarrierWorldXRef.current = carrierWorldX;
+
+    const trackSpan = Math.abs(rig.scene1Track.startX - rig.scene1Track.endX);
     const isWalking =
-      carrierMoved &&
-      Math.abs(desertDelta) > camelWalkSettings.scrollIdleThreshold;
+      trackSpan > 0 &&
+      Math.abs(carrierWorldDelta) > camelWalkSettings.scrollIdleThreshold;
+
     if (isWalking) {
       walkPhaseRef.current +=
-        Math.abs(desertDelta) *
+        (Math.abs(carrierWorldDelta) / trackSpan) *
         camelWalkSettings.walkCyclesPerScene *
         Math.PI *
         2;

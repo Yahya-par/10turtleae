@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { cameraSettings } from "@features/portfolio/config/cameraSettings";
 
 export type CameraWaypoint = {
   position: THREE.Vector3;
@@ -157,6 +158,14 @@ export function getScrollRange(sceneFrame: SceneFrame | null) {
   return { min: 4, max: 19 };
 }
 
+export function getScrollProgressAtX(
+  x: number,
+  range: { min: number; max: number },
+) {
+  if (range.max <= range.min) return 0;
+  return THREE.MathUtils.clamp((x - range.min) / (range.max - range.min), 0, 1);
+}
+
 /** World X that matches ScrollCamera lookAt for a given scroll progress. */
 export function scrollProgressToPathX(
   progress: number,
@@ -164,6 +173,19 @@ export function scrollProgressToPathX(
 ) {
   const range = getScrollRange(sceneFrame);
   return THREE.MathUtils.lerp(range.min, range.max, progress);
+}
+
+/** Opening-scene scroll progress (scene 1 / camel start). */
+export function getInitialScrollProgress(sceneFrame: SceneFrame | null) {
+  const range = getScrollRange(sceneFrame);
+  const { lookAt } = cameraSettings.manual;
+  if (range.max <= range.min) return 1;
+
+  return THREE.MathUtils.clamp(
+    (lookAt.x - range.min) / (range.max - range.min),
+    0,
+    1,
+  );
 }
 
 // getDioramaPose - get the diorama pose from the curve and the look at center

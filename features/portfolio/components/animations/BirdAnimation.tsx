@@ -4,7 +4,9 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { birdAnimationSettings } from "../../config/birdAnimationSettings";
-import { findSceneObject, getObjectBounds } from "../../utils/sceneObjectUtils";
+import { getScene1BirdFlightBounds } from "../../utils/sceneObjectUtils";
+
+type BirdConfig = (typeof birdAnimationSettings.birds)[number];
 
 type FlightBounds = {
   minX: number;
@@ -13,8 +15,6 @@ type FlightBounds = {
   maxZ: number;
   floorTop: number;
 };
-
-type BirdConfig = (typeof birdAnimationSettings.birds)[number];
 
 type BirdRig = {
   root: THREE.Group;
@@ -36,6 +36,18 @@ type BirdAnimationProps = {
   nodes: Record<string, THREE.Object3D>;
 };
 
+function getFlightBounds(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+) {
+  return getScene1BirdFlightBounds(
+    scene,
+    nodes,
+    birdAnimationSettings.openingFloor,
+    birdAnimationSettings.pathInset,
+  );
+}
+
 function getFlapAngle(
   elapsed: number,
   flapSpeed: number,
@@ -55,29 +67,6 @@ function getFlapAngle(
   const t = (cycle - downstrokePortion) / (1 - downstrokePortion);
   const eased = 1 - (1 - t) ** 2;
   return THREE.MathUtils.lerp(downAngle, upAngle, eased);
-}
-
-function getFlightBounds(
-  scene: THREE.Object3D,
-  nodes: Record<string, THREE.Object3D>,
-): FlightBounds | null {
-  const floor = findSceneObject(
-    scene,
-    nodes,
-    birdAnimationSettings.openingFloor,
-  );
-  if (!floor) return null;
-
-  const bounds = getObjectBounds(floor);
-  const { pathInset } = birdAnimationSettings;
-
-  return {
-    minX: bounds.min.x + pathInset,
-    maxX: bounds.max.x - pathInset,
-    minZ: bounds.min.z + 0.4,
-    maxZ: bounds.max.z - 0.4,
-    floorTop: bounds.max.y,
-  };
 }
 
 /** Smooth 0→1→0 patrol — eases in and out at each turn. */
@@ -161,7 +150,11 @@ function updateBirdFlight(
     bird.lapDuration,
     bird.phaseOffset,
   );
-  const x = THREE.MathUtils.lerp(bounds.minX, bounds.maxX, progress);
+  const x = THREE.MathUtils.clamp(
+    THREE.MathUtils.lerp(bounds.minX, bounds.maxX, progress),
+    bounds.minX,
+    bounds.maxX,
+  );
 
   const bob =
     Math.sin(elapsed * bird.bobSpeed + bird.phaseOffset * 0.65) *
@@ -170,8 +163,9 @@ function updateBirdFlight(
     Math.sin(elapsed * 0.38 + bird.phaseOffset * 1.15) * bird.zDrift;
 
   const y = bounds.floorTop + bird.heightOffset + bob;
+  const centerZ = (bounds.minZ + bounds.maxZ) * 0.5;
   const z = THREE.MathUtils.clamp(
-    bird.z + zWobble,
+    centerZ + bird.z + zWobble,
     bounds.minZ,
     bounds.maxZ,
   );
@@ -179,58 +173,101 @@ function updateBirdFlight(
   bird.root.position.set(x, y, z);
 }
 
+function mountBirdFlock(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+) {
+  scene.getObjectByName("Scene1BirdFlock")?.removeFromParent();
+
+  const bounds = getFlightBounds(scene, nodes);
+  if (!bounds) return null;
+
+  const flock = new THREE.Group();
+  flock.name = "Scene1BirdFlock";
+  flock.renderOrder = 20;
+  scene.add(flock);
+
+  const birds = birdAnimationSettings.birds.map((config, index) => {
+    const rig = createBirdRig(index, config);
+    flock.add(rig.root);
+    return rig;
+  });
+
+  if (process.env.NODE_ENV === "development") {
+    console.info("[BirdAnimation] Ready:", {
+      count: birds.length,
+      bounds,
+    });
+  }
+
+  return { flock, birds, bounds };
+}
+
 export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
   const birdsRef = useRef<BirdRig[]>([]);
   const boundsRef = useRef<FlightBounds | null>(null);
   const flockRef = useRef<THREE.Group | null>(null);
   const elapsedRef = useRef(0);
+  const retryTimerRef = useRef(0);
+  const mountAttemptsRef = useRef(0);
+  const warnedRef = useRef(false);
 
   useLayoutEffect(() => {
-    const existingFlock = scene.getObjectByName("Scene1BirdFlock");
-    existingFlock?.removeFromParent();
+    scene.getObjectByName("Scene1BirdFlock")?.removeFromParent();
 
-    const bounds = getFlightBounds(scene, nodes);
-    if (!bounds) {
-      birdsRef.current = [];
-      boundsRef.current = null;
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[BirdAnimation] Missing scene 1 floor:", {
-          openingFloor: birdAnimationSettings.openingFloor,
-        });
-      }
-      return;
-    }
+    birdsRef.current = [];
+    boundsRef.current = null;
+    flockRef.current = null;
+    retryTimerRef.current = 0;
+    mountAttemptsRef.current = 0;
+    warnedRef.current = false;
 
-    const flock = new THREE.Group();
-    flock.name = "Scene1BirdFlock";
-    scene.add(flock);
-    flockRef.current = flock;
+    const mounted = mountBirdFlock(scene, nodes);
+    if (!mounted) return;
 
-    const birds = birdAnimationSettings.birds.map((config, index) => {
-      const rig = createBirdRig(index, config);
-      flock.add(rig.root);
-      return rig;
-    });
-
-    birdsRef.current = birds;
-    boundsRef.current = bounds;
-
-    if (process.env.NODE_ENV === "development") {
-      console.info("[BirdAnimation] Ready:", {
-        count: birds.length,
-        bounds,
-      });
-    }
+    flockRef.current = mounted.flock;
+    birdsRef.current = mounted.birds;
+    boundsRef.current = mounted.bounds;
 
     return () => {
-      flock.removeFromParent();
+      mounted.flock.removeFromParent();
       flockRef.current = null;
       birdsRef.current = [];
       boundsRef.current = null;
     };
   }, [scene, nodes]);
-// useFrame - update the bird animation passing state and delta for the animation of the birds. state represents the current state of the scene and delta represents the time since the last frame.
+
   useFrame((state, delta) => {
+    if (!birdsRef.current.length) {
+      retryTimerRef.current += delta;
+      if (retryTimerRef.current < 0.15) return;
+
+      retryTimerRef.current = 0;
+      mountAttemptsRef.current += 1;
+      scene.updateMatrixWorld(true);
+
+      const mounted = mountBirdFlock(scene, nodes);
+      if (!mounted) {
+        if (
+          process.env.NODE_ENV === "development" &&
+          !warnedRef.current &&
+          mountAttemptsRef.current >= 4
+        ) {
+          warnedRef.current = true;
+          console.warn("[BirdAnimation] Flock not mounted after retries:", {
+            openingFloor: birdAnimationSettings.openingFloor,
+            attempts: mountAttemptsRef.current,
+          });
+        }
+        return;
+      }
+
+      flockRef.current = mounted.flock;
+      birdsRef.current = mounted.birds;
+      boundsRef.current = mounted.bounds;
+      return;
+    }
+
     const bounds = boundsRef.current;
     const birds = birdsRef.current;
     if (!bounds || !birds.length) return;

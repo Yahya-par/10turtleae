@@ -64,7 +64,7 @@ export const atlantisYachtScrollSettings: YachtScrollSettings = {
   positionOffset: { x: 0, y: 0.3, z: 0 },
   scrollStart: null,
   scrollEnd: null,
-  scrollFallback: { scrollStart: 0.12, scrollEnd: 0 },
+  scrollFallback: { scrollStart: 0.14, scrollEnd: 0 },
 
   turtleSeatOffsetX: 0.20,
   turtleSeatOffsetY: -0.05,

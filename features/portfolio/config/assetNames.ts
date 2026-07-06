@@ -126,6 +126,9 @@ export const assetNames = {
     material: "Perfect_Buildings",
   },
   scenes: {
+    /** Scene 1 continuity panel in Modelv1 (Blender: continuefloor.001) */
+    continuityFloor: "continuefloor001",
+    continuityFloorBlender: "continuefloor.001",
     /** Opening desert sky panel (Desert_Scene_Floor, ~X 11) */
     openingDesert: "Desert_Scene_Floor",
     /** One scene left of Dubai Frame (~X -6) */

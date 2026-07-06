@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { boatScrollSettings } from "@features/portfolio/config/boatScrollSettings";
 import {
   attachAnimationCarrier,
+  findScene2Floor,
   findSceneObject,
   getObjectBounds,
 } from "@features/portfolio/utils/sceneObjectUtils";
@@ -14,6 +15,7 @@ import {
 
 type BoatRig = {
   carrier: THREE.Group;
+  floor: THREE.Object3D;
   baseY: number;
   baseZ: number;
   restX: number;
@@ -133,17 +135,27 @@ function buildRig(
   const boat =
     findSceneObject(scene, nodes, boatScrollSettings.boat) ??
     findSceneObject(scene, nodes, boatScrollSettings.boatBlender);
-  const floor = findSceneObject(scene, nodes, boatScrollSettings.scene2Floor);
+  const floor = findScene2Floor(scene, nodes);
 
-  if (!boat || !floor) return null;
+  if (!boat || !floor) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[BoatScrollMovement] Setup failed:", {
+        boat: boat?.name ?? null,
+        floor: floor?.name ?? null,
+      });
+    }
+    return null;
+  }
 
   const carrier = attachAnimationCarrier(boat, boatScrollSettings.carrierName);
-  const restX = carrier.position.x;
+  carrier.updateMatrixWorld(true);
+  const restWorld = new THREE.Vector3();
+  carrier.getWorldPosition(restWorld);
   const track = getScene2Track(
     floor,
-    restX,
-    carrier.position.y,
-    carrier.position.z,
+    restWorld.x,
+    restWorld.y,
+    restWorld.z,
     getScrollRange(sceneFrame),
   );
 
@@ -160,6 +172,7 @@ function buildRig(
 
   return {
     carrier,
+    floor,
     baseY: track.baseY,
     baseZ: track.baseZ,
     restX: track.restX,
@@ -190,6 +203,10 @@ export default function BoatScrollMovement({
   const carReturnSetupDoneRef = useRef(false);
 
   useLayoutEffect(() => {
+    if (!sceneFrame) {
+      rigRef.current = null;
+      return;
+    }
     const rig = buildRig(scene, nodes, sceneFrame);
     rigRef.current = rig;
     return () => {
@@ -198,12 +215,25 @@ export default function BoatScrollMovement({
   }, [scene, nodes, sceneFrame]);
 
   useFrame((_, delta) => {
+    if (!sceneFrame) return;
+
     let rig = rigRef.current;
     if (!rig) {
       rig = buildRig(scene, nodes, sceneFrame);
       if (!rig) return;
       rigRef.current = rig;
     }
+
+    const track = getScene2Track(
+      rig.floor,
+      rig.restX,
+      rig.baseY,
+      rig.baseZ,
+      getScrollRange(sceneFrame),
+    );
+    rig.scene2ScrollStart = track.scene2ScrollStart;
+    rig.scene2ScrollEnd = track.scene2ScrollEnd;
+    rig.trackEndX = track.trackEndX;
 
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,

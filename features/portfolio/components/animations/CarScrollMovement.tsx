@@ -26,6 +26,8 @@ type CarRig = {
   carrier: THREE.Group;
   body: THREE.Object3D;
   wheels: WheelRig[];
+  roadMesh: THREE.Object3D;
+  scene2Floor: THREE.Object3D;
   restX: number;
   trackEndX: number;
   baseY: number;
@@ -104,12 +106,14 @@ function getCarScrollWindow(
   scrollRange: { min: number; max: number },
 ) {
   const scene2Bounds = getObjectBounds(scene2Floor);
-  const carScrollStart = xToScrollProgress(scene2Bounds.min.x, scrollRange);
-  const carScrollEnd = xToScrollProgress(roadEndX, scrollRange);
+  const routeStartX = scene2Bounds.min.x;
+  const routeEndX = roadEndX;
+  const eastX = Math.max(routeStartX, routeEndX);
+  const westX = Math.min(routeStartX, routeEndX);
 
   return {
-    carScrollStart,
-    carScrollEnd: Math.min(carScrollStart, carScrollEnd),
+    carScrollStart: xToScrollProgress(eastX, scrollRange),
+    carScrollEnd: xToScrollProgress(westX, scrollRange),
   };
 }
 
@@ -309,15 +313,22 @@ function buildRig(
     getScrollRange(sceneFrame),
   );
 
-  const floor2Bounds = getObjectBounds(floor2);
-  const dockX = floor2Bounds.min.x + carScrollSettings.pathInset;
-  const restX = THREE.MathUtils.clamp(dockX, track.endX, track.startX);
+  carrier.updateMatrixWorld(true);
+  const authoredWorld = new THREE.Vector3();
+  carrier.getWorldPosition(authoredWorld);
+  const restX = THREE.MathUtils.clamp(
+    authoredWorld.x,
+    track.endX,
+    track.startX,
+  );
   const trackEndX = track.endX;
+  const baseY = authoredWorld.y + carrierOffset.y;
+  const baseZ = authoredWorld.z + carrierOffset.z;
 
   carrier.position.set(
     restX + carrierOffset.x,
-    track.y + carrierOffset.y,
-    track.z + carrierOffset.z,
+    baseY,
+    baseZ,
   );
 
   if (process.env.NODE_ENV === "development") {
@@ -334,10 +345,12 @@ function buildRig(
     carrier,
     body: bodyMesh,
     wheels,
+    roadMesh,
+    scene2Floor: floor2,
     restX: restX + carrierOffset.x,
     trackEndX: trackEndX + carrierOffset.x,
-    baseY: track.y + carrierOffset.y,
-    baseZ: track.z + carrierOffset.z,
+    baseY,
+    baseZ,
     carScrollStart: scrollWindow.carScrollStart,
     carScrollEnd: scrollWindow.carScrollEnd,
     carProgress: 0,
@@ -362,6 +375,11 @@ export default function CarScrollMovement({
   const carSessionActiveRef = useRef(false);
 
   useLayoutEffect(() => {
+    if (!sceneFrame) {
+      rigRef.current = null;
+      carTravelProgressRef.current = 0;
+      return;
+    }
     rigRef.current = buildRig(scene, nodes, sceneFrame);
     carTravelProgressRef.current = 0;
     return () => {
@@ -371,12 +389,29 @@ export default function CarScrollMovement({
   }, [scene, nodes, sceneFrame, carTravelProgressRef]);
 
   useFrame((_, delta) => {
+    if (!sceneFrame) return;
+
     let rig = rigRef.current;
     if (!rig) {
       rig = buildRig(scene, nodes, sceneFrame);
       if (!rig) return;
       rigRef.current = rig;
     }
+
+    const track = getRoadTrack(
+      rig.roadMesh,
+      carScrollSettings.startInset,
+      carScrollSettings.endInset,
+      carScrollSettings.roadOffset,
+    );
+    const scrollWindow = getCarScrollWindow(
+      rig.scene2Floor,
+      track.endX,
+      getScrollRange(sceneFrame),
+    );
+    rig.carScrollStart = scrollWindow.carScrollStart;
+    rig.carScrollEnd = scrollWindow.carScrollEnd;
+    rig.trackEndX = track.endX + carScrollSettings.carrierOffset.x;
 
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,

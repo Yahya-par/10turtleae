@@ -1,9 +1,10 @@
 import { assetNames } from "./assetNames";
 
 export const birdAnimationSettings = {
-  /** Scene 1 — opening desert panel. */
-  openingFloor: assetNames.scenes.openingDesert,
+  /** Scene 1 bounds — continuity panel (continuefloor.001 in Modelv1). */
+  openingFloor: assetNames.scenes.continuityFloor,
 
+  /** Inset from scene 1 entrance / exit (world X). */
   pathInset: 1.8,
 
   /** Simple black gull silhouette. */
