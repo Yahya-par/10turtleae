@@ -64,6 +64,9 @@ export const assetNames = {
     landBlender: "safariland.001",
     mountains: "safarimountains001",
     mountainsBlender: "safarimountains.001",
+    /** Blender: lahbbabimageasset.001 — desert camp image billboard */
+    bellyDancerBillboard: "lahbbabimageasset001",
+    bellyDancerBillboardBlender: "lahbbabimageasset.001",
   },
   camel: {
     /** Blender: camel.001 — opening scene camel with turtle rider */

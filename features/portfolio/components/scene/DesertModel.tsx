@@ -18,6 +18,7 @@ import CarScrollMovement from "../animations/CarScrollMovement";
 import YachtScrollMovement from "../animations/YachtScrollMovement";
 import LanternAnimation from "../animations/LanternAnimation";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
+import DesertSafariVideoOverlay from "../animations/DesertSafariVideoOverlay";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -130,6 +131,7 @@ export default function DesertModel({
       <SafariCampWind scene={scene} nodes={nodes} />
       <LanternAnimation scene={scene} nodes={nodes} />
       <BurjKhalifaVideoOverlay scene={scene} nodes={nodes} />
+      <DesertSafariVideoOverlay scene={scene} nodes={nodes} />
       <CamelWalkAnimation
         scene={scene}
         nodes={nodes}
