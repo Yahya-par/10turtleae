@@ -17,16 +17,16 @@ export const carBodyAnimationSettings = {
   carrierName: "CarBodyCarrier001",
 
   /** Seconds for one full lap along the road (same idea as CarAnimation). */
-  lapDuration: 12,
+  lapDuration: 7,
   phaseOffset: 0,
 
   /** Applied every frame on top of the road track position. */
   carrierOffset: { x: 0, y: 0, z: 0 },
 
-  /** Route along RoadStreched.001 in Modelv1.glb. */
+  /** Route along junaroadjevu.001 in Modelv1.glb. */
   track: {
-    road: assetNames.roads.stretched,
-    roadBlender: assetNames.roads.stretchedBlender,
+    road: assetNames.roads.junaroadjevu,
+    roadBlender: assetNames.roads.junaroadjevuBlender,
     startInset: 1.5,
     endInset: 1.5,
     /** Nudge along the road — applied live every frame (safe to tune in dev). */

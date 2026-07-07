@@ -19,6 +19,11 @@ import JetskiScrollMovement from "../animations/JetskiScrollMovement";
 import YachtScrollMovement from "../animations/YachtScrollMovement";
 import PlaneScrollMovement from "../animations/PlaneScrollMovement";
 import LanternAnimation from "../animations/LanternAnimation";
+import AudioRuntime from "../audio/AudioRuntime";
+import CarPassAudio from "../audio/CarPassAudio";
+import MetroPassAudio from "../audio/MetroPassAudio";
+import PlanePassAudio from "../audio/PlanePassAudio";
+import CampfirePassAudio from "../audio/CampfirePassAudio";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -83,6 +88,7 @@ export default function DesertModel({
   return (
     <>
       <primitive object={scene} />
+      <AudioRuntime />
       <MetroTrainAnimation scene={scene} nodes={nodes} />
       <CarAnimation scene={scene} nodes={nodes} />
       <CarScrollMovement
@@ -188,6 +194,10 @@ export default function DesertModel({
       <CloudAnimation scene={scene} nodes={nodes} />
       <BirdAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
+      <CarPassAudio scene={scene} nodes={nodes} />
+      <MetroPassAudio scene={scene} nodes={nodes} />
+      <PlanePassAudio scene={scene} nodes={nodes} />
+      <CampfirePassAudio scene={scene} nodes={nodes} />
     </>
   );
 }

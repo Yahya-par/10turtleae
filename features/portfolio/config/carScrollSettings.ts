@@ -9,8 +9,11 @@ export const carScrollSettings = {
   scene2Floor: assetNames.scenes.floor1,
   scene2FloorBlender: assetNames.scenes.floor1Blender,
 
-  road: assetNames.roads.stretched,
-  roadBlender: assetNames.roads.stretchedBlender,
+  road: assetNames.roads.junaroadjevu,
+  roadBlender: assetNames.roads.junaroadjevuBlender,
+
+  /** Seconds for one east→west lap while the turtle is not riding. */
+  lapDuration: 7,
 
   pathInset: 1.2,
   startInset: 1.5,
@@ -19,6 +22,8 @@ export const carScrollSettings = {
   carrierOffset: { x: 0, y: 0, z: 0 },
 
   travelExponent: 1.45,
+  /** Multiplier for how quickly the car covers its route while the turtle is riding. */
+  travelSpeed: 1.4,
   followLerp: 0.1,
 
   /** Start boat→car transfer when centers are within this X distance. */

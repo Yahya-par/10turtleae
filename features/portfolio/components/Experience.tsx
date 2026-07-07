@@ -4,8 +4,11 @@ import * as THREE from "three";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
 import { renderSettings } from "@features/portfolio/config/renderSettings";
 import { useScrollNavigation } from "@features/portfolio/hooks/useScrollNavigation";
+import { usePortfolioAudio } from "@features/portfolio/hooks/usePortfolioAudio";
+import { audioManager } from "@features/portfolio/utils/audioManager";
 import { useInspectProtection, blockInspectContextMenu } from "@features/portfolio/hooks/useInspectProtection";
-import PortfolioLoader from "@features/portfolio/components/loading/PortfolioLoader";
+import LoaderSelector from "@features/portfolio/components/loading/LoaderSelector";
+import AudioToggle from "@features/portfolio/components/ui/AudioToggle";
 import Scene from "./scene/Scene";
 import Overlay from "./scene/Overlay";
 import CameraHud from "./camera/CameraHud";
@@ -23,6 +26,10 @@ export default function Experience() {
   const [isReady, setIsReady] = useState(false);
   const [loaderDone, setLoaderDone] = useState(false);
   const handleLoaderComplete = useCallback(() => setLoaderDone(true), []);
+  const handleCanvasPointerDown = useCallback(() => {
+    void audioManager.unlock();
+  }, []);
+  const { isMuted, toggleMute } = usePortfolioAudio(loaderDone);
   const [orbitPose, setOrbitPose] = useState({
     position: { ...cameraSettings.orbit.position },
     lookAt: { ...cameraSettings.orbit.target },
@@ -33,12 +40,14 @@ export default function Experience() {
     <div
       className={`portfolio-shell ${isOrbitMode ? "portfolio-shell--orbit" : ""} ${isScrollMode ? "portfolio-shell--scroll" : ""}`}
       onContextMenu={blockInspectContextMenu}
+      onPointerDown={handleCanvasPointerDown}
     >
       <Canvas
         shadows
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: false }}
         onContextMenu={blockInspectContextMenu}
+        onPointerDown={handleCanvasPointerDown}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = renderSettings.exposure;
@@ -56,7 +65,7 @@ export default function Experience() {
         />
       </Canvas>
       {!loaderDone && (
-        <PortfolioLoader
+        <LoaderSelector
           isAssetsReady={isReady}
           onComplete={handleLoaderComplete}
         />
@@ -66,6 +75,7 @@ export default function Experience() {
         progress={navigation.targetScrollProgress}
         mode={cameraSettings.mode}
       />
+      <AudioToggle isMuted={isMuted} onToggle={toggleMute} visible={loaderDone} />
       {isOrbitMode && loaderDone && isReady && <CameraHud {...orbitPose} />}
     </div>
   );

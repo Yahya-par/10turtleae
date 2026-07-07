@@ -40,6 +40,9 @@ export const assetNames = {
     three: "cloud003",
   },
   roads: {
+    /** Blender: junaroadjevu.001 — Dubai Frame → Burj Al Arab coastal road */
+    junaroadjevu: "junaroadjevu001",
+    junaroadjevuBlender: "junaroadjevu.001",
     /** Last road segment before Atlantis (Blender: Road.004, ~X -92 to -101) */
     alRabEnd: "Road004",
     /** Blender: Roadthatpart.001 */

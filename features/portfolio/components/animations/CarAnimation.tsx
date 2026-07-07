@@ -11,9 +11,13 @@ import {
 type CarTrack = {
   start: THREE.Vector3;
   end: THREE.Vector3;
+  roadMinX: number;
+  roadMaxX: number;
 };
 
 type AnimatedCar = {
+  id: string;
+  mesh: THREE.Object3D;
   carrier: THREE.Group;
   lapDuration: number;
   phaseOffset: number;
@@ -36,33 +40,30 @@ function resolveObject(
   );
 }
 
-// getCarTrack is a function that returns the start and end positions of the cars along the track.
 function getCarTrack(
   sceneStart: THREE.Object3D,
-  sceneEnd: THREE.Object3D,
-  roadEnd: THREE.Object3D | null,
+  road: THREE.Object3D,
   carrierY: number,
   carrierZ: number,
 ) {
   const startBox = getObjectBounds(sceneStart);
-  const endBox = getObjectBounds(sceneEnd);
-  const roadBox = roadEnd ? getObjectBounds(roadEnd) : null;
+  const roadBox = getObjectBounds(road);
   const { startInset, endInset } = carAnimationSettings;
 
-  // Dubai Frame (scene 3) → Burj Al Arab (scene 7 / floor 005).
-  // Start at scene entrance (max X); end at last road segment before Atlantis.
-  const startX = startBox.max.x - startInset;
-  const endX = roadBox
-    ? roadBox.min.x + endInset
-    : endBox.min.x + endInset;
+  const roadMinX = roadBox.min.x + endInset;
+  const roadMaxX = roadBox.max.x - endInset;
+  const entranceX = startBox.max.x - startInset;
+
+  const startX = THREE.MathUtils.clamp(entranceX, roadMinX, roadMaxX);
+  /** West end of the road — cars travel east → west (high X → low X). */
+  const endX = roadMinX;
 
   const start = new THREE.Vector3(startX, carrierY, carrierZ);
   const end = new THREE.Vector3(endX, carrierY, carrierZ);
 
-  return { start, end, startBox, endBox, roadBox };
+  return { start, end, roadMinX, roadMaxX, startBox, roadBox };
 }
 
-//getLoopProgress is a function that returns a number between 0 and 1 that represents the progress of the car along the track.
 function getLoopProgress(
   elapsed: number,
   lapDuration: number,
@@ -71,7 +72,6 @@ function getLoopProgress(
   return ((elapsed + phaseOffset) % lapDuration) / lapDuration;
 }
 
-// CarAnimation is a component that animates the cars along the track.
 export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
   const carsRef = useRef<AnimatedCar[]>([]);
   const trackRef = useRef<CarTrack | null>(null);
@@ -90,30 +90,20 @@ export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
       carAnimationSettings.sceneStart,
       carAnimationSettings.sceneStartBlender,
     );
-    const sceneEnd = resolveObject(
+    const road = resolveObject(
       scene,
       nodes,
-      carAnimationSettings.sceneEnd,
-      carAnimationSettings.sceneEndBlender,
-    );
-    const roadEnd = resolveObject(
-      scene,
-      nodes,
-      carAnimationSettings.roadEnd,
-      carAnimationSettings.roadEndBlender,
+      carAnimationSettings.road,
+      carAnimationSettings.roadBlender,
     );
 
-    if (!sceneStart || !sceneEnd) {
+    if (!sceneStart || !road) {
       if (process.env.NODE_ENV === "development") {
         console.warn("[CarAnimation] Missing track markers:", {
           sceneStart: carAnimationSettings.sceneStart,
-          sceneStartBlender: carAnimationSettings.sceneStartBlender,
           startFound: Boolean(sceneStart),
-          sceneEnd: carAnimationSettings.sceneEnd,
-          sceneEndBlender: carAnimationSettings.sceneEndBlender,
-          endFound: Boolean(sceneEnd),
-          roadEnd: carAnimationSettings.roadEnd,
-          roadFound: Boolean(roadEnd),
+          road: carAnimationSettings.road,
+          roadFound: Boolean(road),
         });
       }
       return;
@@ -122,7 +112,12 @@ export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
     const animatedCars: AnimatedCar[] = [];
 
     for (const carConfig of carAnimationSettings.cars) {
-      const car = findSceneObject(scene, nodes, carConfig.objectName);
+      const car = resolveObject(
+        scene,
+        nodes,
+        carConfig.objectName,
+        carConfig.objectBlender,
+      );
       if (!car) {
         if (process.env.NODE_ENV === "development") {
           console.warn("[CarAnimation] Missing car:", carConfig.objectName);
@@ -132,6 +127,8 @@ export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
 
       const carrier = attachAnimationCarrier(car, carConfig.carrierName);
       animatedCars.push({
+        id: carConfig.id,
+        mesh: car,
         carrier,
         lapDuration: carConfig.lapDuration,
         phaseOffset: carConfig.phaseOffset,
@@ -141,15 +138,14 @@ export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
     if (!animatedCars.length) return;
 
     const leadCarrier = animatedCars[0].carrier;
-    const { start, end, startBox, endBox, roadBox } = getCarTrack(
+    const { start, end, roadMinX, roadMaxX, startBox, roadBox } = getCarTrack(
       sceneStart,
-      sceneEnd,
-      roadEnd,
+      road,
       leadCarrier.position.y,
       leadCarrier.position.z,
     );
 
-    trackRef.current = { start, end };
+    trackRef.current = { start, end, roadMinX, roadMaxX };
     carsRef.current = animatedCars;
     initializedRef.current = true;
 
@@ -161,12 +157,12 @@ export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
 
     if (process.env.NODE_ENV === "development") {
       console.info("[CarAnimation] Ready:", {
-        cars: animatedCars.map((entry) => entry.carrier.children[0]?.name),
+        cars: animatedCars.map((entry) => entry.mesh.name),
         start: start.toArray(),
         end: end.toArray(),
         sceneStartX: [startBox.min.x, startBox.max.x],
-        sceneEndX: [endBox.min.x, endBox.max.x],
-        roadEndX: roadBox ? [roadBox.min.x, roadBox.max.x] : null,
+        roadX: [roadBox.min.x, roadBox.max.x],
+        clampedX: [roadMinX, roadMaxX],
       });
     }
   }, [scene, nodes]);
@@ -185,6 +181,11 @@ export default function CarAnimation({ scene, nodes }: CarAnimationProps) {
         phaseOffset,
       );
       tempPositionRef.current.copy(track.start).lerp(track.end, t);
+      tempPositionRef.current.x = THREE.MathUtils.clamp(
+        tempPositionRef.current.x,
+        track.roadMinX,
+        track.roadMaxX,
+      );
       carrier.position.copy(tempPositionRef.current);
     }
   });

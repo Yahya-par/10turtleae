@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { carScrollSettings } from "@features/portfolio/config/carScrollSettings";
+import { carPassState } from "@features/portfolio/config/carPassState";
 import type { CarBodyWheelSettings } from "@features/portfolio/config/carBodyAnimationSettings";
 import {
   attachAnimationCarrier,
@@ -27,6 +28,7 @@ type CarRig = {
   body: THREE.Object3D;
   wheels: WheelRig[];
   restX: number;
+  trackStartX: number;
   trackEndX: number;
   baseY: number;
   baseZ: number;
@@ -153,7 +155,7 @@ function getCarTravelProgress(
   if (span <= 0) return 0;
 
   return THREE.MathUtils.clamp(
-    (carScrollStart - scrollProgress) / span,
+    ((carScrollStart - scrollProgress) / span) * carScrollSettings.travelSpeed,
     0,
     1,
   );
@@ -312,6 +314,7 @@ function buildRig(
   const floor2Bounds = getObjectBounds(floor2);
   const dockX = floor2Bounds.min.x + carScrollSettings.pathInset;
   const restX = THREE.MathUtils.clamp(dockX, track.endX, track.startX);
+  const trackStartX = track.startX;
   const trackEndX = track.endX;
 
   carrier.position.set(
@@ -325,6 +328,7 @@ function buildRig(
       body: bodyMesh.name,
       wheels: wheels.map((entry) => entry.wheel.name),
       restX,
+      trackStartX,
       trackEndX,
       carScroll: [scrollWindow.carScrollStart, scrollWindow.carScrollEnd],
     });
@@ -335,6 +339,7 @@ function buildRig(
     body: bodyMesh,
     wheels,
     restX: restX + carrierOffset.x,
+    trackStartX: trackStartX + carrierOffset.x,
     trackEndX: trackEndX + carrierOffset.x,
     baseY: track.y + carrierOffset.y,
     baseZ: track.z + carrierOffset.z,
@@ -360,6 +365,8 @@ export default function CarScrollMovement({
 }: CarScrollMovementProps) {
   const rigRef = useRef<CarRig | null>(null);
   const carSessionActiveRef = useRef(false);
+  const idleElapsedRef = useRef(0);
+  const carParkedRef = useRef(false);
 
   useLayoutEffect(() => {
     rigRef.current = buildRig(scene, nodes, sceneFrame);
@@ -367,6 +374,8 @@ export default function CarScrollMovement({
     return () => {
       rigRef.current = null;
       carTravelProgressRef.current = 0;
+      carParkedRef.current = false;
+      carPassState.scrollCarParked = true;
     };
   }, [scene, nodes, sceneFrame, carTravelProgressRef]);
 
@@ -394,6 +403,8 @@ export default function CarScrollMovement({
       carTravelProgressRef.current = 0;
       rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
       rig.lastX = rig.restX;
+      carParkedRef.current = true;
+      carPassState.scrollCarParked = true;
       return;
     }
 
@@ -411,16 +422,44 @@ export default function CarScrollMovement({
       carTravelProgressRef.current = 1;
       rig.carrier.position.set(rig.trackEndX, rig.baseY, rig.baseZ);
       rig.lastX = rig.trackEndX;
+      carParkedRef.current = true;
+      carPassState.scrollCarParked = true;
       return;
     }
 
     if (!turtleOnCarRef.current && !carSessionActiveRef.current) {
-      rig.carProgress = 0;
+      carParkedRef.current = false;
+      carPassState.scrollCarParked = false;
+      const lapDuration = carScrollSettings.lapDuration;
+      const prevElapsed = idleElapsedRef.current;
+      idleElapsedRef.current += delta;
+      const lapT =
+        (idleElapsedRef.current % lapDuration) / lapDuration;
+      const prevLapT = (prevElapsed % lapDuration) / lapDuration;
+      const nextX = THREE.MathUtils.lerp(
+        rig.trackStartX,
+        rig.trackEndX,
+        lapT,
+      );
+
+      rig.carProgress = lapT;
       carTravelProgressRef.current = 0;
-      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
-      rig.lastX = rig.restX;
+      rig.carrier.position.set(nextX, rig.baseY, rig.baseZ);
+
+      const wrapped = lapT < prevLapT;
+      const deltaX = wrapped ? 0 : Math.abs(nextX - rig.lastX);
+      for (const wheelRig of rig.wheels) {
+        const spin = deltaX * wheelRig.spinSpeed * wheelRig.spinDirection;
+        wheelRig.wheel.rotateOnAxis(wheelRig.spinAxis, -spin);
+      }
+
+      rig.lastX = nextX;
       return;
     }
+
+    carParkedRef.current = false;
+    carPassState.scrollCarParked = false;
+    idleElapsedRef.current = 0;
 
     rig.carProgress = getCarTravelProgress(
       progress,
