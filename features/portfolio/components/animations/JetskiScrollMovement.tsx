@@ -7,8 +7,10 @@ import { jetskiScrollSettings } from "@features/portfolio/config/jetskiScrollSet
 import {
   attachAnimationCarrier,
   findAlRabScenePanel,
+  findObjectByNamePattern,
   findSceneObject,
   getObjectBounds,
+  setObjectWorldPosition,
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
   getScrollRange,
@@ -79,22 +81,80 @@ function getJetskiScrollWindow(
   };
 }
 
-function getJetskiTrackEndX(
-  sceneFloor: THREE.Object3D,
-  pathInset: number,
-  trackEndOffsetX: number,
-) {
-  const floorBounds = getObjectBounds(sceneFloor);
-  return floorBounds.min.x + pathInset + trackEndOffsetX;
+function getMeshWorldBox(object: THREE.Object3D) {
+  object.updateMatrixWorld(true);
+  const mesh = object as THREE.Mesh;
+
+  if (mesh.isMesh && mesh.geometry) {
+    if (!mesh.geometry.boundingBox) {
+      mesh.geometry.computeBoundingBox();
+    }
+
+    return mesh.geometry.boundingBox!.clone().applyMatrix4(mesh.matrixWorld);
+  }
+
+  return getObjectBounds(object);
 }
 
-function getDriverTrackStart(
-  driver: THREE.Object3D,
-  target = new THREE.Vector3(),
+function resolveJetskiWaterMesh(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
 ) {
-  const bounds = getObjectBounds(driver);
-  bounds.getCenter(target);
-  return target;
+  const { water, waterBlender } = jetskiScrollSettings;
+
+  return (
+    resolveObject(scene, nodes, water, waterBlender) ??
+    findObjectByNamePattern(scene, /^water\.?001$|^water001$/i)
+  );
+}
+
+type JetskiWaterTrack = {
+  restX: number;
+  trackEndX: number;
+  baseY: number;
+  baseZ: number;
+};
+
+function resolveJetskiWaterTrack(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  sceneFloor: THREE.Object3D,
+  authoredWorldY: number,
+  authoredWorldZ: number,
+): JetskiWaterTrack {
+  const { startInset, endInset, pathInset, trackEndOffsetX, carrierOffset } =
+    jetskiScrollSettings;
+  const water = resolveJetskiWaterMesh(scene, nodes);
+
+  if (water) {
+    const waterBox = getMeshWorldBox(water);
+    // Only drive east/west (X). Keep the authored Y/Z so the jetski + turtle
+    // stay riding on the surface instead of dropping to the water center.
+    return {
+      restX: waterBox.max.x - startInset + carrierOffset.x,
+      trackEndX: waterBox.min.x + endInset + trackEndOffsetX + carrierOffset.x,
+      baseY: authoredWorldY + carrierOffset.y,
+      baseZ: authoredWorldZ + carrierOffset.z,
+    };
+  }
+
+  const floorBounds = getObjectBounds(sceneFloor);
+  return {
+    restX: floorBounds.max.x - pathInset + carrierOffset.x,
+    trackEndX: floorBounds.min.x + pathInset + trackEndOffsetX + carrierOffset.x,
+    baseY: authoredWorldY + carrierOffset.y,
+    baseZ: authoredWorldZ + carrierOffset.z,
+  };
+}
+
+function setCarrierWorldPosition(
+  carrier: THREE.Object3D,
+  worldX: number,
+  worldY: number,
+  worldZ: number,
+) {
+  tempOffset.set(worldX, worldY, worldZ);
+  setObjectWorldPosition(carrier, tempOffset);
 }
 
 export function resolveJetskiScrollWindow(
@@ -107,8 +167,6 @@ export function resolveJetskiScrollWindow(
     driverBlender,
     sceneFloor,
     sceneFloorBlender,
-    pathInset,
-    trackEndOffsetX,
   } = jetskiScrollSettings;
 
   const driverMesh = resolveObject(scene, nodes, driver, driverBlender);
@@ -120,10 +178,15 @@ export function resolveJetskiScrollWindow(
     return { jetskiScrollStart: 1, jetskiScrollEnd: 0 };
   }
 
-  const start = getDriverTrackStart(driverMesh, tempOffset);
-  const trackEndX = getJetskiTrackEndX(floor, pathInset, trackEndOffsetX);
+  const { restX, trackEndX } = resolveJetskiWaterTrack(
+    scene,
+    nodes,
+    floor,
+    0,
+    0,
+  );
 
-  return getJetskiScrollWindow(start.x, trackEndX, getScrollRange(sceneFrame));
+  return getJetskiScrollWindow(restX, trackEndX, getScrollRange(sceneFrame));
 }
 
 function getJetskiTravelProgress(
@@ -157,8 +220,6 @@ function buildRig(
     carrierOffset,
     sceneFloor,
     sceneFloorBlender,
-    pathInset,
-    trackEndOffsetX,
   } = jetskiScrollSettings;
 
   const driverMesh = resolveObject(scene, nodes, driver, driverBlender);
@@ -183,28 +244,38 @@ function buildRig(
   carrier.updateMatrixWorld(true);
   const restWorld = new THREE.Vector3();
   carrier.getWorldPosition(restWorld);
-  const restX = restWorld.x;
-  const trackEndX = getJetskiTrackEndX(floor, pathInset, trackEndOffsetX);
+  const track = resolveJetskiWaterTrack(
+    scene,
+    nodes,
+    floor,
+    restWorld.y,
+    restWorld.z,
+  );
   const scrollWindow = getJetskiScrollWindow(
-    restX,
-    trackEndX,
+    track.restX,
+    track.trackEndX,
     getScrollRange(sceneFrame),
   );
 
   if (!jetskiScrollSettings.lockToModelPosition) {
-    carrier.position.set(
-      restX + carrierOffset.x,
-      restWorld.y + carrierOffset.y,
-      restWorld.z + carrierOffset.z,
+    setCarrierWorldPosition(
+      carrier,
+      track.restX,
+      track.baseY,
+      track.baseZ,
     );
   }
 
   if (process.env.NODE_ENV === "development") {
+    const water = resolveJetskiWaterMesh(scene, nodes);
+    const waterBox = water ? getMeshWorldBox(water) : null;
     console.info("[JetskiScrollMovement] Ready:", {
       driver: driverMesh.name,
       jetski: jetskiMesh?.name ?? null,
-      rest: [restX, restWorld.y, restWorld.z],
-      trackEndX,
+      water: water?.name ?? null,
+      waterX: waterBox ? [waterBox.min.x, waterBox.max.x] : null,
+      restX: track.restX,
+      trackEndX: track.trackEndX,
       jetskiScroll: [scrollWindow.jetskiScrollStart, scrollWindow.jetskiScrollEnd],
     });
   }
@@ -214,10 +285,10 @@ function buildRig(
     driver: driverMesh,
     jetski: jetskiMesh,
     sceneFloor: floor,
-    restX: restX + carrierOffset.x,
-    trackEndX: trackEndX + carrierOffset.x,
-    baseY: restWorld.y + carrierOffset.y,
-    baseZ: restWorld.z + carrierOffset.z,
+    restX: track.restX,
+    trackEndX: track.trackEndX,
+    baseY: track.baseY,
+    baseZ: track.baseZ,
     jetskiScrollStart: scrollWindow.jetskiScrollStart,
     jetskiScrollEnd: scrollWindow.jetskiScrollEnd,
     jetskiProgress: 0,
@@ -287,12 +358,17 @@ export default function JetskiScrollMovement({
       rigRef.current = rig;
     }
 
-    const trackEndX = getJetskiTrackEndX(
+    const track = resolveJetskiWaterTrack(
+      scene,
+      nodes,
       rig.sceneFloor,
-      jetskiScrollSettings.pathInset,
-      jetskiScrollSettings.trackEndOffsetX,
+      rig.baseY,
+      rig.baseZ,
     );
-    rig.trackEndX = trackEndX + jetskiScrollSettings.carrierOffset.x;
+    rig.restX = track.restX;
+    rig.trackEndX = track.trackEndX;
+    rig.baseY = track.baseY;
+    rig.baseZ = track.baseZ;
     const scrollWindow = getJetskiScrollWindow(
       rig.restX,
       rig.trackEndX,
@@ -315,7 +391,7 @@ export default function JetskiScrollMovement({
       rig.jetskiProgress = 1;
       jetskiTravelProgressRef.current = 1;
       if (!jetskiScrollSettings.lockToModelPosition) {
-        rig.carrier.position.set(rig.trackEndX, rig.baseY, rig.baseZ);
+        setCarrierWorldPosition(rig.carrier, rig.trackEndX, rig.baseY, rig.baseZ);
       }
       return;
     }
@@ -325,7 +401,7 @@ export default function JetskiScrollMovement({
       rig.jetskiProgress = 0;
       jetskiTravelProgressRef.current = 0;
       if (!jetskiScrollSettings.lockToModelPosition) {
-        rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+        setCarrierWorldPosition(rig.carrier, rig.restX, rig.baseY, rig.baseZ);
       }
       return;
     }
@@ -339,7 +415,7 @@ export default function JetskiScrollMovement({
             rig.trackEndX,
             heldProgress,
           );
-          rig.carrier.position.set(heldX, rig.baseY, rig.baseZ);
+          setCarrierWorldPosition(rig.carrier, heldX, rig.baseY, rig.baseZ);
         }
         return;
       }
@@ -347,7 +423,7 @@ export default function JetskiScrollMovement({
       rig.jetskiProgress = 0;
       jetskiTravelProgressRef.current = 0;
       if (!jetskiScrollSettings.lockToModelPosition) {
-        rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+        setCarrierWorldPosition(rig.carrier, rig.restX, rig.baseY, rig.baseZ);
       }
       return;
     }
@@ -364,7 +440,7 @@ export default function JetskiScrollMovement({
         rig.trackEndX,
         rig.jetskiProgress,
       );
-      rig.carrier.position.set(nextX, rig.baseY, rig.baseZ);
+      setCarrierWorldPosition(rig.carrier, nextX, rig.baseY, rig.baseZ);
     }
 
     jetskiTravelProgressRef.current = rig.jetskiProgress;

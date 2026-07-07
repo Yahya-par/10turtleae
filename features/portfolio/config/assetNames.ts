@@ -106,6 +106,9 @@ export const assetNames = {
     blenderName: "jetski.001",
     driver: "jetskidriver001",
     driverBlender: "jetskidriver.001",
+    /** Al Arab scene water corridor — jetski start/end reference. */
+    water: "water001",
+    waterBlender: "water.001",
   },
   plane: {
     object: "planewithtext001",

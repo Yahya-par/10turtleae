@@ -6,13 +6,20 @@ export const jetskiScrollSettings = {
   jetski: assetNames.jetski.object,
   jetskiBlender: assetNames.jetski.blenderName,
   carrierName: "JetskiScrollCarrier001",
-  /** Keep the jetski at its authored GLB position — scroll only drives turtle handoffs. */
-  lockToModelPosition: true,
+  /** When true, jetski stays at its authored GLB position and scroll only drives turtle handoffs. */
+  lockToModelPosition: false,
 
   sceneFloor: assetNames.scenes.alRab,
   sceneFloorBlender: "Desert_Scene_Floor.005",
+  /** Al Arab scene water001 — sole reference for jetski start/end. */
+  water: assetNames.jetski.water,
+  waterBlender: assetNames.jetski.waterBlender,
 
   pathInset: 1.2,
+  /** Inset from the eastern water edge for the jetski start line (larger = starts further inside the water). */
+  startInset: 1.6,
+  /** Inset from the western water edge for the jetski stop line (larger = stops further inside the water). */
+  endInset: 1.6,
   /** Extra nudge on the stop X (negative = stop slightly earlier). */
   trackEndOffsetX: 0,
   /** Extra nudge on the whole jetski carrier (x/y/z). */
