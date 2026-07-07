@@ -13,7 +13,7 @@ export const planeScrollSettings = {
   trackEnd: assetNames.scenes.alRab,
   trackEndBlender: "Desert_Scene_Floor.005",
 
-  pathInset: 2,
+  pathInset: 0,
   useAuthoredStart: true,
   endOffsetX: 0,
   positionOffset: { x: 0, y: 0, z: 0 },
