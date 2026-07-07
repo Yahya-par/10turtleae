@@ -131,9 +131,6 @@ function getJetskiTravelProgress(
   jetskiScrollStart: number,
   jetskiScrollEnd: number,
 ) {
-  if (scrollProgress > jetskiScrollStart) return 0;
-  if (scrollProgress < jetskiScrollEnd) return 1;
-
   const span = jetskiScrollStart - jetskiScrollEnd;
   if (span <= 0) return 0;
 
@@ -194,11 +191,13 @@ function buildRig(
     getScrollRange(sceneFrame),
   );
 
-  carrier.position.set(
-    restX + carrierOffset.x,
-    restWorld.y + carrierOffset.y,
-    restWorld.z + carrierOffset.z,
-  );
+  if (!jetskiScrollSettings.lockToModelPosition) {
+    carrier.position.set(
+      restX + carrierOffset.x,
+      restWorld.y + carrierOffset.y,
+      restWorld.z + carrierOffset.z,
+    );
+  }
 
   if (process.env.NODE_ENV === "development") {
     console.info("[JetskiScrollMovement] Ready:", {
@@ -315,7 +314,9 @@ export default function JetskiScrollMovement({
     if (turtleOnYachtRef.current) {
       rig.jetskiProgress = 1;
       jetskiTravelProgressRef.current = 1;
-      rig.carrier.position.set(rig.trackEndX, rig.baseY, rig.baseZ);
+      if (!jetskiScrollSettings.lockToModelPosition) {
+        rig.carrier.position.set(rig.trackEndX, rig.baseY, rig.baseZ);
+      }
       return;
     }
 
@@ -323,25 +324,31 @@ export default function JetskiScrollMovement({
       jetskiSessionActiveRef.current = false;
       rig.jetskiProgress = 0;
       jetskiTravelProgressRef.current = 0;
-      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+      if (!jetskiScrollSettings.lockToModelPosition) {
+        rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+      }
       return;
     }
 
     if (!turtleOnJetskiRef.current) {
       if (jetskiSessionActiveRef.current) {
-        const heldProgress = jetskiTravelProgressRef.current;
-        const heldX = THREE.MathUtils.lerp(
-          rig.restX,
-          rig.trackEndX,
-          heldProgress,
-        );
-        rig.carrier.position.set(heldX, rig.baseY, rig.baseZ);
+        if (!jetskiScrollSettings.lockToModelPosition) {
+          const heldProgress = jetskiTravelProgressRef.current;
+          const heldX = THREE.MathUtils.lerp(
+            rig.restX,
+            rig.trackEndX,
+            heldProgress,
+          );
+          rig.carrier.position.set(heldX, rig.baseY, rig.baseZ);
+        }
         return;
       }
 
       rig.jetskiProgress = 0;
       jetskiTravelProgressRef.current = 0;
-      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+      if (!jetskiScrollSettings.lockToModelPosition) {
+        rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+      }
       return;
     }
 
@@ -351,13 +358,15 @@ export default function JetskiScrollMovement({
       rig.jetskiScrollEnd,
     );
 
-    const nextX = THREE.MathUtils.lerp(
-      rig.restX,
-      rig.trackEndX,
-      rig.jetskiProgress,
-    );
+    if (!jetskiScrollSettings.lockToModelPosition) {
+      const nextX = THREE.MathUtils.lerp(
+        rig.restX,
+        rig.trackEndX,
+        rig.jetskiProgress,
+      );
+      rig.carrier.position.set(nextX, rig.baseY, rig.baseZ);
+    }
 
-    rig.carrier.position.set(nextX, rig.baseY, rig.baseZ);
     jetskiTravelProgressRef.current = rig.jetskiProgress;
   });
 

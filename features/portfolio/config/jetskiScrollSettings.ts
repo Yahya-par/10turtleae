@@ -6,6 +6,8 @@ export const jetskiScrollSettings = {
   jetski: assetNames.jetski.object,
   jetskiBlender: assetNames.jetski.blenderName,
   carrierName: "JetskiScrollCarrier001",
+  /** Keep the jetski at its authored GLB position — scroll only drives turtle handoffs. */
+  lockToModelPosition: true,
 
   sceneFloor: assetNames.scenes.alRab,
   sceneFloorBlender: "Desert_Scene_Floor.005",
