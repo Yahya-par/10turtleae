@@ -4,11 +4,21 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { carScrollSettings } from "@features/portfolio/config/carScrollSettings";
+import { jetskiScrollSettings } from "@features/portfolio/config/jetskiScrollSettings";
+import { assetNames } from "@features/portfolio/config/assetNames";
 import type { CarBodyWheelSettings } from "@features/portfolio/config/carBodyAnimationSettings";
 import {
   attachAnimationCarrier,
+  findAlRabScenePanel,
+  findScrollCarRoadMesh,
   findSceneObject,
+  findScrollCarBody,
   getObjectBounds,
+  measureCarBodyCarrierExtents,
+  resolveCarCarrierTrack,
+  resolveCarRoadTrack,
+  resolveScene3CarStartX,
+  type CarRoadTrack,
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
   getScrollRange,
@@ -26,8 +36,7 @@ type CarRig = {
   carrier: THREE.Group;
   body: THREE.Object3D;
   wheels: WheelRig[];
-  roadMesh: THREE.Object3D;
-  scene2Floor: THREE.Object3D;
+  roadMesh: THREE.Object3D | null;
   restX: number;
   trackEndX: number;
   baseY: number;
@@ -35,6 +44,7 @@ type CarRig = {
   carScrollStart: number;
   carScrollEnd: number;
   carProgress: number;
+  dockedAtEnd: boolean;
   lastX: number;
 };
 
@@ -69,26 +79,112 @@ function resolveObject(
   );
 }
 
-function getRoadTrack(
-  road: THREE.Object3D,
-  startInset: number,
-  endInset: number,
-  roadOffset: { x: number; y: number; z: number },
-) {
-  const roadBox = getObjectBounds(road);
-  const roadCenter = new THREE.Vector3();
-  roadBox.getCenter(roadCenter);
+function getRoadTrack(road: THREE.Object3D): CarRoadTrack {
+  return resolveCarRoadTrack(road, {
+    roadOffset: carScrollSettings.roadOffset,
+  });
+}
 
-  const startX = roadBox.max.x - startInset + roadOffset.x;
-  const endX = roadBox.min.x + endInset + roadOffset.x;
+function resolveCarrierTrack(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  carrier: THREE.Group,
+  bodyMesh: THREE.Object3D,
+  roadMesh: THREE.Object3D | null,
+) {
+  const { startInset, endInset } = carScrollSettings;
+  const extents = measureCarBodyCarrierExtents(carrier);
+
+  if (roadMesh) {
+    const roadTrack = getRoadTrack(roadMesh);
+    return {
+      ...resolveCarCarrierTrack(roadTrack, extents, { startInset, endInset }),
+      roadTrack,
+    };
+  }
+
+  const scene3Start = resolveScene3CarStartX(scene, nodes, startInset);
+  const fallbackEndX = resolveCarTrackEndX(scene, nodes, roadMesh, null, extents);
+
+  if (scene3Start === null || fallbackEndX === null) {
+    return null;
+  }
+
+  const roadTrack: CarRoadTrack = {
+    roadEastX: scene3Start + startInset,
+    roadWestX: fallbackEndX - endInset - extents.westExtent,
+    y: carrier.position.y,
+    z: carrier.position.z,
+    roadBox: new THREE.Box3(),
+  };
 
   return {
-    startX,
-    endX,
-    y: roadCenter.y + roadOffset.y,
-    z: roadCenter.z + roadOffset.z,
-    roadBox,
+    ...resolveCarCarrierTrack(roadTrack, extents, { startInset, endInset }),
+    roadTrack,
   };
+}
+
+function resolveCarTrackEndX(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  roadMesh: THREE.Object3D | null,
+  roadTrack: CarRoadTrack | null,
+  extents?: { westExtent: number },
+) {
+  if (roadTrack) {
+    return (
+      roadTrack.roadWestX +
+      carScrollSettings.endInset +
+      (extents?.westExtent ?? 0)
+    );
+  }
+
+  const { endInset, pathInset } = carScrollSettings;
+
+  if (roadMesh) {
+    const track = getRoadTrack(roadMesh);
+    return track.roadWestX + endInset + (extents?.westExtent ?? 0);
+  }
+
+  const jetskiDriver =
+    findSceneObject(
+      scene,
+      nodes,
+      jetskiScrollSettings.driver,
+      jetskiScrollSettings.driverBlender,
+    ) ?? null;
+
+  if (jetskiDriver) {
+    jetskiDriver.updateMatrixWorld(true);
+    const jetskiBounds = getObjectBounds(jetskiDriver);
+    return jetskiBounds.max.x + 1.5 + (extents?.westExtent ?? 0);
+  }
+
+  const floor =
+    findAlRabScenePanel(scene, nodes) ??
+    findSceneObject(
+      scene,
+      nodes,
+      jetskiScrollSettings.sceneFloor,
+      jetskiScrollSettings.sceneFloorBlender,
+    );
+
+  if (floor) {
+    return getObjectBounds(floor).min.x + pathInset + (extents?.westExtent ?? 0);
+  }
+
+  const alRab = findSceneObject(
+    scene,
+    nodes,
+    assetNames.scenes.alRabLandmark,
+    "burjalarab.001",
+  );
+
+  if (alRab) {
+    return getObjectBounds(alRab).min.x + pathInset + (extents?.westExtent ?? 0);
+  }
+
+  return null;
 }
 
 function xToScrollProgress(
@@ -101,15 +197,12 @@ function xToScrollProgress(
 }
 
 function getCarScrollWindow(
-  scene2Floor: THREE.Object3D,
+  restX: number,
   roadEndX: number,
   scrollRange: { min: number; max: number },
 ) {
-  const scene2Bounds = getObjectBounds(scene2Floor);
-  const routeStartX = scene2Bounds.min.x;
-  const routeEndX = roadEndX;
-  const eastX = Math.max(routeStartX, routeEndX);
-  const westX = Math.min(routeStartX, routeEndX);
+  const eastX = Math.max(restX, roadEndX);
+  const westX = Math.min(restX, roadEndX);
 
   return {
     carScrollStart: xToScrollProgress(eastX, scrollRange),
@@ -122,27 +215,34 @@ export function resolveCarScrollWindow(
   nodes: Record<string, THREE.Object3D>,
   sceneFrame: SceneFrame | null,
 ) {
-  const {
-    body,
-    bodyBlender,
-    road,
-    roadBlender,
-    scene2Floor,
-    scene2FloorBlender,
-    startInset,
-    endInset,
-    roadOffset,
-  } = carScrollSettings;
+  const bodyMesh = findScrollCarBody(scene, nodes);
+  const roadMesh = findScrollCarRoadMesh(scene, nodes);
 
-  const roadMesh = resolveObject(scene, nodes, road, roadBlender);
-  const floor2 = resolveObject(scene, nodes, scene2Floor, scene2FloorBlender);
-
-  if (!roadMesh || !floor2) {
+  if (!bodyMesh?.parent) {
     return { carScrollStart: 1, carScrollEnd: 0 };
   }
 
-  const track = getRoadTrack(roadMesh, startInset, endInset, roadOffset);
-  return getCarScrollWindow(floor2, track.endX, getScrollRange(sceneFrame));
+  const carrier =
+    bodyMesh.parent instanceof THREE.Group
+      ? bodyMesh.parent
+      : attachAnimationCarrier(bodyMesh, carScrollSettings.carrierName);
+  const carrierTrack = resolveCarrierTrack(
+    scene,
+    nodes,
+    carrier,
+    bodyMesh,
+    roadMesh,
+  );
+
+  if (!carrierTrack) {
+    return { carScrollStart: 1, carScrollEnd: 0 };
+  }
+
+  return getCarScrollWindow(
+    carrierTrack.restX,
+    carrierTrack.trackEndX,
+    getScrollRange(sceneFrame),
+  );
 }
 
 function getCarTravelProgress(
@@ -150,9 +250,6 @@ function getCarTravelProgress(
   carScrollStart: number,
   carScrollEnd: number,
 ) {
-  if (scrollProgress > carScrollStart) return 0;
-  if (scrollProgress < carScrollEnd) return 1;
-
   const span = carScrollStart - carScrollEnd;
   if (span <= 0) return 0;
 
@@ -241,21 +338,12 @@ function buildRig(
   scene.updateMatrixWorld(true);
 
   const {
-    body,
-    bodyBlender,
     carrierName,
     wheels: wheelSettings,
-    road,
-    roadBlender,
-    scene2Floor,
-    scene2FloorBlender,
-    startInset,
-    endInset,
-    roadOffset,
     carrierOffset,
   } = carScrollSettings;
 
-  const bodyMesh = resolveObject(scene, nodes, body, bodyBlender);
+  const bodyMesh = findScrollCarBody(scene, nodes);
   const frontWheel = resolveObject(
     scene,
     nodes,
@@ -268,10 +356,15 @@ function buildRig(
     wheelSettings.back.runtimeName,
     wheelSettings.back.blenderName,
   );
-  const roadMesh = resolveObject(scene, nodes, road, roadBlender);
-  const floor2 = resolveObject(scene, nodes, scene2Floor, scene2FloorBlender);
+  const roadMesh = findScrollCarRoadMesh(scene, nodes);
 
-  if (!bodyMesh?.parent || !roadMesh || !floor2) {
+  if (!bodyMesh?.parent) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[CarScrollMovement] Setup failed:", {
+        body: bodyMesh?.name ?? null,
+        road: roadMesh?.name ?? null,
+      });
+    }
     return null;
   }
 
@@ -306,24 +399,36 @@ function buildRig(
     if (backRig) wheels.push(backRig);
   }
 
-  const track = getRoadTrack(roadMesh, startInset, endInset, roadOffset);
+  const carrierTrack = resolveCarrierTrack(
+    scene,
+    nodes,
+    carrier,
+    bodyMesh,
+    roadMesh,
+  );
+
+  if (!carrierTrack) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[CarScrollMovement] Setup failed: no carrier track", {
+        body: bodyMesh.name,
+        road: roadMesh?.name ?? null,
+      });
+    }
+    return null;
+  }
+
+  const { restX, trackEndX, roadTrack } = carrierTrack;
   const scrollWindow = getCarScrollWindow(
-    floor2,
-    track.endX,
+    restX,
+    trackEndX,
     getScrollRange(sceneFrame),
   );
 
   carrier.updateMatrixWorld(true);
   const authoredWorld = new THREE.Vector3();
   carrier.getWorldPosition(authoredWorld);
-  const restX = THREE.MathUtils.clamp(
-    authoredWorld.x,
-    track.endX,
-    track.startX,
-  );
-  const trackEndX = track.endX;
-  const baseY = authoredWorld.y + carrierOffset.y;
-  const baseZ = authoredWorld.z + carrierOffset.z;
+  const baseY = roadTrack.y + carrierOffset.y;
+  const baseZ = roadTrack.z + carrierOffset.z;
 
   carrier.position.set(
     restX + carrierOffset.x,
@@ -332,9 +437,13 @@ function buildRig(
   );
 
   if (process.env.NODE_ENV === "development") {
+    const extents = measureCarBodyCarrierExtents(carrier);
     console.info("[CarScrollMovement] Ready:", {
       body: bodyMesh.name,
       wheels: wheels.map((entry) => entry.wheel.name),
+      road: roadMesh?.name ?? "(fallback)",
+      roadX: [roadTrack.roadWestX, roadTrack.roadEastX],
+      extents,
       restX,
       trackEndX,
       carScroll: [scrollWindow.carScrollStart, scrollWindow.carScrollEnd],
@@ -346,7 +455,6 @@ function buildRig(
     body: bodyMesh,
     wheels,
     roadMesh,
-    scene2Floor: floor2,
     restX: restX + carrierOffset.x,
     trackEndX: trackEndX + carrierOffset.x,
     baseY,
@@ -354,6 +462,7 @@ function buildRig(
     carScrollStart: scrollWindow.carScrollStart,
     carScrollEnd: scrollWindow.carScrollEnd,
     carProgress: 0,
+    dockedAtEnd: false,
     lastX: carrier.position.x,
   };
 }
@@ -398,20 +507,18 @@ export default function CarScrollMovement({
       rigRef.current = rig;
     }
 
-    const track = getRoadTrack(
-      rig.roadMesh,
-      carScrollSettings.startInset,
-      carScrollSettings.endInset,
-      carScrollSettings.roadOffset,
-    );
+    const restX = rig.restX - carScrollSettings.carrierOffset.x;
+    const trackEndX =
+      rig.trackEndX - carScrollSettings.carrierOffset.x;
     const scrollWindow = getCarScrollWindow(
-      rig.scene2Floor,
-      track.endX,
+      restX,
+      trackEndX,
       getScrollRange(sceneFrame),
     );
-    rig.carScrollStart = scrollWindow.carScrollStart;
-    rig.carScrollEnd = scrollWindow.carScrollEnd;
-    rig.trackEndX = track.endX + carScrollSettings.carrierOffset.x;
+    if (!carSessionActiveRef.current) {
+      rig.carScrollStart = scrollWindow.carScrollStart;
+      rig.carScrollEnd = scrollWindow.carScrollEnd;
+    }
 
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,
@@ -419,38 +526,42 @@ export default function CarScrollMovement({
       lerpFactor,
     );
 
-    if (turtleOnCarRef.current) {
+    if (
+      turtleOnCarRef.current ||
+      carTravelProgressRef.current > 0.01 ||
+      rig.dockedAtEnd
+    ) {
       carSessionActiveRef.current = true;
     }
 
     if (turtleOnBoatRef.current && !turtleOnCarRef.current) {
       carSessionActiveRef.current = false;
       rig.carProgress = 0;
+      rig.dockedAtEnd = false;
       carTravelProgressRef.current = 0;
       rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
       rig.lastX = rig.restX;
       return;
     }
 
-    const atJetskiHandoff = carTravelProgressRef.current >= 0.94;
     const parkAtJetskiHandoff =
       !turtleOnCarRef.current &&
       !turtleOnBoatRef.current &&
-      (turtleOnJetskiRef.current ||
-        turtleOnYachtRef.current ||
-        atJetskiHandoff);
+      (turtleOnJetskiRef.current || turtleOnYachtRef.current);
 
     if (parkAtJetskiHandoff) {
       carSessionActiveRef.current = false;
       rig.carProgress = 1;
+      rig.dockedAtEnd = true;
       carTravelProgressRef.current = 1;
       rig.carrier.position.set(rig.trackEndX, rig.baseY, rig.baseZ);
       rig.lastX = rig.trackEndX;
       return;
     }
 
-    if (!turtleOnCarRef.current && !carSessionActiveRef.current) {
+    if (!carSessionActiveRef.current) {
       rig.carProgress = 0;
+      rig.dockedAtEnd = false;
       carTravelProgressRef.current = 0;
       rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
       rig.lastX = rig.restX;
@@ -462,6 +573,12 @@ export default function CarScrollMovement({
       rig.carScrollStart,
       rig.carScrollEnd,
     );
+
+    if (rig.carProgress >= 0.94) {
+      rig.dockedAtEnd = true;
+    } else {
+      rig.dockedAtEnd = false;
+    }
 
     const nextX = THREE.MathUtils.lerp(
       rig.restX,

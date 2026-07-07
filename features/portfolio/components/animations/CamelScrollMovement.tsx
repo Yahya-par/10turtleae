@@ -13,6 +13,7 @@ import {
   attachObjectToCarrier,
   findOpeningDesertFloor,
   findSceneObject,
+  findScrollCarBody,
   getObjectBounds,
   resolveScene1CamelTrack,
   clampScene1WorldX,
@@ -713,12 +714,7 @@ function buildRig(
     }
   }
 
-  const car = resolveObject(
-    scene,
-    nodes,
-    carScrollSettings.body,
-    carScrollSettings.bodyBlender,
-  );
+  const car = findScrollCarBody(scene, nodes);
 
   const jetskiDriver = resolveObject(
     scene,
@@ -928,13 +924,7 @@ export default function CamelScrollMovement({
           ) ?? rig.boat;
       }
       if (!rig.car) {
-        rig.car =
-          resolveObject(
-            scene,
-            nodes,
-            carScrollSettings.body,
-            carScrollSettings.bodyBlender,
-          ) ?? rig.car;
+        rig.car = findScrollCarBody(scene, nodes) ?? rig.car;
       }
       if (!rig.jetskiDriver) {
         rig.jetskiDriver =
@@ -1357,6 +1347,13 @@ export default function CamelScrollMovement({
       rig.onBoat = false;
     }
 
+    if (
+      turtleReturnedFromCarRef.current &&
+      (rig.forwardScrollHold >= forwardTransferScrollHold || boatAtHandoff)
+    ) {
+      turtleReturnedFromCarRef.current = false;
+    }
+
     const mayTransferBoatToCar =
       !scrollingBack &&
       rig.forwardScrollHold >= forwardTransferScrollHold &&
@@ -1557,8 +1554,10 @@ export default function CamelScrollMovement({
     if (rig.mount !== "camel") {
       mountTurtleOnCamel(rig);
     }
-    turtleOnBoatRef.current = false;
-    turtleOnCarRef.current = false;
+    if (!rig.onCar && carTravelProgressRef.current <= 0.01) {
+      turtleOnBoatRef.current = false;
+      turtleOnCarRef.current = false;
+    }
 
     rig.lastScrollProgress = progress;
   });

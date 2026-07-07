@@ -5,9 +5,12 @@ import { boatScrollSettings } from "@features/portfolio/config/boatScrollSetting
 import { carScrollSettings } from "@features/portfolio/config/carScrollSettings";
 import {
   attachAnimationCarrier,
+  findScrollCarRoadMesh,
   findScene2Floor,
   findSceneObject,
+  findScrollCarBody,
   getObjectBounds,
+  resolveCarRoadTrack,
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
   getScrollRange,
@@ -27,6 +30,71 @@ type BoatRig = {
   boatProgress: number;
   dockedAtEnd: boolean;
 };
+
+function resolveCarDockHandoffX(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+) {
+  const road = findScrollCarRoadMesh(scene, nodes);
+  if (road) {
+    const track = resolveCarRoadTrack(road, {
+      roadOffset: carScrollSettings.roadOffset,
+    });
+    return track.roadEastX + boatScrollSettings.carHandoffInset;
+  }
+
+  const car = findScrollCarBody(scene, nodes);
+  if (!car) return null;
+
+  car.updateMatrixWorld(true);
+  const carBounds = getObjectBounds(car);
+  return carBounds.max.x + boatScrollSettings.carHandoffInset;
+}
+
+function resolveScene2TrackEndX(
+  restX: number,
+  floor: THREE.Object3D,
+  carDockHandoffX: number | null,
+) {
+  const floorBounds = getObjectBounds(floor);
+  const { pathInset } = boatScrollSettings;
+  const scene2WestLimit = floorBounds.min.x + pathInset;
+
+  if (carDockHandoffX !== null) {
+    return Math.max(carDockHandoffX, scene2WestLimit);
+  }
+
+  const floorCenterX = (floorBounds.min.x + floorBounds.max.x) * 0.5;
+
+  const fallback =
+    restX >= floorCenterX
+      ? floorBounds.min.x + pathInset
+      : floorBounds.max.x - pathInset;
+
+  return Math.max(fallback, scene2WestLimit);
+}
+
+function getScene2Track(
+  floor: THREE.Object3D,
+  restX: number,
+  carrierY: number,
+  carrierZ: number,
+  scrollRange: { min: number; max: number },
+  carDockHandoffX: number | null,
+) {
+  const trackEndX = resolveScene2TrackEndX(restX, floor, carDockHandoffX);
+  const eastX = Math.max(restX, trackEndX);
+  const westX = Math.min(restX, trackEndX);
+
+  return {
+    restX,
+    trackEndX,
+    baseY: carrierY,
+    baseZ: carrierZ,
+    scene2ScrollStart: xToScrollProgress(eastX, scrollRange),
+    scene2ScrollEnd: xToScrollProgress(westX, scrollRange),
+  };
+}
 
 type BoatScrollMovementProps = {
   scene: THREE.Object3D;
@@ -52,54 +120,6 @@ function xToScrollProgress(
   const span = scrollRange.max - scrollRange.min;
   if (span <= 0) return 0;
   return THREE.MathUtils.clamp((worldX - scrollRange.min) / span, 0, 1);
-}
-
-function resolveScene2TrackEndX(
-  scene: THREE.Object3D,
-  nodes: Record<string, THREE.Object3D>,
-  restX: number,
-  floor: THREE.Object3D,
-) {
-  const car =
-    findSceneObject(scene, nodes, carScrollSettings.body) ??
-    findSceneObject(scene, nodes, carScrollSettings.bodyBlender);
-
-  if (car) {
-    car.updateMatrixWorld(true);
-    const carBounds = getObjectBounds(car);
-    return carBounds.max.x + boatScrollSettings.carHandoffInset;
-  }
-
-  const floorBounds = getObjectBounds(floor);
-  const { pathInset } = boatScrollSettings;
-  const floorCenterX = (floorBounds.min.x + floorBounds.max.x) * 0.5;
-
-  return restX >= floorCenterX
-    ? floorBounds.min.x + pathInset
-    : floorBounds.max.x - pathInset;
-}
-
-function getScene2Track(
-  scene: THREE.Object3D,
-  nodes: Record<string, THREE.Object3D>,
-  floor: THREE.Object3D,
-  restX: number,
-  carrierY: number,
-  carrierZ: number,
-  scrollRange: { min: number; max: number },
-) {
-  const trackEndX = resolveScene2TrackEndX(scene, nodes, restX, floor);
-  const eastX = Math.max(restX, trackEndX);
-  const westX = Math.min(restX, trackEndX);
-
-  return {
-    restX,
-    trackEndX,
-    baseY: carrierY,
-    baseZ: carrierZ,
-    scene2ScrollStart: xToScrollProgress(eastX, scrollRange),
-    scene2ScrollEnd: xToScrollProgress(westX, scrollRange),
-  };
 }
 
 function getBoatTravelProgress(
@@ -180,27 +200,28 @@ function buildRig(
   carrier.getWorldPosition(tempWorld);
 
   const restX = tempWorld.x;
+  const carDockHandoffX = resolveCarDockHandoffX(scene, nodes);
   const track = getScene2Track(
-    scene,
-    nodes,
     floor,
     restX,
     carrier.position.y,
     carrier.position.z,
     getScrollRange(sceneFrame),
+    carDockHandoffX,
   );
 
   carrier.position.set(track.restX, track.baseY, track.baseZ);
 
-  if (process.env.NODE_ENV === "development") {
-    console.info("[BoatScrollMovement] Ready:", {
-      restX: track.restX,
-      trackEndX: track.trackEndX,
-      scene2Scroll: [track.scene2ScrollStart, track.scene2ScrollEnd],
-      boat: boat.name,
-      floor: floor.name,
-    });
-  }
+    if (process.env.NODE_ENV === "development") {
+      console.info("[BoatScrollMovement] Ready:", {
+        restX: track.restX,
+        trackEndX: track.trackEndX,
+        carDockHandoffX,
+        scene2Scroll: [track.scene2ScrollStart, track.scene2ScrollEnd],
+        boat: boat.name,
+        floor: floor.name,
+      });
+    }
 
   return {
     carrier,
@@ -255,19 +276,6 @@ export default function BoatScrollMovement({
       if (!rig) return;
       rigRef.current = rig;
     }
-
-    const track = getScene2Track(
-      scene,
-      nodes,
-      rig.floor,
-      rig.restX,
-      rig.baseY,
-      rig.baseZ,
-      getScrollRange(sceneFrame),
-    );
-    rig.scene2ScrollStart = track.scene2ScrollStart;
-    rig.scene2ScrollEnd = track.scene2ScrollEnd;
-    rig.trackEndX = track.trackEndX;
 
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,

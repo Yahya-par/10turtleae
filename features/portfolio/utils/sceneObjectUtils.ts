@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { assetNames } from "@features/portfolio/config/assetNames";
 import {
   getScrollProgressAtX,
   getScrollRange,
@@ -383,7 +384,162 @@ export function findAlRabScenePanel(
   );
 }
 
-// attachAnimationCarrier - attach the animation carrier to the object 
+/** Scroll-driven convertible body (carbody / legacy carboady typo). */
+export function findScrollCarBody(
+  scene: THREE.Object3D,
+  nodes?: Record<string, THREE.Object3D>,
+) {
+  const { body, bodyBlender, bodyTypo, bodyTypoBlender } = assetNames.cars;
+
+  return (
+    findSceneObject(
+      scene,
+      nodes,
+      body,
+      bodyBlender,
+      bodyTypo,
+      bodyTypoBlender,
+    ) ?? findObjectByNamePattern(scene, /carbo[a]?dy/i)
+  );
+}
+
+/** Scene 3 east entrance — where the scroll car waits / starts driving. */
+export function resolveScene3CarStartX(
+  scene: THREE.Object3D,
+  nodes?: Record<string, THREE.Object3D>,
+  startInset = 1.5,
+) {
+  const scene3Panel =
+    findSceneObject(
+      scene,
+      nodes,
+      assetNames.scenes.dubaiFrame,
+      "Desert_Scene_Floor.002",
+    ) ?? findObjectByNamePattern(scene, /Desert_Scene_Floor\.?002/i);
+
+  if (scene3Panel) {
+    return getObjectBounds(scene3Panel).max.x - startInset;
+  }
+
+  const dubaiFrame = findSceneObject(
+    scene,
+    nodes,
+    assetNames.scenes.dubaiFrameLandmark,
+    "proper_dubaiframe.001",
+  );
+
+  if (dubaiFrame) {
+    return getObjectBounds(dubaiFrame).max.x - startInset;
+  }
+
+  return null;
+}
+
+export type CarRoadTrack = {
+  /** Eastern edge of junaroadjevu.001 — car tail must not pass this. */
+  roadEastX: number;
+  /** Western edge of junaroadjevu.001 — car nose must not pass this. */
+  roadWestX: number;
+  y: number;
+  z: number;
+  roadBox: THREE.Box3;
+};
+
+export type CarBodyCarrierExtents = {
+  eastExtent: number;
+  westExtent: number;
+};
+
+/** How far the car (body + wheels) extends east/west from the scroll carrier pivot. */
+export function measureCarBodyCarrierExtents(carrier: THREE.Object3D) {
+  carrier.updateMatrixWorld(true);
+  const bounds = getObjectBounds(carrier);
+  const carrierX = carrier.getWorldPosition(new THREE.Vector3()).x;
+
+  return {
+    eastExtent: bounds.max.x - carrierX,
+    westExtent: carrierX - bounds.min.x,
+  };
+}
+
+/** Carrier X so tail stays at road east edge and nose at road west edge. */
+export function resolveCarCarrierTrack(
+  roadTrack: Pick<CarRoadTrack, "roadEastX" | "roadWestX">,
+  extents: CarBodyCarrierExtents,
+  options: { startInset: number; endInset: number },
+) {
+  const { startInset, endInset } = options;
+  const { eastExtent, westExtent } = extents;
+
+  const restX = roadTrack.roadEastX - startInset - eastExtent;
+  const trackEndX = roadTrack.roadWestX + endInset + westExtent;
+
+  return { restX, trackEndX };
+}
+
+/** Bounds from junaroadjevu.001 only — no scene-panel clipping. */
+export function resolveCarRoadTrack(
+  road: THREE.Object3D,
+  options: {
+    roadOffset: { x: number; y: number; z: number };
+  },
+): CarRoadTrack {
+  road.updateMatrixWorld(true);
+  const roadBox = getObjectBounds(road);
+  const roadCenter = roadBox.getCenter(new THREE.Vector3());
+
+  return {
+    roadEastX: roadBox.max.x + options.roadOffset.x,
+    roadWestX: roadBox.min.x + options.roadOffset.x,
+    y: roadCenter.y + options.roadOffset.y,
+    z: roadCenter.z + options.roadOffset.z,
+    roadBox,
+  };
+}
+
+/** Scroll car road — strictly junaroadjevu.001 (no legacy road fallbacks). */
+export function findScrollCarRoadMesh(
+  scene: THREE.Object3D,
+  nodes?: Record<string, THREE.Object3D>,
+) {
+  const { juneRoad, juneRoadBlender } = assetNames.roads;
+
+  return (
+    findSceneObject(scene, nodes, juneRoad, juneRoadBlender) ??
+    findObjectByNamePattern(scene, /junaroadjevu/i)
+  );
+}
+
+/** Road mesh for patrol / legacy lookups — junaroadjevu first, then fallbacks. */
+export function findCarRoadMesh(
+  scene: THREE.Object3D,
+  nodes?: Record<string, THREE.Object3D>,
+) {
+  const scrollRoad = findScrollCarRoadMesh(scene, nodes);
+  if (scrollRoad) return scrollRoad;
+
+  const {
+    stretched,
+    stretchedBlender,
+    thatPart,
+    thatPartBlender,
+    alRabEnd,
+  } = assetNames.roads;
+
+  return (
+    findSceneObject(
+      scene,
+      nodes,
+      stretched,
+      stretchedBlender,
+      thatPart,
+      thatPartBlender,
+      alRabEnd,
+    ) ?? findObjectByNamePattern(scene, /road(?:streched|thatpart)/i)
+  );
+}
+
+// attachAnimationCarrier - attach the animation carrier to the object
 export function attachAnimationCarrier(
   object: THREE.Object3D,
   carrierName: string,

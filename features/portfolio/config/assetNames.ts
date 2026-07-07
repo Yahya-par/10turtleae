@@ -21,9 +21,12 @@ export const assetNames = {
     sedan: "Car1001",
     /** Blender: RR.001 */
     rangeRover: "RR001",
-    /** Blender: carboady.001 (export typo for car body) */
-    body: "carboady001",
-    bodyBlender: "carboady.001",
+    /** Blender: carbody.001 — scroll-driven convertible body */
+    body: "carbody001",
+    bodyBlender: "carbody.001",
+    /** Legacy export typo kept as fallback alias */
+    bodyTypo: "carboady001",
+    bodyTypoBlender: "carboady.001",
     /** Blender: aagadnutyre.001 (front tyre) */
     frontWheel: "aagadnutyre001",
     frontWheelBlender: "aagadnutyre.001",
@@ -40,6 +43,9 @@ export const assetNames = {
     three: "cloud003",
   },
   roads: {
+    /** Blender: junaroadjevu.001 — scene 3 car drive strip (boat dock → frame). */
+    juneRoad: "junaroadjevu001",
+    juneRoadBlender: "junaroadjevu.001",
     /** Last road segment before Atlantis (Blender: Road.004, ~X -92 to -101) */
     alRabEnd: "Road004",
     /** Blender: Roadthatpart.001 */

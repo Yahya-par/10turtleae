@@ -3,9 +3,9 @@ import { assetNames } from "./assetNames";
 export const boatScrollSettings = {
   boat: assetNames.boat.object,
   boatBlender: assetNames.boat.blenderName,
-  /** Unified diorama floor (continuefloor.001 in Modelv1). */
-  scene2Floor: assetNames.scenes.continuityFloor,
-  scene2FloorBlender: assetNames.scenes.continuityFloorBlender,
+  /** Scene 2 panel (boat route) — NOT the unified continuefloor diorama. */
+  scene2Floor: assetNames.scenes.floor1,
+  scene2FloorBlender: assetNames.scenes.floor1Blender,
   carrierName: "BoatScrollCarrier001",
 
   /** Inset from scene 2 floor edges. */

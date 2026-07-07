@@ -9,17 +9,26 @@ export const carScrollSettings = {
   scene2Floor: assetNames.scenes.continuityFloor,
   scene2FloorBlender: assetNames.scenes.continuityFloorBlender,
 
-  road: assetNames.roads.stretched,
-  roadBlender: assetNames.roads.stretchedBlender,
+  /** Scene 3 panel — car rest position (east entrance / Dubai Frame). */
+  scene3Floor: assetNames.scenes.dubaiFrame,
+  scene3FloorBlender: "Desert_Scene_Floor.002",
+  scene3Landmark: assetNames.scenes.dubaiFrameLandmark,
+  scene3LandmarkBlender: "proper_dubaiframe.001",
+
+  road: assetNames.roads.juneRoad,
+  roadBlender: assetNames.roads.juneRoadBlender,
 
   pathInset: 1.2,
-  startInset: 1.5,
-  endInset: 1.5,
+  /** Tiny inset so wheels stay on the junaroadjevu mesh at start/end. */
+  startInset: 0,
+  endInset: 0,
   roadOffset: { x: 0, y: 0.5, z: 0 },
   carrierOffset: { x: 0, y: 0, z: 0 },
 
-  travelExponent: 1.45,
-  followLerp: 0.1,
+  /** 1 = linear scroll mapping along the full car route. */
+  travelExponent: 1,
+  /** Kept for reverse-return smoothing; forward scroll uses direct mapping. */
+  followLerp: 0.75,
 
   /** Start boat→car transfer when centers are within this X distance. */
   transferStartDistanceX: 3.8,
