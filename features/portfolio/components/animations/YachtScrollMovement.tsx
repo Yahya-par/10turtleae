@@ -11,6 +11,7 @@ import {
   findObjectByNamePattern,
   findSceneObject,
   getObjectBounds,
+  setObjectWorldPosition,
 } from "@features/portfolio/utils/sceneObjectUtils";
 
 type YachtScrollMovementProps = {
@@ -29,6 +30,8 @@ type YachtScrollMovementProps = {
 type YachtRig = {
   carrier: THREE.Group;
   restPosition: THREE.Vector3;
+  baseY: number;
+  baseZ: number;
   lastX: number;
 };
 
@@ -153,7 +156,7 @@ function isInScrollWindow(
 
 function getWaterTrack(
   waterStart: THREE.Object3D,
-  trackEnd: THREE.Object3D,
+  trackEnd: THREE.Object3D | null,
   pathInset: number,
   positionOffset: { x: number; y: number; z: number },
   startOffsetX: number,
@@ -161,27 +164,47 @@ function getWaterTrack(
   authoredStart: THREE.Vector3 | null,
   waterEnd: THREE.Object3D | null,
   trackEndMode: YachtScrollSettings["trackEndMode"],
+  useWaterBounds = false,
+  authoredSurfaceY: number | null = null,
+  authoredSurfaceZ: number | null = null,
 ) {
   const startWaterBox = getObjectBounds(waterStart);
   const endWaterBox = waterEnd ? getObjectBounds(waterEnd) : startWaterBox;
-  const trackEndBox = getObjectBounds(trackEnd);
+  const trackEndBox = trackEnd ? getObjectBounds(trackEnd) : null;
   const startCenter = new THREE.Vector3();
   const endCenter = new THREE.Vector3();
   startWaterBox.getCenter(startCenter);
   endWaterBox.getCenter(endCenter);
 
-  const startY = startCenter.y + positionOffset.y;
-  const startZ = startCenter.z + positionOffset.z;
-  const endY = endCenter.y + positionOffset.y;
-  const endZ = endCenter.z + positionOffset.z;
+  const startY =
+    useWaterBounds && authoredSurfaceY !== null
+      ? authoredSurfaceY
+      : startCenter.y + positionOffset.y;
+  const startZ =
+    useWaterBounds && authoredSurfaceZ !== null
+      ? authoredSurfaceZ
+      : startCenter.z + positionOffset.z;
+  const endY =
+    useWaterBounds && authoredSurfaceY !== null
+      ? authoredSurfaceY
+      : endCenter.y + positionOffset.y;
+  const endZ =
+    useWaterBounds && authoredSurfaceZ !== null
+      ? authoredSurfaceZ
+      : endCenter.z + positionOffset.z;
 
   const edgeStartX =
     startWaterBox.max.x - pathInset + positionOffset.x + startOffsetX;
 
-  const panelEdgeX = trackEndBox.min.x + pathInset + endOffsetX;
+  const panelEdgeX = trackEndBox
+    ? trackEndBox.min.x + pathInset + endOffsetX
+    : startWaterBox.min.x + pathInset + endOffsetX;
   const waterEdgeX = endWaterBox.min.x + pathInset + endOffsetX;
-  const edgeEndX =
-    trackEndMode === "throughNextScene"
+  // useWaterBounds anchors the stop line to the water's own western edge,
+  // ignoring the scene panel so the yacht sails the full shinywater corridor.
+  const edgeEndX = useWaterBounds
+    ? startWaterBox.min.x + pathInset + endOffsetX
+    : trackEndMode === "throughNextScene"
       ? Math.min(waterEdgeX, panelEdgeX)
       : Math.max(startWaterBox.min.x + pathInset + endOffsetX, panelEdgeX);
 
@@ -220,6 +243,16 @@ function applyManualPositions(
   }
 }
 
+function setCarrierWorldPosition(
+  carrier: THREE.Object3D,
+  worldX: number,
+  worldY: number,
+  worldZ: number,
+) {
+  tempPosition.set(worldX, worldY, worldZ);
+  setObjectWorldPosition(carrier, tempPosition);
+}
+
 function buildRig(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
@@ -229,9 +262,8 @@ function buildRig(
 
   scene.updateMatrixWorld(true);
 
-  const yachtPattern = /yacht002|yacht\.002/i.test(yacht)
-    ? /yacht\.?002|yacht002/i
-    : /yacht\.?001|yacht001/i;
+  const yachtNumber = yacht.match(/(\d+)/)?.[1] ?? "001";
+  const yachtPattern = new RegExp(`yacht\\.?${yachtNumber}`, "i");
   const yachtObject = resolveObject(
     scene,
     nodes,
@@ -246,6 +278,10 @@ function buildRig(
       ? (yachtObject.parent as THREE.Group)
       : attachAnimationCarrier(yachtObject, carrierName);
 
+  carrier.updateMatrixWorld(true);
+  const restWorld = new THREE.Vector3();
+  carrier.getWorldPosition(restWorld);
+
   const storedRest = carrier.userData.authoredPosition;
   const restPosition =
     storedRest instanceof THREE.Vector3
@@ -253,9 +289,13 @@ function buildRig(
       : carrier.position.clone();
   carrier.userData.authoredPosition = restPosition.clone();
 
+  const { positionOffset } = settings;
+
   return {
     carrier,
     restPosition,
+    baseY: restWorld.y + positionOffset.y,
+    baseZ: restWorld.z + positionOffset.z,
     lastX: carrier.position.x,
   };
 }
@@ -342,12 +382,15 @@ export default function YachtScrollMovement({
       rigRef.current = buildRig(scene, nodes, settings);
     }
 
+    // With useWaterBounds the yacht is driven entirely by the water mesh, so
+    // the scene floor panels (absent in Modelv1) are not required.
+    const requiresScenePanels = !settings.useWaterBounds;
+
     if (
       !waterObject ||
-      !trackEndObject ||
-      !sceneStartObject ||
-      !sceneEndObject ||
       !rigRef.current ||
+      (requiresScenePanels &&
+        (!trackEndObject || !sceneStartObject || !sceneEndObject)) ||
       (settings.waterEnd && !waterEndObject)
     ) {
       if (process.env.NODE_ENV === "development") {
@@ -384,20 +427,25 @@ export default function YachtScrollMovement({
         settings.useAuthoredStart ? rigRef.current.restPosition : null,
         waterEndObject,
         settings.trackEndMode,
+        settings.useWaterBounds,
       );
-      const window = getSceneScrollWindow(
-        sceneStartObject,
-        sceneEndObject,
-        sceneFrame,
-        scrollStart,
-        scrollEnd,
-        scrollFallback,
-      );
+      const window =
+        sceneStartObject && sceneEndObject
+          ? getSceneScrollWindow(
+              sceneStartObject,
+              sceneEndObject,
+              sceneFrame,
+              scrollStart,
+              scrollEnd,
+              scrollFallback,
+            )
+          : { scrollStart: NaN, scrollEnd: NaN };
       console.info(`[YachtScrollMovement:${label}] Ready:`, {
         yacht: rigRef.current.carrier.children[0]?.name,
         water: waterObject.name,
         waterEnd: waterEndObject?.name ?? null,
         waterX: [waterBox.min.x, waterBox.max.x],
+        useWaterBounds: settings.useWaterBounds ?? false,
         panelEdgeX,
         edgeEndX,
         start: start.toArray(),
@@ -414,7 +462,10 @@ export default function YachtScrollMovement({
     const sceneStart = sceneStartRef.current;
     const sceneEnd = sceneEndRef.current;
     const rig = rigRef.current;
-    if (!water || !trackEndObject || !sceneStart || !sceneEnd || !rig) return;
+    if (!water || !rig) return;
+    if (!settings.useWaterBounds && (!trackEndObject || !sceneStart || !sceneEnd)) {
+      return;
+    }
 
     const {
       pathInset,
@@ -438,6 +489,9 @@ export default function YachtScrollMovement({
       useAuthoredStart ? rig.restPosition : null,
       waterEndObject,
       trackEndMode,
+      settings.useWaterBounds,
+      settings.useWaterBounds ? rig.baseY : null,
+      settings.useWaterBounds ? rig.baseZ : null,
     );
     applyManualPositions(start, end, settings);
 
@@ -447,26 +501,57 @@ export default function YachtScrollMovement({
       lerpFactor,
     );
 
-    const { scrollStart: winStart, scrollEnd: winEnd } = getSceneScrollWindow(
-      sceneStart,
-      sceneEnd,
-      sceneFrame,
-      scrollStart,
-      scrollEnd,
-      scrollFallback,
-    );
+    let winStart: number;
+    let winEnd: number;
+
+    if (settings.useWaterBounds) {
+      // Keep the scroll window aligned with the water positions so the yacht
+      // travels across the full shinywater corridor as the user scrolls.
+      const scrollRange = getScrollRange(sceneFrame);
+      const waterBox = getObjectBounds(water);
+      winStart = THREE.MathUtils.clamp(
+        xToScroll(waterBox.max.x, scrollRange),
+        0,
+        1,
+      );
+      winEnd = THREE.MathUtils.clamp(
+        xToScroll(waterBox.min.x, scrollRange),
+        0,
+        1,
+      );
+    } else {
+      const sceneWindow = getSceneScrollWindow(
+        sceneStart!,
+        sceneEnd!,
+        sceneFrame,
+        scrollStart,
+        scrollEnd,
+        scrollFallback,
+      );
+      winStart = sceneWindow.scrollStart;
+      winEnd = sceneWindow.scrollEnd;
+    }
 
     const inWindow = isInScrollWindow(progress, winStart, winEnd);
     rig.carrier.visible = true;
 
     const turtleBoarded = !turtleOnYachtRef || turtleOnYachtRef.current;
 
+    const placeCarrier = (x: number, y: number, z: number) => {
+      if (settings.useWaterBounds) {
+        setCarrierWorldPosition(rig.carrier, x, y, z);
+      } else {
+        tempPosition.set(x, y, z);
+        rig.carrier.position.copy(tempPosition);
+      }
+    };
+
     if (!inWindow || !turtleBoarded) {
       const parkedAtStart =
         !turtleBoarded || (winEnd < winStart ? progress > winStart : progress < winStart);
-      tempPosition.copy(parkedAtStart ? start : end);
-      rig.carrier.position.copy(tempPosition);
-      rig.lastX = tempPosition.x;
+      const parked = parkedAtStart ? start : end;
+      placeCarrier(parked.x, parked.y, parked.z);
+      rig.lastX = parked.x;
       if (travelProgressRef) {
         travelProgressRef.current = parkedAtStart ? 0 : 1;
       }
@@ -478,7 +563,7 @@ export default function YachtScrollMovement({
       travelProgressRef.current = trackProgress;
     }
     tempPosition.copy(start).lerp(end, trackProgress);
-    rig.carrier.position.copy(tempPosition);
+    placeCarrier(tempPosition.x, tempPosition.y, tempPosition.z);
     rig.lastX = tempPosition.x;
   });
 

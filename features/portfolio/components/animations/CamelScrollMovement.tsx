@@ -11,6 +11,7 @@ import { getYachtSeatWorld } from "@features/portfolio/components/animations/Yac
 import {
   attachAnimationCarrier,
   attachObjectToCarrier,
+  findObjectByNamePattern,
   findOpeningDesertFloor,
   findSceneObject,
   findScrollCarBody,
@@ -716,19 +717,23 @@ function buildRig(
 
   const car = findScrollCarBody(scene, nodes);
 
-  const jetskiDriver = resolveObject(
-    scene,
-    nodes,
-    jetskiScrollSettings.driver,
-    jetskiScrollSettings.driverBlender,
-  );
+  const jetskiDriver =
+    resolveObject(
+      scene,
+      nodes,
+      jetskiScrollSettings.driver,
+      jetskiScrollSettings.driverBlender,
+    ) ?? findObjectByNamePattern(scene, /jetskidriver/i);
 
-  const yacht = resolveObject(
-    scene,
-    nodes,
-    atlantisYachtScrollSettings.yacht,
-    atlantisYachtScrollSettings.yachtBlender,
-  );
+  const yachtNumber =
+    atlantisYachtScrollSettings.yacht.match(/(\d+)/)?.[1] ?? "003";
+  const yacht =
+    resolveObject(
+      scene,
+      nodes,
+      atlantisYachtScrollSettings.yacht,
+      atlantisYachtScrollSettings.yachtBlender,
+    ) ?? findObjectByNamePattern(scene, new RegExp(`yacht\\.?${yachtNumber}`, "i"));
 
   const transferCarrier = new THREE.Group();
   transferCarrier.name = "TurtleTransferCarrier";

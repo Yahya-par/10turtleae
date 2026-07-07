@@ -115,8 +115,9 @@ export const assetNames = {
     blenderName: "planewithtext.001",
   },
   yacht: {
-    object: "yacht001",
-    blenderName: "yacht.001",
+    /** Atlantis yacht — node "yacht.003" (~X -110). Mesh data is "yacht.001". */
+    object: "yacht003",
+    blenderName: "yacht.003",
     water: "shinywater001",
     waterBlender: "shinywater.001",
     mosqueYacht: "yacht002",

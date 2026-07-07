@@ -23,6 +23,8 @@ export type YachtScrollSettings = {
   trackEndMode: "stopBeforeNextScene" | "throughNextScene";
   pathInset: number;
   useAuthoredStart: boolean;
+  /** When true, start/end come purely from the water mesh east/west edges. */
+  useWaterBounds?: boolean;
   startOffsetX: number;
   endOffsetX: number;
   positionOffset: { x: number; y: number; z: number };
@@ -58,10 +60,11 @@ export const atlantisYachtScrollSettings: YachtScrollSettings = {
   trackEndBlender: assetNames.scenes.atlantisBlender,
   trackEndMode: "stopBeforeNextScene",
   pathInset: 1.5,
-  useAuthoredStart: true,
+  useAuthoredStart: false,
+  useWaterBounds: true,
   startOffsetX: 0,
   endOffsetX: 0,
-  positionOffset: { x: 0, y: 0.3, z: 0 },
+  positionOffset: { x: 0, y: 0, z: 0 },
   scrollStart: null,
   scrollEnd: null,
   scrollFallback: { scrollStart: 0.14, scrollEnd: 0 },
