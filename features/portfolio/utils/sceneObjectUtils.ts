@@ -124,12 +124,37 @@ export function findOpeningDesertFloor(
   );
 }
 
+/** Unified floor mesh spanning the full diorama (Modelv1 uses continuefloor.001). */
+export function findUnifiedSceneFloor(
+  scene: THREE.Object3D,
+  nodes?: Record<string, THREE.Object3D>,
+) {
+  return (
+    findScene1ContinuityFloor(scene, nodes) ??
+    findSceneObject(scene, nodes, "Desert_Scene_Floor") ??
+    findObjectByNamePattern(scene, /continuefloor/i) ??
+    findSceneFloorByExtent(scene, "max")
+  );
+}
+
+/** Scene 1 / scene 2 divider panel (Desert_Scene_Floor.001) when authored separately. */
+export function findScene1EndPanel(
+  scene: THREE.Object3D,
+  nodes?: Record<string, THREE.Object3D>,
+  runtimeName = "Desert_Scene_Floor001",
+  blenderName = "Desert_Scene_Floor.001",
+) {
+  return (
+    findSceneObject(scene, nodes, runtimeName, blenderName) ??
+    findObjectByNamePattern(scene, /Desert_Scene_Floor\.?001/i)
+  );
+}
+
 /** Scene 2 floor panel (boat scene) — tries authored names, then panel east of opening. */
 export function findScene2Floor(
   scene: THREE.Object3D,
   nodes?: Record<string, THREE.Object3D>,
 ) {
-  const opening = findOpeningDesertFloor(scene, nodes);
   const authored =
     findSceneObject(
       scene,
@@ -140,6 +165,10 @@ export function findScene2Floor(
 
   if (authored) return authored;
 
+  const unified = findUnifiedSceneFloor(scene, nodes);
+  if (unified) return unified;
+
+  const opening = findOpeningDesertFloor(scene, nodes);
   if (!opening) return findSceneFloorByExtent(scene, "min");
 
   const openingBounds = getObjectBounds(opening);
@@ -183,9 +212,12 @@ export function resolveScene1CamelTrack(
   options: {
     startInset: number;
     endInset: number;
+    camelBoatMeetGap?: number;
   },
+  boat?: THREE.Object3D | null,
 ): Scene1CamelTrack | null {
-  const sceneStart = findScene1ContinuityFloor(scene, nodes) ?? findOpeningDesertFloor(scene, nodes);
+  const sceneStart =
+    findScene1ContinuityFloor(scene, nodes) ?? findOpeningDesertFloor(scene, nodes);
   if (!sceneStart) return null;
 
   const sceneEnd = findScene2Floor(scene, nodes);
@@ -194,10 +226,28 @@ export function resolveScene1CamelTrack(
   const scrollRange = getScrollRange(sceneFrame);
 
   const startX = startBox.max.x - options.startInset;
+  const sceneEndPanel = findScene1EndPanel(scene, nodes);
+  const panelWestLimit = sceneEndPanel
+    ? getObjectBounds(sceneEndPanel).max.x + options.endInset
+    : null;
   const boundaryX = endBox
     ? Math.min(startBox.min.x, endBox.max.x)
     : startBox.min.x;
-  const endX = boundaryX + options.endInset;
+  let westLimit = panelWestLimit ?? boundaryX + options.endInset;
+
+  let endX = westLimit;
+  if (boat) {
+    boat.updateMatrixWorld(true);
+    const boatBounds = getObjectBounds(boat);
+    const meetGap = options.camelBoatMeetGap ?? 1.0;
+    // Camel walks east → west; stop east of the boat (still in scene 1 desert).
+    const meetX = boatBounds.max.x + meetGap;
+    if (!sceneEndPanel) {
+      // Unified floor spans the whole diorama — cap at the boat handoff, not floor min X.
+      westLimit = Math.max(westLimit, meetX);
+    }
+    endX = THREE.MathUtils.clamp(meetX, westLimit, startX - 0.05);
+  }
 
   const progressAtStart = getScrollProgressAtX(startX, scrollRange);
   const progressAtEnd = getScrollProgressAtX(endX, scrollRange);

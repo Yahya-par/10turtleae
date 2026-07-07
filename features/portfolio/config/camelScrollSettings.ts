@@ -8,7 +8,7 @@ export const camelScrollSettings = {
   boat: assetNames.boat.object,
   boatBlender: assetNames.boat.blenderName,
   carrierName: "CamelScrollCarrier001",
-  openingFloor: assetNames.scenes.openingDesert,
+  openingFloor: assetNames.scenes.continuityFloor,
   /** Scene 2 panel — camel must not cross this boundary. */
   sceneEndFloor: assetNames.scenes.floor1,
   sceneEndFloorBlender: assetNames.scenes.floor1Blender,
@@ -19,6 +19,8 @@ export const camelScrollSettings = {
   startInset: 1.2,
   /** Inset from scene 1 exit / scene 2 start (low X). */
   endInset: 1.2,
+  /** Gap east of the boat's near edge where the camel stops (world X). */
+  camelBoatMeetGap: 0.85,
 
   /** Start transfer when camel is this far (X) from boat. */
   transferStartDistanceX: 5.8,

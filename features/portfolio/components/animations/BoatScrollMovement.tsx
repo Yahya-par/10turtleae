@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { boatScrollSettings } from "@features/portfolio/config/boatScrollSettings";
+import { carScrollSettings } from "@features/portfolio/config/carScrollSettings";
 import {
   attachAnimationCarrier,
   findScene2Floor,
@@ -42,59 +43,81 @@ type BoatScrollMovementProps = {
   turtleReturnedFromCarRef: RefObject<boolean>;
 };
 
+const tempWorld = new THREE.Vector3();
+
+function xToScrollProgress(
+  worldX: number,
+  scrollRange: { min: number; max: number },
+) {
+  const span = scrollRange.max - scrollRange.min;
+  if (span <= 0) return 0;
+  return THREE.MathUtils.clamp((worldX - scrollRange.min) / span, 0, 1);
+}
+
+function resolveScene2TrackEndX(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  restX: number,
+  floor: THREE.Object3D,
+) {
+  const car =
+    findSceneObject(scene, nodes, carScrollSettings.body) ??
+    findSceneObject(scene, nodes, carScrollSettings.bodyBlender);
+
+  if (car) {
+    car.updateMatrixWorld(true);
+    const carBounds = getObjectBounds(car);
+    return carBounds.max.x + boatScrollSettings.carHandoffInset;
+  }
+
+  const floorBounds = getObjectBounds(floor);
+  const { pathInset } = boatScrollSettings;
+  const floorCenterX = (floorBounds.min.x + floorBounds.max.x) * 0.5;
+
+  return restX >= floorCenterX
+    ? floorBounds.min.x + pathInset
+    : floorBounds.max.x - pathInset;
+}
+
 function getScene2Track(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
   floor: THREE.Object3D,
   restX: number,
   carrierY: number,
   carrierZ: number,
   scrollRange: { min: number; max: number },
 ) {
-  const floorBounds = getObjectBounds(floor);
-  const { pathInset } = boatScrollSettings;
-  const scrollSpan = scrollRange.max - scrollRange.min;
-  const floorCenterX = (floorBounds.min.x + floorBounds.max.x) * 0.5;
-
-  const trackEndX =
-    restX >= floorCenterX
-      ? floorBounds.min.x + pathInset
-      : floorBounds.max.x - pathInset;
-
-  const scene2ScrollStart =
-    scrollSpan > 0 ? (floorBounds.min.x - scrollRange.min) / scrollSpan : 0;
-  const scene2ScrollEnd =
-    scrollSpan > 0 ? (floorBounds.max.x - scrollRange.min) / scrollSpan : 1;
+  const trackEndX = resolveScene2TrackEndX(scene, nodes, restX, floor);
+  const eastX = Math.max(restX, trackEndX);
+  const westX = Math.min(restX, trackEndX);
 
   return {
     restX,
     trackEndX,
     baseY: carrierY,
     baseZ: carrierZ,
-    scene2ScrollStart: THREE.MathUtils.clamp(scene2ScrollStart, 0, 1),
-    scene2ScrollEnd: THREE.MathUtils.clamp(scene2ScrollEnd, 0, 1),
+    scene2ScrollStart: xToScrollProgress(eastX, scrollRange),
+    scene2ScrollEnd: xToScrollProgress(westX, scrollRange),
   };
 }
 
-function getScene2Progress(
+function getBoatTravelProgress(
   scrollProgress: number,
   scene2ScrollStart: number,
   scene2ScrollEnd: number,
 ) {
-  if (scene2ScrollEnd <= scene2ScrollStart) return 0;
+  if (scrollProgress > scene2ScrollStart) return 0;
+  if (scrollProgress < scene2ScrollEnd) return 1;
+
+  const span = scene2ScrollStart - scene2ScrollEnd;
+  if (span <= 0) return 0;
 
   return THREE.MathUtils.clamp(
-    (scrollProgress - scene2ScrollStart) / (scene2ScrollEnd - scene2ScrollStart),
+    (scene2ScrollStart - scrollProgress) / span,
     0,
     1,
   );
-}
-
-/** Scene 2 is traversed while global scroll progress decreases. */
-function getScene2TravelT(
-  scrollProgress: number,
-  scene2ScrollStart: number,
-  scene2ScrollEnd: number,
-) {
-  return 1 - getScene2Progress(scrollProgress, scene2ScrollStart, scene2ScrollEnd);
 }
 
 function getBoatTargetProgress(
@@ -103,13 +126,12 @@ function getBoatTargetProgress(
   scene2ScrollStart: number,
   scene2ScrollEnd: number,
 ) {
-  const scene2T = getScene2TravelT(
+  const scene2T = getBoatTravelProgress(
     scrollProgress,
     scene2ScrollStart,
     scene2ScrollEnd,
   );
 
-  // Docked at scene-2 exit (e.g. after car return) — follow scroll both ways.
   if (boardScene2T >= 0.99) {
     return scene2T;
   }
@@ -135,7 +157,13 @@ function buildRig(
   const boat =
     findSceneObject(scene, nodes, boatScrollSettings.boat) ??
     findSceneObject(scene, nodes, boatScrollSettings.boatBlender);
-  const floor = findScene2Floor(scene, nodes);
+  const floor =
+    findSceneObject(
+      scene,
+      nodes,
+      boatScrollSettings.scene2Floor,
+      boatScrollSettings.scene2FloorBlender,
+    ) ?? findScene2Floor(scene, nodes);
 
   if (!boat || !floor) {
     if (process.env.NODE_ENV === "development") {
@@ -149,13 +177,16 @@ function buildRig(
 
   const carrier = attachAnimationCarrier(boat, boatScrollSettings.carrierName);
   carrier.updateMatrixWorld(true);
-  const restWorld = new THREE.Vector3();
-  carrier.getWorldPosition(restWorld);
+  carrier.getWorldPosition(tempWorld);
+
+  const restX = tempWorld.x;
   const track = getScene2Track(
+    scene,
+    nodes,
     floor,
-    restWorld.x,
-    restWorld.y,
-    restWorld.z,
+    restX,
+    carrier.position.y,
+    carrier.position.z,
     getScrollRange(sceneFrame),
   );
 
@@ -167,6 +198,7 @@ function buildRig(
       trackEndX: track.trackEndX,
       scene2Scroll: [track.scene2ScrollStart, track.scene2ScrollEnd],
       boat: boat.name,
+      floor: floor.name,
     });
   }
 
@@ -225,6 +257,8 @@ export default function BoatScrollMovement({
     }
 
     const track = getScene2Track(
+      scene,
+      nodes,
       rig.floor,
       rig.restX,
       rig.baseY,
@@ -250,7 +284,11 @@ export default function BoatScrollMovement({
       }
     }
 
-    if (turtleOnCarRef.current || turtleOnJetskiRef.current || turtleOnYachtRef.current) {
+    if (
+      turtleOnCarRef.current ||
+      turtleOnJetskiRef.current ||
+      turtleOnYachtRef.current
+    ) {
       carReturnSetupDoneRef.current = false;
     }
 
@@ -271,7 +309,7 @@ export default function BoatScrollMovement({
         return;
       }
 
-      if (progress > rig.scene2ScrollEnd + 0.008) {
+      if (progress > rig.scene2ScrollStart + 0.008) {
         rig.dockedAtEnd = false;
         rig.boardScene2T = null;
         rig.boatProgress = 0;
@@ -289,7 +327,7 @@ export default function BoatScrollMovement({
     }
 
     if (rig.boardScene2T === null) {
-      rig.boardScene2T = getScene2TravelT(
+      rig.boardScene2T = getBoatTravelProgress(
         progress,
         rig.scene2ScrollStart,
         rig.scene2ScrollEnd,

@@ -6,8 +6,8 @@ export const carScrollSettings = {
   bodyBlender: assetNames.cars.bodyBlender,
   carrierName: "CarScrollCarrier001",
 
-  scene2Floor: assetNames.scenes.floor1,
-  scene2FloorBlender: assetNames.scenes.floor1Blender,
+  scene2Floor: assetNames.scenes.continuityFloor,
+  scene2FloorBlender: assetNames.scenes.continuityFloorBlender,
 
   road: assetNames.roads.stretched,
   roadBlender: assetNames.roads.stretchedBlender,
