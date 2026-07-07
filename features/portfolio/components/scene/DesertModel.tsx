@@ -22,7 +22,7 @@ import LanternAnimation from "../animations/LanternAnimation";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
 import DesertSafariVideoOverlay from "../animations/DesertSafariVideoOverlay";
 
-const MODEL_PATH = "/Models/Modelv2.glb";
+const MODEL_PATH = "/Models/Modelv1.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
