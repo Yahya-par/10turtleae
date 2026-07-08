@@ -6,4 +6,4 @@ export const journeySettings = {
   mode: "prod" as "dev" | "prod",
 } as const;
 
-export const isJourneyDevMode = journeySettings.mode === "dev";
+export const isJourneyDevMode = journeySettings.mode === "prod";

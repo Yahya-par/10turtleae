@@ -148,7 +148,21 @@ export function createDioramaCurve(frame: SceneFrame) {
 export function getScrollRange(sceneFrame: SceneFrame | null) {
   if (sceneFrame?.waypoints.length) {
     const xs = sceneFrame.waypoints.map((waypoint) => waypoint.position.x);
-    return { min: Math.min(...xs), max: Math.max(...xs) };
+    const waypointMin = Math.min(...xs);
+    const waypointMax = Math.max(...xs);
+
+    if (sceneFrame.bounds) {
+      // Clamp waypoint-derived range to real mesh bounds to avoid
+      // long empty pre/post-roll caused by outlier Empty waypoints.
+      const clampedMin = Math.max(waypointMin, sceneFrame.bounds.min.x);
+      const clampedMax = Math.min(waypointMax, sceneFrame.bounds.max.x);
+
+      if (clampedMax > clampedMin) {
+        return { min: clampedMin, max: clampedMax };
+      }
+    }
+
+    return { min: waypointMin, max: waypointMax };
   }
 
   if (sceneFrame?.bounds) {

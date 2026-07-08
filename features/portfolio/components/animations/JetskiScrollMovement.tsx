@@ -21,6 +21,15 @@ type JetskiRig = {
   carrier: THREE.Group;
   driver: THREE.Object3D;
   jetski: THREE.Object3D | null;
+  frozenJetski:
+    | {
+        object: THREE.Object3D;
+        parent: THREE.Object3D;
+        position: THREE.Vector3;
+        quaternion: THREE.Quaternion;
+        scale: THREE.Vector3;
+      }
+    | null;
   sceneFloor: THREE.Object3D;
   restX: number;
   trackEndX: number;
@@ -157,6 +166,38 @@ function setCarrierWorldPosition(
   setObjectWorldPosition(carrier, tempOffset);
 }
 
+function captureFrozenTransform(object: THREE.Object3D) {
+  if (!object.parent) return null;
+  return {
+    object,
+    parent: object.parent,
+    position: object.position.clone(),
+    quaternion: object.quaternion.clone(),
+    scale: object.scale.clone(),
+  };
+}
+
+function restoreFrozenTransform(
+  frozen:
+    | {
+        object: THREE.Object3D;
+        parent: THREE.Object3D;
+        position: THREE.Vector3;
+        quaternion: THREE.Quaternion;
+        scale: THREE.Vector3;
+      }
+    | null,
+) {
+  if (!frozen) return;
+  if (frozen.object.parent !== frozen.parent) {
+    frozen.parent.add(frozen.object);
+  }
+  frozen.object.position.copy(frozen.position);
+  frozen.object.quaternion.copy(frozen.quaternion);
+  frozen.object.scale.copy(frozen.scale);
+  frozen.object.updateMatrixWorld(true);
+}
+
 export function resolveJetskiScrollWindow(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
@@ -237,9 +278,10 @@ function buildRig(
       ? (driverMesh.parent as THREE.Group)
       : attachAnimationCarrier(driverMesh, carrierName);
 
-  if (jetskiMesh && jetskiMesh.parent !== carrier) {
-    carrier.attach(jetskiMesh);
+  if (jetskiMesh?.parent === carrier) {
+    scene.attach(jetskiMesh);
   }
+  const frozenJetski = jetskiMesh ? captureFrozenTransform(jetskiMesh) : null;
 
   carrier.updateMatrixWorld(true);
   const restWorld = new THREE.Vector3();
@@ -284,6 +326,7 @@ function buildRig(
     carrier,
     driver: driverMesh,
     jetski: jetskiMesh,
+    frozenJetski,
     sceneFloor: floor,
     restX: track.restX,
     trackEndX: track.trackEndX,
@@ -376,6 +419,7 @@ export default function JetskiScrollMovement({
     );
     rig.jetskiScrollStart = scrollWindow.jetskiScrollStart;
     rig.jetskiScrollEnd = scrollWindow.jetskiScrollEnd;
+    restoreFrozenTransform(rig.frozenJetski);
 
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,

@@ -13,11 +13,37 @@ export function normalizeObjectName(name: string) {
 const SCENE_FLOOR_PATTERN =
   /^(Desert_Scene_Floor|Fourth_Scene_Floor|continuefloor)/i;
 
+// function lookupByName(
+//   scene: THREE.Object3D,
+//   nodes: Record<string, THREE.Object3D> | undefined,
+//   name: string,
+// ) {
+//   const fromNodes = nodes?.[name];
+//   if (fromNodes) return fromNodes;
+
+//   const fromScene = scene.getObjectByName(name);
+//   if (fromScene) return fromScene;
+
+//   const normalized = normalizeObjectName(name);
+//   let match: THREE.Object3D | null = null;
+//   scene.traverse((child) => {
+//     if (match || !child.name) return;
+//     if (
+//       child.name === name ||
+//       normalizeObjectName(child.name) === normalized
+//     ) {
+//       match = child;
+//     }
+//   });
+//   return match;
+// }
 function lookupByName(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D> | undefined,
-  name: string,
+  name?: string,
 ) {
+  if (!name) return null;
+
   const fromNodes = nodes?.[name];
   if (fromNodes) return fromNodes;
 
@@ -25,9 +51,12 @@ function lookupByName(
   if (fromScene) return fromScene;
 
   const normalized = normalizeObjectName(name);
+
   let match: THREE.Object3D | null = null;
+
   scene.traverse((child) => {
     if (match || !child.name) return;
+
     if (
       child.name === name ||
       normalizeObjectName(child.name) === normalized
@@ -35,20 +64,37 @@ function lookupByName(
       match = child;
     }
   });
+
   return match;
 }
 
 // findSceneObject - find the scene object in the scene by name
+// export function findSceneObject(
+//   scene: THREE.Object3D,
+//   nodes: Record<string, THREE.Object3D> | undefined,
+//   name: string,
+//   ...aliases: string[]
+// ) {
+//   for (const candidate of [name, ...aliases]) {
+//     const found = lookupByName(scene, nodes, candidate);
+//     if (found) return found;
+//   }
+//   return null;
+// }
+
 export function findSceneObject(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D> | undefined,
-  name: string,
-  ...aliases: string[]
+  name?: string,
+  ...aliases: (string | undefined)[]
 ) {
   for (const candidate of [name, ...aliases]) {
+    if (!candidate) continue;
+
     const found = lookupByName(scene, nodes, candidate);
     if (found) return found;
   }
+
   return null;
 }
 
@@ -294,6 +340,40 @@ export function clampScene1WorldX(
   const minX = Math.min(track.startX, track.endX);
   const maxX = Math.max(track.startX, track.endX);
   return THREE.MathUtils.clamp(x, minX, maxX);
+}
+
+/** Safari / Lahbab panel — camel track from east handoff → west exit. */
+export function resolveSafariCamelTrack(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D> | undefined,
+  sceneFrame: SceneFrame | null,
+  options: { startInset: number; endInset: number },
+): Scene1CamelTrack | null {
+  const floor =
+    findSceneObject(
+      scene,
+      nodes,
+      "Desert_Scene_Floor008",
+      "Desert_Scene_Floor.008",
+    ) ?? findObjectByNamePattern(scene, /Desert_Scene_Floor\.?008/i);
+
+  if (!floor) return null;
+
+  const box = getObjectBounds(floor);
+  const scrollRange = getScrollRange(sceneFrame);
+  const startX = box.max.x - options.startInset;
+  const endX = box.min.x + options.endInset;
+  const progressAtStart = getScrollProgressAtX(startX, scrollRange);
+  const progressAtEnd = getScrollProgressAtX(endX, scrollRange);
+
+  return {
+    startX,
+    endX,
+    progressAtStart,
+    progressAtEnd,
+    desertScrollStart: Math.min(progressAtStart, progressAtEnd),
+    desertScrollEnd: Math.max(progressAtStart, progressAtEnd),
+  };
 }
 
 /** Patrol bounds for scene 1 only — X clamped to opening → scene 2 boundary. */

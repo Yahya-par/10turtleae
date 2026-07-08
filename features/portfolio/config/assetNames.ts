@@ -75,6 +75,9 @@ export const assetNames = {
     bellyDancerBillboardBlender: "lahbbabimageasset.001",
   },
   camel: {
+    /** Lahbab / safari end-scene camel (Blender: camel.002) — ornate saddle by sign. */
+    safariBody: "camel002",
+    safariBodyBlender: "camel.002",
     /** Blender: camel.001 — opening scene camel with turtle rider */
     body: "camel001",
     bodyBlender: "camel.001",

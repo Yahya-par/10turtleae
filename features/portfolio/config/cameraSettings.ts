@@ -48,5 +48,11 @@ export const cameraSettings = {
       leftX: null as number | null,
       rightX: null as number | null,
     },
+
+    /**
+     * Shift scroll camera framing along X so the opening backdrop edge
+     * starts at the viewport left instead of centered.
+     */
+    xOffset: -0.5,
   },
 };

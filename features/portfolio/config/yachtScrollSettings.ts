@@ -110,6 +110,11 @@ export const mosqueYachtScrollSettings: YachtScrollSettings = {
    */
   manualStartPosition: { x: 0, y: 0.45, z: -1 },
   manualEndPosition: { x: 0, y: 0.45, z: -1 },
+  // Keep turtle behind yacht.002 during the final yacht segment.
+  turtleSeatOffsetX: 0.2,
+  turtleSeatOffsetY: 0,
+  turtleSeatOffsetZ: 0.5,
+  turtleDeckHeightFactor: 0.62,
 };
 
 export const yachtScrollConfigs = [
