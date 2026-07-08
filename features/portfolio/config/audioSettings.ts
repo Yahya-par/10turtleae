@@ -8,8 +8,8 @@ export const audioSettings = {
     dubai: audioSrc("/Audios/dubaibgsound.mp3"),
     loop: true,
     volume: {
-      drum: 0.45,
-      dubai: 0.55,
+      drum: 0.35,
+      dubai: 0.35,
     },
   },
   cars: {
