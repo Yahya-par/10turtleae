@@ -1644,39 +1644,16 @@ body {
   margin-bottom: 0.5rem;
 }
 
-.tilt-prompt__icon svg {
-  animation: tilt-rotate 2.6s ease-in-out infinite;
-  transform-origin: 50% 50%;
+.tilt-prompt__icon-lottie {
+  width: 96px;
+  height: 96px;
+  display: block;
+  transform: scaleX(-1);
 }
 
-.tilt-prompt__phone {
-  fill: none;
-  stroke: var(--paper);
-  stroke-width: 3;
-}
-
-.tilt-prompt__screen {
-  fill: rgba(201, 123, 79, 0.35);
-  stroke: var(--accent);
-  stroke-width: 1.5;
-}
-
-.tilt-prompt__home {
-  fill: var(--paper);
-}
-
-.tilt-prompt__arrow {
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  width: 26px;
-  height: 26px;
-  border-top: 3px solid var(--accent);
-  border-right: 3px solid var(--accent);
-  border-radius: 4px;
-  transform: translateY(-50%) rotate(45deg);
-  opacity: 0;
-  animation: tilt-arrow 2.6s ease-in-out infinite;
+.tilt-prompt__icon-lottie svg {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .tilt-prompt__title {
@@ -1713,14 +1690,3 @@ body {
   box-shadow: 0 4px 14px rgba(201, 123, 79, 0.3);
 }
 
-@keyframes tilt-rotate {
-  0%, 18% { transform: rotate(0deg); }
-  50%, 68% { transform: rotate(-90deg); }
-  100% { transform: rotate(0deg); }
-}
-
-@keyframes tilt-arrow {
-  0%, 12% { opacity: 0; }
-  30%, 55% { opacity: 1; }
-  75%, 100% { opacity: 0; }
-}
