@@ -27,6 +27,10 @@ export const carScrollSettings = {
 
   /** 1 = linear scroll mapping along the full car route. */
   travelExponent: 1,
+  /** Multiplier on scroll→travel mapping (higher = car reaches west end sooner). */
+  travelSpeed: 1.4,
+  /** Idle loop duration (seconds) for the back-and-forth drive when no turtle is aboard. */
+  lapDuration: 7,
   /** Kept for reverse-return smoothing; forward scroll uses direct mapping. */
   followLerp: 0.75,
 

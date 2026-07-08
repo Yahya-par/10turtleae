@@ -430,7 +430,7 @@ function buildRig(
   const authoredWorld = new THREE.Vector3();
   carrier.getWorldPosition(authoredWorld);
   const baseY = roadTrack.y + carrierOffset.y;
-  const trackStartX = track.startX;
+  const trackStartX = restX;
   const baseZ = roadTrack.z + carrierOffset.z;
 
   carrier.position.set(

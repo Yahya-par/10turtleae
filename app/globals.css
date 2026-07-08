@@ -804,3 +804,923 @@ body {
     text-align: center;
   }
 }
+
+/* =========================================================================
+   Loader 3 — "Freaky" typographic preloader (befreaky.co inspired)
+   Rolling odometer counter · marquee ticker · curved slide-up reveal
+   ========================================================================= */
+.freaky-loader {
+  --freaky-bg: #e8e3d9;
+  --freaky-ink: #16130d;
+  --freaky-accent: #c1502e;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--freaky-ink);
+}
+
+.freaky-loader__panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 3.5vw, 3rem);
+  background: var(--freaky-bg);
+  opacity: 0;
+  will-change: transform;
+}
+
+/* Convex bottom edge that trails the panel as it slides up, then flattens. */
+.freaky-loader__curve {
+  position: absolute;
+  top: 100%;
+  left: -25%;
+  width: 150%;
+  height: 12vh;
+  background: var(--freaky-bg);
+  border-radius: 0 0 50% 50%;
+  pointer-events: none;
+}
+
+.freaky-loader__topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.freaky-loader__meta {
+  opacity: 0.62;
+}
+
+.freaky-loader__center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.freaky-loader__wordmark {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.02em;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-weight: 600;
+  font-size: clamp(3rem, 12vw, 11rem);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+/* Each line clips its inner span so the reveal slides up from below. */
+.freaky-loader__word-line {
+  display: block;
+  overflow: hidden;
+}
+
+.freaky-loader__word-line span {
+  display: block;
+  will-change: transform;
+}
+
+.freaky-loader__bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.freaky-loader__counter {
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-weight: 600;
+  font-size: clamp(3.5rem, 13vw, 10rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.freaky-loader__reels {
+  display: flex;
+}
+
+/* One digit window; the strip inside scrolls vertically. */
+.freaky-loader__reel {
+  height: 1em;
+  overflow: hidden;
+}
+
+.freaky-loader__reel-strip {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.freaky-loader__reel-strip span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.freaky-loader__percent {
+  margin-left: 0.12em;
+  font-size: 0.42em;
+  line-height: 1;
+  color: var(--freaky-accent);
+  align-self: flex-start;
+  margin-top: 0.35em;
+}
+
+.freaky-loader__marquee {
+  flex: 1;
+  max-width: 55%;
+  overflow: hidden;
+  border-top: 1px solid rgba(22, 19, 13, 0.25);
+  padding-top: 0.75rem;
+  margin-bottom: 0.6rem;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+}
+
+.freaky-loader__marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: freaky-marquee 18s linear infinite;
+}
+
+.freaky-loader__marquee-item {
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@keyframes freaky-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .freaky-loader__bottom {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+  }
+
+  .freaky-loader__marquee {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .freaky-loader__marquee-track {
+    animation: none;
+  }
+}
+
+/* =========================================================================
+   Loader 4 — "Spylt" bold preloader (spylt.com inspired)
+   Peeling flavor-card deck · superscript counter · punchy marquee · wipe reveal
+   ========================================================================= */
+.spylt-loader {
+  --spylt-bg: #f3e7d6;
+  --spylt-ink: #1e1810;
+  --spylt-accent: #d1471f;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--spylt-bg);
+  color: var(--spylt-ink);
+  clip-path: inset(0 0 0 0);
+  will-change: clip-path;
+}
+
+.spylt-loader__inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 3.5vw, 3rem);
+  opacity: 0;
+}
+
+.spylt-loader__topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.spylt-loader__tag:last-child {
+  opacity: 0.62;
+}
+
+.spylt-loader__deck {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spylt-loader__card {
+  position: absolute;
+  width: clamp(11rem, 26vw, 18rem);
+  aspect-ratio: 3 / 4;
+  border-radius: 1.25rem;
+  padding: clamp(1rem, 2vw, 1.6rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 30px 60px -20px rgba(30, 24, 16, 0.55);
+  transform-origin: center bottom;
+  will-change: transform, opacity;
+}
+
+.spylt-loader__card-index {
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+
+.spylt-loader__card-label {
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.spylt-loader__footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.spylt-loader__brand {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.5rem, 9vw, 8rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Counter sits as a superscript to the top-right of the wordmark. */
+.spylt-loader__count {
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(1rem, 2vw, 1.9rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--spylt-accent);
+  top: -1.2em;
+  margin-left: 0.15em;
+}
+
+.spylt-loader__marquee {
+  flex: 1;
+  max-width: 48%;
+  overflow: hidden;
+  border-top: 2px solid rgba(30, 24, 16, 0.28);
+  padding-top: 0.75rem;
+  margin-bottom: 0.65rem;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+}
+
+.spylt-loader__marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: spylt-marquee 16s linear infinite;
+}
+
+.spylt-loader__marquee-item {
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.85rem, 1.4vw, 1.15rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@keyframes spylt-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .spylt-loader__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+  }
+
+  .spylt-loader__marquee {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spylt-loader__marquee-track {
+    animation: none;
+  }
+}
+
+/* =========================================================================
+   Loader 5 — "Aurora" cinematic preloader (awwwards inspired)
+   SVG stroke-draw ring · rotating text badge · cycling word · shutter reveal
+   ========================================================================= */
+.aurora-loader {
+  --aurora-sky: #f4ead8;
+  --aurora-sand: #e8d9c0;
+  --aurora-sand-deep: #d4b896;
+  --aurora-ink: #3d3229;
+  --aurora-accent: #c97b4f;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--aurora-ink);
+}
+
+/* Vertical shutter panels — the desert backdrop that lifts away on exit. */
+.aurora-loader__panels {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  z-index: 1;
+}
+
+.aurora-loader__panel {
+  flex: 1 1 0;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    var(--aurora-sky) 0%,
+    var(--aurora-sand) 55%,
+    var(--aurora-sand-deep) 100%
+  );
+  will-change: transform;
+}
+
+/* Subtle stripe so the shutter columns read distinctly as they lift. */
+.aurora-loader__panel:nth-child(odd) {
+  background: linear-gradient(
+    180deg,
+    #f7f0e2 0%,
+    #ecdec7 55%,
+    #dcc4a2 100%
+  );
+}
+
+.aurora-loader__content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2rem, 5vw, 3.5rem);
+  opacity: 0;
+}
+
+.aurora-loader__badge {
+  position: relative;
+  width: clamp(15rem, 42vw, 22rem);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aurora-loader__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: aurora-spin 22s linear infinite;
+}
+
+.aurora-loader__ring-text {
+  fill: rgba(61, 50, 41, 0.5);
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 3.5px;
+  text-transform: uppercase;
+}
+
+.aurora-loader__progress {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.aurora-loader__progress-arc {
+  filter: drop-shadow(0 0 6px rgba(201, 123, 79, 0.5));
+  transition: stroke-dashoffset 0.15s linear;
+}
+
+.aurora-loader__count {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-weight: 500;
+  font-size: clamp(3rem, 9vw, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.aurora-loader__count i {
+  font-style: normal;
+  font-size: 0.32em;
+  margin-top: 0.4em;
+  margin-left: 0.15em;
+  color: var(--aurora-accent);
+}
+
+.aurora-loader__word {
+  overflow: hidden;
+}
+
+.aurora-loader__word-mask {
+  display: block;
+  overflow: hidden;
+}
+
+.aurora-loader__word-inner {
+  display: block;
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(0.8rem, 1.6vw, 1rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(61, 50, 41, 0.72);
+  will-change: transform;
+}
+
+.aurora-loader__footer {
+  position: absolute;
+  bottom: clamp(1.5rem, 3vw, 2.5rem);
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 clamp(1.5rem, 3.5vw, 3rem);
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(61, 50, 41, 0.6);
+}
+
+@keyframes aurora-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-loader__ring {
+    animation: none;
+  }
+}
+
+/* =========================================================================
+   Loader 6 — "Don" monochrome preloader (donprod.uk inspired)
+   Per-letter mask reveal · big counter · scaling divider · center-split reveal
+   ========================================================================= */
+.don-loader {
+  --don-sky: #f4ead8;
+  --don-sand: #e8d9c0;
+  --don-sand-deep: #d4b896;
+  --don-ink: #3d3229;
+  --don-accent: #c97b4f;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--don-ink);
+}
+
+/* Two desert halves that part vertically to reveal the scene.
+   Each half carries its slice of a continuous sky -> sand gradient. */
+.don-loader__half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  z-index: 1;
+  will-change: transform;
+}
+
+.don-loader__half--top {
+  top: 0;
+  background: linear-gradient(180deg, var(--don-sky) 0%, var(--don-sand) 100%);
+}
+
+.don-loader__half--bottom {
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    var(--don-sand) 0%,
+    var(--don-sand-deep) 100%
+  );
+}
+
+/* Parallax layers — move at different depths on pointer + idle drift. */
+.don-loader__parallax {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.don-loader__parallax--top {
+  background:
+    radial-gradient(ellipse 70% 45% at 72% 8%, rgba(255, 196, 120, 0.42), transparent 68%),
+    radial-gradient(ellipse 90% 55% at 30% 0%, rgba(255, 230, 190, 0.35), transparent 72%);
+}
+
+.don-loader__sun {
+  position: absolute;
+  top: 12%;
+  right: 18%;
+  width: clamp(5rem, 14vw, 9rem);
+  height: clamp(5rem, 14vw, 9rem);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 35%,
+    #fff4dc 0%,
+    rgba(255, 196, 120, 0.75) 45%,
+    rgba(201, 123, 79, 0.15) 72%,
+    transparent 100%
+  );
+  will-change: transform;
+}
+
+.don-loader__dunes {
+  position: absolute;
+  left: -4%;
+  right: -4%;
+  width: 108%;
+  color: rgba(180, 140, 95, 0.55);
+  will-change: transform;
+}
+
+.don-loader__dunes--back {
+  bottom: 0;
+  height: 42%;
+  opacity: 0.7;
+}
+
+.don-loader__parallax--bottom .don-loader__dunes--front {
+  top: 0;
+  height: 48%;
+  color: rgba(160, 120, 78, 0.72);
+}
+
+.don-loader__orb {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 248, 238, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(61, 50, 41, 0.1);
+  will-change: transform;
+}
+
+.don-loader__orb--1 {
+  width: clamp(3.5rem, 8vw, 5.5rem);
+  height: clamp(3.5rem, 8vw, 5.5rem);
+  left: 14%;
+  top: 22%;
+}
+
+.don-loader__orb--2 {
+  width: clamp(2.5rem, 6vw, 4rem);
+  height: clamp(2.5rem, 6vw, 4rem);
+  right: 16%;
+  bottom: 28%;
+}
+
+.don-loader__grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.045;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+.don-loader__content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 3.5vw, 3rem);
+  opacity: 0;
+}
+
+.don-loader__glass-pill {
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(255, 248, 238, 0.32);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow:
+    0 4px 20px rgba(61, 50, 41, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.don-loader__glass-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.25rem, 3vw, 2.25rem);
+  padding: clamp(2rem, 5vw, 3.5rem) clamp(2.25rem, 6vw, 4rem);
+  border-radius: 1.5rem;
+  background: rgba(255, 248, 238, 0.34);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 12px 40px rgba(61, 50, 41, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  will-change: transform, opacity;
+}
+
+.don-loader__topbar,
+.don-loader__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.don-loader__topbar .don-loader__tag:last-child,
+.don-loader__footer .don-loader__meta:last-child {
+  opacity: 0.72;
+}
+
+.don-loader__center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.don-loader__wordmark {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.5rem, 11vw, 9rem);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Each character clips its glyph so the reveal slides up from below. */
+.don-loader__char-mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.don-loader__char {
+  display: inline-block;
+  will-change: transform;
+}
+
+.don-loader__space {
+  display: inline-block;
+  width: 0.4em;
+}
+
+.don-loader__divider {
+  width: min(60vw, 34rem);
+  height: 1px;
+  background: rgba(61, 50, 41, 0.55);
+  transform: scaleX(0);
+  will-change: transform;
+}
+
+.don-loader__count {
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-weight: 500;
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.don-loader__count i {
+  font-style: normal;
+  font-size: 0.5em;
+  margin-top: 0.15em;
+  margin-left: 0.15em;
+  color: var(--don-accent);
+}
+
+@media only screen and (max-width: 768px) {
+  .don-loader__topbar,
+  .don-loader__footer {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .don-loader__glass-panel {
+    width: 100%;
+    max-width: 28rem;
+    padding: 1.75rem 1.5rem;
+  }
+}
+
+/* ── Tilt prompt (mobile / tablet only) ──────────────────────────────── */
+.tilt-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at 50% 30%, #2a2118 0%, #171310 70%, #0f0c0a 100%);
+  color: var(--paper);
+}
+
+.tilt-prompt__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 22rem;
+  gap: 1.1rem;
+}
+
+.tilt-prompt__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 0.5rem;
+}
+
+.tilt-prompt__icon svg {
+  animation: tilt-rotate 2.6s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+.tilt-prompt__phone {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 3;
+}
+
+.tilt-prompt__screen {
+  fill: rgba(201, 123, 79, 0.35);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.tilt-prompt__home {
+  fill: var(--paper);
+}
+
+.tilt-prompt__arrow {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  border-top: 3px solid var(--accent);
+  border-right: 3px solid var(--accent);
+  border-radius: 4px;
+  transform: translateY(-50%) rotate(45deg);
+  opacity: 0;
+  animation: tilt-arrow 2.6s ease-in-out infinite;
+}
+
+.tilt-prompt__title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.tilt-prompt__text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  opacity: 0.82;
+}
+
+.tilt-prompt__button {
+  margin-top: 0.6rem;
+  padding: 0.8rem 2.2rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(201, 123, 79, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tilt-prompt__button:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 14px rgba(201, 123, 79, 0.3);
+}
+
+@keyframes tilt-rotate {
+  0%, 18% { transform: rotate(0deg); }
+  50%, 68% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes tilt-arrow {
+  0%, 12% { opacity: 0; }
+  30%, 55% { opacity: 1; }
+  75%, 100% { opacity: 0; }
+}

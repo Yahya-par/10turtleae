@@ -7,8 +7,10 @@ import { useScrollNavigation } from "@features/portfolio/hooks/useScrollNavigati
 import { usePortfolioAudio } from "@features/portfolio/hooks/usePortfolioAudio";
 import { audioManager } from "@features/portfolio/utils/audioManager";
 import { useInspectProtection, blockInspectContextMenu } from "@features/portfolio/hooks/useInspectProtection";
+import { useDeviceType, useIsPortrait } from "@features/portfolio/hooks/useDeviceType";
 import LoaderSelector from "@features/portfolio/components/loading/LoaderSelector";
 import AudioToggle from "@features/portfolio/components/ui/AudioToggle";
+import MobileTiltPrompt from "@features/portfolio/components/ui/MobileTiltPrompt";
 import Scene from "./scene/Scene";
 import Overlay from "./scene/Overlay";
 import CameraHud from "./camera/CameraHud";
@@ -35,6 +37,17 @@ export default function Experience() {
     lookAt: { ...cameraSettings.orbit.target },
     fov: cameraSettings.orbit.fov,
   });
+
+  const deviceType = useDeviceType();
+  const isPortrait = useIsPortrait();
+  const isHandheld = deviceType !== "desktop";
+  const [introAcknowledged, setIntroAcknowledged] = useState(false);
+  const handleTiltAccept = useCallback(() => setIntroAcknowledged(true), []);
+
+  // Intro card (with Okay) until acknowledged, then a "tilt to continue" gate
+  // that stays until the device is physically rotated to landscape.
+  const showIntroPrompt = isHandheld && isPortrait && !introAcknowledged;
+  const showTiltGate = isHandheld && isPortrait && introAcknowledged;
 
   return (
     <div
@@ -77,6 +90,10 @@ export default function Experience() {
       />
       <AudioToggle isMuted={isMuted} onToggle={toggleMute} visible={loaderDone} />
       {isOrbitMode && loaderDone && isReady && <CameraHud {...orbitPose} />}
+      {showIntroPrompt && (
+        <MobileTiltPrompt variant="intro" onAccept={handleTiltAccept} />
+      )}
+      {showTiltGate && <MobileTiltPrompt variant="gate" />}
     </div>
   );
 }

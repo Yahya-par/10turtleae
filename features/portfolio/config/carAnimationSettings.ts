@@ -24,8 +24,8 @@ export const carAnimationSettings = {
   sceneStart: assetNames.scenes.dubaiFrameLandmark,
   sceneStartBlender: "proper_dubaiframe.001",
   /** Coastal road mesh — cars stay within this bounds */
-  road: assetNames.roads.junaroadjevu,
-  roadBlender: assetNames.roads.junaroadjevuBlender,
+  road: assetNames.roads.juneRoad,
+  roadBlender: assetNames.roads.juneRoadBlender,
 
   /** Inset from Dubai Frame entrance edge (high X, toward scene 1). */
   startInset: 1.5,

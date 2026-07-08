@@ -25,8 +25,8 @@ export const carBodyAnimationSettings = {
 
   /** Route along junaroadjevu.001 in Modelv1.glb. */
   track: {
-    road: assetNames.roads.junaroadjevu,
-    roadBlender: assetNames.roads.junaroadjevuBlender,
+    road: assetNames.roads.juneRoad,
+    roadBlender: assetNames.roads.juneRoadBlender,
     startInset: 1.5,
     endInset: 1.5,
     /** Nudge along the road — applied live every frame (safe to tune in dev). */

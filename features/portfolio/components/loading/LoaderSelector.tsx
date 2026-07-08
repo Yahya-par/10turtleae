@@ -1,6 +1,10 @@
-import { loaderSettings } from "../../config/loaderSettings";
+  import { loaderSettings } from "../../config/loaderSettings";
 import PortfolioLoader from "./PortfolioLoader";
 import MinimalLoader from "./MinimalLoader";
+import FreakyLoader from "./FreakyLoader";
+import SpyltLoader from "./SpyltLoader";
+import AuroraLoader from "./AuroraLoader";
+import DonLoader from "./DonLoader";
 
 type LoaderSelectorProps = {
   isAssetsReady: boolean;
@@ -16,6 +20,22 @@ export default function LoaderSelector({
   onComplete,
 }: LoaderSelectorProps) {
   const { activeLoader } = loaderSettings;
+
+  if (activeLoader === "loader6") {
+    return <DonLoader isAssetsReady={isAssetsReady} onComplete={onComplete} />;
+  }
+
+  if (activeLoader === "loader5") {
+    return <AuroraLoader isAssetsReady={isAssetsReady} onComplete={onComplete} />;
+  }
+
+  if (activeLoader === "loader4") {
+    return <SpyltLoader isAssetsReady={isAssetsReady} onComplete={onComplete} />;
+  }
+
+  if (activeLoader === "loader3") {
+    return <FreakyLoader isAssetsReady={isAssetsReady} onComplete={onComplete} />;
+  }
 
   if (activeLoader === "loader2") {
     return <MinimalLoader isAssetsReady={isAssetsReady} onComplete={onComplete} />;
