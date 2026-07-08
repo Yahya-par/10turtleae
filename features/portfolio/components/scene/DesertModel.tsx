@@ -10,6 +10,8 @@ import AinAnimation from "../animations/AinAnimation";
 import CampfireSmoke from "../animations/CampfireSmoke";
 import SafariCampWind from "../animations/SafariCampWind";
 import CamelWalkAnimation from "../animations/CamelWalkAnimation";
+import SafariCamelScrollMovement from "../animations/SafariCamelScrollMovement";
+import SafariCamelWalkAnimation from "../animations/SafariCamelWalkAnimation";
 import SceneObjectLinks from "./SceneObjectLinks";
 import CamelScrollMovement from "../animations/CamelScrollMovement";
 import BirdAnimation from "../animations/BirdAnimation";
@@ -81,6 +83,8 @@ export default function DesertModel({
   const turtleOnYachtRef = useRef(false);
   const yachtTravelProgressRef = useRef(0);
   const turtleReturnedFromYachtRef = useRef(false);
+  const turtleOnSafariCamelRef = useRef(false);
+  const safariCamelTravelProgressRef = useRef(0);
 
   useLayoutEffect(() => {
     prepareScene(scene);
@@ -90,6 +94,17 @@ export default function DesertModel({
   return (
     <>
       <primitive object={scene} />
+      <SafariCamelScrollMovement
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnSafariCamelRef={turtleOnSafariCamelRef}
+        turtleOnYachtRef={turtleOnYachtRef}
+        safariCamelTravelProgressRef={safariCamelTravelProgressRef}
+      />
       <CamelScrollMovement
         scene={scene}
         nodes={nodes}
@@ -108,6 +123,8 @@ export default function DesertModel({
         turtleReturnedFromJetskiRef={turtleReturnedFromJetskiRef}
         yachtTravelProgressRef={yachtTravelProgressRef}
         turtleReturnedFromYachtRef={turtleReturnedFromYachtRef}
+        turtleOnSafariCamelRef={turtleOnSafariCamelRef}
+        safariCamelTravelProgressRef={safariCamelTravelProgressRef}
       />
       <CamelWalkAnimation
         scene={scene}
@@ -116,6 +133,11 @@ export default function DesertModel({
         scrollProgress={scrollProgress}
         targetScrollProgress={targetScrollProgress}
         lerpFactor={lerpFactor}
+      />
+      <SafariCamelWalkAnimation
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
       />
       <AudioRuntime />
       <MetroTrainAnimation scene={scene} nodes={nodes} />

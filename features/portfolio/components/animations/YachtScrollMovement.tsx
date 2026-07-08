@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import type { YachtScrollSettings } from "@features/portfolio/config/yachtScrollSettings";
+import { carPassState } from "@features/portfolio/config/carPassState";
 import {
   getScrollRange,
   type SceneFrame,
@@ -495,6 +496,26 @@ export default function YachtScrollMovement({
     );
     applyManualPositions(start, end, settings);
 
+    const placeCarrier = (x: number, y: number, z: number) => {
+      if (settings.useWaterBounds) {
+        setCarrierWorldPosition(rig.carrier, x, y, z);
+      } else {
+        tempPosition.set(x, y, z);
+        rig.carrier.position.copy(tempPosition);
+      }
+    };
+
+    if (
+      (carPassState.yachtToSafariCamelTransfer ||
+        carPassState.yachtDockedAtEnd) &&
+      travelProgressRef
+    ) {
+      placeCarrier(end.x, end.y, end.z);
+      rig.lastX = end.x;
+      travelProgressRef.current = 1;
+      return;
+    }
+
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,
       targetScrollProgress.current,
@@ -537,18 +558,14 @@ export default function YachtScrollMovement({
 
     const turtleBoarded = !turtleOnYachtRef || turtleOnYachtRef.current;
 
-    const placeCarrier = (x: number, y: number, z: number) => {
-      if (settings.useWaterBounds) {
-        setCarrierWorldPosition(rig.carrier, x, y, z);
-      } else {
-        tempPosition.set(x, y, z);
-        rig.carrier.position.copy(tempPosition);
-      }
-    };
-
     if (!inWindow || !turtleBoarded) {
       const parkedAtStart =
-        !turtleBoarded || (winEnd < winStart ? progress > winStart : progress < winStart);
+        !carPassState.yachtDockedAtEnd &&
+        (!turtleBoarded
+          ? true
+          : winEnd < winStart
+            ? progress > winStart
+            : progress < winStart);
       const parked = parkedAtStart ? start : end;
       placeCarrier(parked.x, parked.y, parked.z);
       rig.lastX = parked.x;

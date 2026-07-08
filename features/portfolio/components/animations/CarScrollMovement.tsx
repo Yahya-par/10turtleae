@@ -256,7 +256,7 @@ function getCarTravelProgress(
   if (span <= 0) return 0;
 
   return THREE.MathUtils.clamp(
-    ((carScrollStart - scrollProgress) / span) * carScrollSettings.travelSpeed,
+    ((carScrollStart - scrollProgress) / span) * carScrollSettings.travelExponent,
     0,
     1,
   );
@@ -430,7 +430,7 @@ function buildRig(
   const authoredWorld = new THREE.Vector3();
   carrier.getWorldPosition(authoredWorld);
   const baseY = roadTrack.y + carrierOffset.y;
-  const trackStartX = track.startX;
+  const trackStartX = roadTrack.roadWestX;
   const baseZ = roadTrack.z + carrierOffset.z;
 
   carrier.position.set(
@@ -501,6 +501,7 @@ export default function CarScrollMovement({
     return () => {
       rigRef.current = null;
       carTravelProgressRef.current = 0;
+      carPassState.boatToCarTransfer = false;
       carParkedRef.current = false;
       carPassState.scrollCarParked = true;
     };
@@ -555,6 +556,18 @@ export default function CarScrollMovement({
       return;
     }
 
+    if (carPassState.boatToCarTransfer) {
+      carSessionActiveRef.current = false;
+      rig.carProgress = 0;
+      rig.dockedAtEnd = false;
+      carTravelProgressRef.current = 0;
+      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+      rig.lastX = rig.restX;
+      carParkedRef.current = true;
+      carPassState.scrollCarParked = true;
+      return;
+    }
+
     const parkAtJetskiHandoff =
       !turtleOnCarRef.current &&
       !turtleOnBoatRef.current &&
@@ -575,7 +588,7 @@ export default function CarScrollMovement({
     if (!carSessionActiveRef.current) {
       carParkedRef.current = false;
       carPassState.scrollCarParked = false;
-      const lapDuration = carScrollSettings.lapDuration;
+      const lapDuration = 7;
       const prevElapsed = idleElapsedRef.current;
       idleElapsedRef.current += delta;
       const lapT =

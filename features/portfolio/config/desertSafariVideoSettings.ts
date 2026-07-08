@@ -4,7 +4,7 @@ export const desertSafariVideoSettings = {
   /** Desert safari camp billboard (Blender: lahbbabimageasset.001, ~X -128). */
   objectName: assetNames.safari.bellyDancerBillboard,
   blenderObjectName: assetNames.safari.bellyDancerBillboardBlender,
-  videoUrl: "/Videos/BELLYDANCERVIDEO.mp4",
+  videoUrl: "/Videos/BELLYDANCERVIDEO.gif",
   overlayName: "DesertSafariBellyDancerVideoOverlay",
   /** Discard near-black pixels so the MP4 background stays transparent. */
   alphaCutoff: 0.08,
