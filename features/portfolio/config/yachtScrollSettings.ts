@@ -113,7 +113,7 @@ export const mosqueYachtScrollSettings: YachtScrollSettings = {
   // Keep turtle behind yacht.002 during the final yacht segment.
   turtleSeatOffsetX: 0.2,
   turtleSeatOffsetY: 0,
-  turtleSeatOffsetZ: -0.5,
+  turtleSeatOffsetZ: 0.5,
   turtleDeckHeightFactor: 0.62,
 };
 
