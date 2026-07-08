@@ -9,6 +9,7 @@ import CloudAnimation from "../animations/CloudAnimation";
 import AinAnimation from "../animations/AinAnimation";
 import CampfireSmoke from "../animations/CampfireSmoke";
 import SafariCampWind from "../animations/SafariCampWind";
+import DroneAnimation from "../animations/DroneAnimation";
 import CamelWalkAnimation from "../animations/CamelWalkAnimation";
 import SceneObjectLinks from "./SceneObjectLinks";
 import CamelScrollMovement from "../animations/CamelScrollMovement";
@@ -196,6 +197,7 @@ export default function DesertModel({
       <DesertSafariVideoOverlay scene={scene} nodes={nodes} />
       <SceneObjectLinks scene={scene} nodes={nodes} />
       <CloudAnimation scene={scene} nodes={nodes} />
+      <DroneAnimation scene={scene} nodes={nodes} />
       <BirdAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
       <CarPassAudio scene={scene} nodes={nodes} />
