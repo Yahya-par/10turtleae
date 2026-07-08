@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { cameraSettings } from "@features/portfolio/config/cameraSettings";
 
 export type CameraWaypoint = {
   position: THREE.Vector3;
@@ -148,7 +147,21 @@ export function createDioramaCurve(frame: SceneFrame) {
 export function getScrollRange(sceneFrame: SceneFrame | null) {
   if (sceneFrame?.waypoints.length) {
     const xs = sceneFrame.waypoints.map((waypoint) => waypoint.position.x);
-    return { min: Math.min(...xs), max: Math.max(...xs) };
+    const waypointMin = Math.min(...xs);
+    const waypointMax = Math.max(...xs);
+
+    if (sceneFrame.bounds) {
+      // Clamp waypoint-derived range to real mesh bounds to avoid
+      // long empty pre/post-roll caused by outlier Empty waypoints.
+      const clampedMin = Math.max(waypointMin, sceneFrame.bounds.min.x);
+      const clampedMax = Math.min(waypointMax, sceneFrame.bounds.max.x);
+
+      if (clampedMax > clampedMin) {
+        return { min: clampedMin, max: clampedMax };
+      }
+    }
+
+    return { min: waypointMin, max: waypointMax };
   }
 
   if (sceneFrame?.bounds) {
@@ -177,15 +190,10 @@ export function scrollProgressToPathX(
 
 /** Opening-scene scroll progress (scene 1 / camel start). */
 export function getInitialScrollProgress(sceneFrame: SceneFrame | null) {
-  const range = getScrollRange(sceneFrame);
-  const { lookAt } = cameraSettings.manual;
-  if (range.max <= range.min) return 1;
-
-  return THREE.MathUtils.clamp(
-    (lookAt.x - range.min) / (range.max - range.min),
-    0,
-    1,
-  );
+  void sceneFrame;
+  // Keep opening shot at scene-1 start by default.
+  // ScrollCamera uses this during mount.
+  return 1;
 }
 
 // getDioramaPose - get the diorama pose from the curve and the look at center

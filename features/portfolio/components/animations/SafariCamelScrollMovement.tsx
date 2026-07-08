@@ -198,14 +198,17 @@ function buildRig(
   carrier.getWorldPosition(restWorld);
 
   const scrollRange = getScrollRange(sceneFrame);
-  const startX = restWorld.x;
+  const startX = track.startX;
+  const restX = startX;
   const endX = track.endX;
 
   if (process.env.NODE_ENV === "development") {
     console.info("[SafariCamelScrollMovement] Ready:", {
       body: camelBody.name,
       carrier: carrier.name,
-      authoredX: startX,
+      authoredX: restWorld.x,
+      restX,
+      startX,
       track: [track.startX, track.endX],
       rest: restWorld.toArray(),
     });
@@ -214,7 +217,7 @@ function buildRig(
   return {
     carrier,
     body: camelBody,
-    restX: startX,
+    restX,
     trackEndX: endX,
     baseY: restWorld.y,
     baseZ: restWorld.z,
