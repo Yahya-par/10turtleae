@@ -253,6 +253,7 @@ export default function SafariCamelScrollMovement({
     if (!sceneFrame) {
       rigRef.current = null;
       safariCamelTravelProgressRef.current = 0;
+      carPassState.safariCamelToYachtTransfer = false;
       return;
     }
     rigRef.current = buildRig(scene, nodes, sceneFrame);
@@ -262,6 +263,7 @@ export default function SafariCamelScrollMovement({
       safariCamelTravelProgressRef.current = 0;
       carPassState.yachtToSafariCamelTransfer = false;
       carPassState.yachtDockedAtEnd = false;
+      carPassState.safariCamelToYachtTransfer = false;
     };
   }, [scene, nodes, sceneFrame, safariCamelTravelProgressRef, settingsRevision]);
 
@@ -303,10 +305,15 @@ export default function SafariCamelScrollMovement({
     };
 
     if (turtleOnYachtRef.current && !turtleOnSafariCamelRef.current) {
-      sessionActiveRef.current = false;
-      rig.travelProgress = 0;
-      safariCamelTravelProgressRef.current = 0;
-      parkAtRest();
+      // Keep camel at whichever safari position it had at handoff:
+      // - near 0 when returning to Atlantis yacht
+      // - near 1 when handing off to yacht002 at safari end
+      sessionActiveRef.current = true;
+      const heldT = THREE.MathUtils.clamp(safariCamelTravelProgressRef.current, 0, 1);
+      rig.travelProgress = heldT;
+      safariCamelTravelProgressRef.current = heldT;
+      const heldX = THREE.MathUtils.lerp(rig.restX, rig.trackEndX, heldT);
+      setCarrierWorldPosition(rig.carrier, heldX, rig.baseY, rig.baseZ);
       return;
     }
 

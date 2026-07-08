@@ -505,14 +505,28 @@ export default function YachtScrollMovement({
       }
     };
 
+    const isAtlantisYacht = settings.carrierName === "YachtScrollCarrier001";
+    const isSafariHandoffYacht = settings.carrierName === "YachtScrollCarrier002";
+
     if (
+      isAtlantisYacht &&
       (carPassState.yachtToSafariCamelTransfer ||
-        carPassState.yachtDockedAtEnd) &&
-      travelProgressRef
+        carPassState.yachtDockedAtEnd)
     ) {
       placeCarrier(end.x, end.y, end.z);
       rig.lastX = end.x;
-      travelProgressRef.current = 1;
+      if (travelProgressRef) {
+        travelProgressRef.current = 1;
+      }
+      return;
+    }
+
+    if (isSafariHandoffYacht && carPassState.safariCamelToYachtTransfer) {
+      placeCarrier(start.x, start.y, start.z);
+      rig.lastX = start.x;
+      if (travelProgressRef) {
+        travelProgressRef.current = 0;
+      }
       return;
     }
 

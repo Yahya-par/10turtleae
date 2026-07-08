@@ -6,4 +6,6 @@ export const carPassState = {
   yachtToSafariCamelTransfer: false,
   /** True after the turtle leaves the yacht for the Lahbab camel — yacht stays docked. */
   yachtDockedAtEnd: false,
+  /** True while turtle is arcing from safari camel to yacht — keeps yacht at start dock. */
+  safariCamelToYachtTransfer: false,
 };

@@ -82,6 +82,7 @@ export default function DesertModel({
   const turtleReturnedFromJetskiRef = useRef(false);
   const turtleOnYachtRef = useRef(false);
   const yachtTravelProgressRef = useRef(0);
+  const mosqueYachtTravelProgressRef = useRef(0);
   const turtleReturnedFromYachtRef = useRef(false);
   const turtleOnSafariCamelRef = useRef(false);
   const safariCamelTravelProgressRef = useRef(0);
@@ -122,6 +123,7 @@ export default function DesertModel({
         jetskiTravelProgressRef={jetskiTravelProgressRef}
         turtleReturnedFromJetskiRef={turtleReturnedFromJetskiRef}
         yachtTravelProgressRef={yachtTravelProgressRef}
+        mosqueYachtTravelProgressRef={mosqueYachtTravelProgressRef}
         turtleReturnedFromYachtRef={turtleReturnedFromYachtRef}
         turtleOnSafariCamelRef={turtleOnSafariCamelRef}
         safariCamelTravelProgressRef={safariCamelTravelProgressRef}
@@ -194,7 +196,9 @@ export default function DesertModel({
           travelProgressRef={
             settings.carrierName === atlantisYachtScrollSettings.carrierName
               ? yachtTravelProgressRef
-              : undefined
+              : settings.carrierName === "YachtScrollCarrier002"
+                ? mosqueYachtTravelProgressRef
+                : undefined
           }
           turtleOnYachtRef={
             settings.carrierName === atlantisYachtScrollSettings.carrierName
