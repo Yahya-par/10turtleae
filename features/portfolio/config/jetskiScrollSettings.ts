@@ -6,7 +6,7 @@ export const jetskiScrollSettings = {
   jetski: assetNames.jetski.object,
   jetskiBlender: assetNames.jetski.blenderName,
   carrierName: "JetskiScrollCarrier001",
-  /** When true, jetski stays at its authored GLB position and scroll only drives turtle handoffs. */
+  /** Global lock for the moving jetski carrier (kept false; jetski001 is frozen separately in JetskiScrollMovement). */
   lockToModelPosition: false,
 
   sceneFloor: assetNames.scenes.alRab,

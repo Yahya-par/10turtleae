@@ -34,6 +34,7 @@ export default function ScrollCamera({
       z: position.z - lookAt.z,
       lookAtY: lookAt.y,
       lookAtZ: lookAt.z,
+      scrollXOffset: cameraSettings.scroll.xOffset ?? 0,
     };
   }, []);
 
@@ -63,7 +64,8 @@ export default function ScrollCamera({
     );
     scrollProgress.current = nextProgress;
 
-    const pathX = THREE.MathUtils.lerp(range.min, range.max, nextProgress);
+    const pathX =
+      THREE.MathUtils.lerp(range.min, range.max, nextProgress) + offsets.scrollXOffset;
     const lookAt = new THREE.Vector3(pathX, offsets.lookAtY, offsets.lookAtZ);
     const position = new THREE.Vector3(
       pathX + offsets.x,
