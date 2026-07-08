@@ -1,16 +1,30 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import normalizeWheel from "normalize-wheel";
+import {
+  getScrollProgressBounds,
+  type ScrollProgressBounds,
+} from "@features/portfolio/components/camera/CameraPath";
 
 const BASE_SCROLL_SPEED = 0.0048;
 const LERP_FACTOR = 0.12;
 /** 1: scroll up moves forward through the diorama (progress decreases toward deeper scenes) */
 const SCROLL_DIRECTION = 1;
 
+function clampScrollProgress(
+  progress: number,
+  bounds: ScrollProgressBounds,
+) {
+  return THREE.MathUtils.clamp(progress, bounds.min, bounds.max);
+}
+
 export function useScrollNavigation(enabled: boolean) {
   /** Start at scene 1 (opening desert) until ScrollCamera refines from waypoints. */
   const scrollProgress = useRef(1);
   const targetScrollProgress = useRef(1);
+  const scrollBounds = useRef<ScrollProgressBounds>(
+    getScrollProgressBounds(null),
+  );
   const mousePositionOffset = useRef(new THREE.Vector3());
   const mouseRotationOffset = useRef(new THREE.Euler());
   const isDragging = useRef(false);
@@ -31,10 +45,9 @@ export function useScrollNavigation(enabled: boolean) {
         * Math.sign(normalized.pixelY)
         * BASE_SCROLL_SPEED
         * Math.min(Math.abs(normalized.pixelY) / 100, 1);
-      targetScrollProgress.current = THREE.MathUtils.clamp(
+      targetScrollProgress.current = clampScrollProgress(
         targetScrollProgress.current,
-        0,
-        1,
+        scrollBounds.current,
       );
     };
 
@@ -53,10 +66,9 @@ export function useScrollNavigation(enabled: boolean) {
           * Math.sign(event.movementY)
           * BASE_SCROLL_SPEED
           * 0.2;
-        targetScrollProgress.current = THREE.MathUtils.clamp(
+        targetScrollProgress.current = clampScrollProgress(
           targetScrollProgress.current,
-          0,
-          1,
+          scrollBounds.current,
         );
       }
     };
@@ -81,10 +93,9 @@ export function useScrollNavigation(enabled: boolean) {
         * Math.sign(deltaY)
         * BASE_SCROLL_SPEED
         * 0.3;
-      targetScrollProgress.current = THREE.MathUtils.clamp(
+      targetScrollProgress.current = clampScrollProgress(
         targetScrollProgress.current,
-        0,
-        1,
+        scrollBounds.current,
       );
       lastTouchY.current = event.touches[0].clientY;
     };
@@ -116,6 +127,7 @@ export function useScrollNavigation(enabled: boolean) {
   return {
     scrollProgress,
     targetScrollProgress,
+    scrollBounds,
     mousePositionOffset,
     mouseRotationOffset,
     lerpFactor: LERP_FACTOR,

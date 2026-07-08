@@ -31,6 +31,7 @@ function LoadingTracker({ onReady }: { onReady: () => void }) {
 export default function Scene({
   scrollProgress,
   targetScrollProgress,
+  scrollBounds,
   lerpFactor,
   onReady,
   onOrbitPoseChange,
@@ -74,6 +75,7 @@ export default function Scene({
           sceneFrame={sceneFrame}
           scrollProgress={scrollProgress}
           targetScrollProgress={targetScrollProgress}
+          scrollBounds={scrollBounds}
           lerpFactor={lerpFactor}
         />
       )}

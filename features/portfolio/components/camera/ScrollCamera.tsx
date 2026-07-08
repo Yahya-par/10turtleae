@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
 import {
   getInitialScrollProgress,
+  getScrollProgressBounds,
   getScrollRange,
   type SceneFrame,
 } from "@features/portfolio/components/camera/CameraPath";
@@ -13,6 +14,7 @@ type ScrollCameraProps = {
   sceneFrame: SceneFrame | null;
   scrollProgress: RefObject<number>;
   targetScrollProgress: RefObject<number>;
+  scrollBounds: RefObject<{ min: number; max: number }>;
   lerpFactor: number;
 };
 
@@ -21,6 +23,7 @@ export default function ScrollCamera({
   sceneFrame,
   scrollProgress,
   targetScrollProgress,
+  scrollBounds,
   lerpFactor,
 }: ScrollCameraProps) {
   const camera = useRef<THREE.PerspectiveCamera>(null);
@@ -38,10 +41,13 @@ export default function ScrollCamera({
   }, []);
 
   useLayoutEffect(() => {
+    const bounds = getScrollProgressBounds(sceneFrame);
+    scrollBounds.current = bounds;
+
     const start = getInitialScrollProgress(sceneFrame);
     scrollProgress.current = start;
     targetScrollProgress.current = start;
-  }, [range, sceneFrame, scrollProgress, targetScrollProgress]);
+  }, [range, sceneFrame, scrollBounds, scrollProgress, targetScrollProgress]);
 
   useLayoutEffect(() => {
     if (!camera.current) return;
@@ -61,7 +67,17 @@ export default function ScrollCamera({
       targetScrollProgress.current,
       lerpFactor,
     );
-    scrollProgress.current = nextProgress;
+    const bounds = scrollBounds.current;
+    scrollProgress.current = THREE.MathUtils.clamp(
+      nextProgress,
+      bounds.min,
+      bounds.max,
+    );
+    targetScrollProgress.current = THREE.MathUtils.clamp(
+      targetScrollProgress.current,
+      bounds.min,
+      bounds.max,
+    );
 
     const pathX = THREE.MathUtils.lerp(range.min, range.max, nextProgress);
     const lookAt = new THREE.Vector3(pathX, offsets.lookAtY, offsets.lookAtZ);

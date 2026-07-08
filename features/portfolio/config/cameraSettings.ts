@@ -34,5 +34,19 @@ export const cameraSettings = {
   scroll: {
     distance: 12,
     heightOffset: 1.2,
+
+    /**
+     * Scroll boundaries — camera stops at these limits.
+     *
+     * Progress: 0 = leftmost waypoint, 1 = rightmost waypoint.
+     * World X: optional overrides (use orbit mode / CameraHud to find values).
+     * When leftX / rightX are set they take priority over minProgress / maxProgress.
+     */
+    bounds: {
+      minProgress: 0.037,
+      maxProgress: 0.965,
+      leftX: null as number | null,
+      rightX: null as number | null,
+    },
   },
 };

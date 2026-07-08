@@ -1,14 +1,17 @@
 import { useEffect, useState, type RefObject } from "react";
 import type { CameraMode } from "@features/portfolio/config/cameraSettings";
+import { getNormalizedScrollProgress } from "@features/portfolio/components/camera/CameraPath";
+import type { ScrollProgressBounds } from "@features/portfolio/components/camera/CameraPath";
 
 type OverlayProps = {
   isReady: boolean;
   progress: RefObject<number>;
+  scrollBounds: RefObject<ScrollProgressBounds>;
   mode: CameraMode;
 };
 
 // Overlay - the overlay component is responsible for the overlay UI of the scene
-export default function Overlay({ isReady, progress, mode }: OverlayProps) {
+export default function Overlay({ isReady, progress, scrollBounds, mode }: OverlayProps) {
   const [visible, setVisible] = useState(true);
   const [percent, setPercent] = useState(0);
 
@@ -23,11 +26,15 @@ export default function Overlay({ isReady, progress, mode }: OverlayProps) {
     if (mode !== "scroll") return;
 
     const interval = window.setInterval(() => {
-      setPercent(Math.round((progress.current ?? 0) * 100));
+      const normalized = getNormalizedScrollProgress(
+        progress.current ?? 0,
+        scrollBounds.current,
+      );
+      setPercent(Math.round(normalized * 100));
     }, 120);
 
     return () => window.clearInterval(interval);
-  }, [progress, mode]);
+  }, [progress, scrollBounds, mode]);
 
   return (
     <>

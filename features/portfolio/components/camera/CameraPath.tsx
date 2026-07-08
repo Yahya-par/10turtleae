@@ -166,6 +166,47 @@ export function getScrollProgressAtX(
   return THREE.MathUtils.clamp((x - range.min) / (range.max - range.min), 0, 1);
 }
 
+export type ScrollProgressBounds = {
+  min: number;
+  max: number;
+};
+
+/** Resolves scroll stop limits from cameraSettings + scene waypoint range. */
+export function getScrollProgressBounds(
+  sceneFrame: SceneFrame | null,
+): ScrollProgressBounds {
+  const { bounds } = cameraSettings.scroll;
+  const range = getScrollRange(sceneFrame);
+
+  let min = bounds.minProgress;
+  let max = bounds.maxProgress;
+
+  if (bounds.leftX !== null) {
+    min = getScrollProgressAtX(bounds.leftX, range);
+  }
+  if (bounds.rightX !== null) {
+    max = getScrollProgressAtX(bounds.rightX, range);
+  }
+
+  const clampedMin = THREE.MathUtils.clamp(min, 0, 1);
+  const clampedMax = THREE.MathUtils.clamp(max, 0, 1);
+
+  return {
+    min: Math.min(clampedMin, clampedMax),
+    max: Math.max(clampedMin, clampedMax),
+  };
+}
+
+/** Remap bounded progress (min–max) to 0–1 for UI such as the progress bar. */
+export function getNormalizedScrollProgress(
+  progress: number,
+  bounds: ScrollProgressBounds,
+) {
+  const span = bounds.max - bounds.min;
+  if (span <= 0) return 0;
+  return THREE.MathUtils.clamp((progress - bounds.min) / span, 0, 1);
+}
+
 /** World X that matches ScrollCamera lookAt for a given scroll progress. */
 export function scrollProgressToPathX(
   progress: number,
@@ -178,14 +219,12 @@ export function scrollProgressToPathX(
 /** Opening-scene scroll progress (scene 1 / camel start). */
 export function getInitialScrollProgress(sceneFrame: SceneFrame | null) {
   const range = getScrollRange(sceneFrame);
+  const bounds = getScrollProgressBounds(sceneFrame);
   const { lookAt } = cameraSettings.manual;
-  if (range.max <= range.min) return 1;
+  if (range.max <= range.min) return bounds.max;
 
-  return THREE.MathUtils.clamp(
-    (lookAt.x - range.min) / (range.max - range.min),
-    0,
-    1,
-  );
+  const progress = (lookAt.x - range.min) / (range.max - range.min);
+  return THREE.MathUtils.clamp(progress, bounds.min, bounds.max);
 }
 
 // getDioramaPose - get the diorama pose from the curve and the look at center

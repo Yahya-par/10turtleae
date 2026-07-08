@@ -86,6 +86,7 @@ export default function Experience() {
       <Overlay
         isReady={loaderDone}
         progress={navigation.targetScrollProgress}
+        scrollBounds={navigation.scrollBounds}
         mode={cameraSettings.mode}
       />
       <AudioToggle isMuted={isMuted} onToggle={toggleMute} visible={loaderDone} />
