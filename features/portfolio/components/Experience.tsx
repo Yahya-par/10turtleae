@@ -1,7 +1,8 @@
 import { Canvas } from "@react-three/fiber";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
+import { isJourneyDevMode } from "@features/portfolio/config/journeySettings";
 import { sceneLinkSettings, type SceneLinkConfig } from "@features/portfolio/config/sceneLinkSettings";
 import { renderSettings } from "@features/portfolio/config/renderSettings";
 import { useScrollNavigation } from "@features/portfolio/hooks/useScrollNavigation";
@@ -21,6 +22,7 @@ const isOrbitMode = cameraSettings.mode === "orbit";
 const isScrollMode = cameraSettings.mode === "scroll";
 const FINAL_CTA_ID = "finalcta001";
 const REDIRECT_SECONDS = 3;
+const REPEAT_REDIRECT_DELAY_MS = 1400;
 const HAS_SEEN_JOURNEY_KEY = "hasSeenJourney";
 const HAS_SEEN_JOURNEY_AT_KEY = "hasSeenJourneyAt";
 const JOURNEY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -50,7 +52,43 @@ export default function Experience() {
   const isHandheld = deviceType !== "desktop";
   const [introAcknowledged, setIntroAcknowledged] = useState(false);
   const [showRedirectModal, setShowRedirectModal] = useState(false);
+  const [redirectModalMode, setRedirectModalMode] = useState<"countdown" | "repeat">("countdown");
+  const repeatRedirectTimerRef = useRef<number | null>(null);
   const handleTiltAccept = useCallback(() => setIntroAcknowledged(true), []);
+  const getFinalCtaUrl = useCallback(() => {
+    return sceneLinkSettings.links.find((link) => link.id === FINAL_CTA_ID)?.url ?? "https://10turtle.ae";
+  }, []);
+  const scheduleRepeatRedirect = useCallback((url: string) => {
+    if (repeatRedirectTimerRef.current) {
+      window.clearTimeout(repeatRedirectTimerRef.current);
+    }
+    repeatRedirectTimerRef.current = window.setTimeout(() => {
+      window.location.href = url;
+    }, REPEAT_REDIRECT_DELAY_MS);
+  }, []);
+
+  useEffect(() => {
+    if (isJourneyDevMode) return;
+
+    const now = Date.now();
+    const hasSeenJourney = localStorage.getItem(HAS_SEEN_JOURNEY_KEY) === "true";
+    const lastSeenAt = Number(localStorage.getItem(HAS_SEEN_JOURNEY_AT_KEY) ?? "0");
+    const isWithinCooldown = hasSeenJourney && lastSeenAt > 0 && now - lastSeenAt < JOURNEY_TTL_MS;
+
+    if (!isWithinCooldown) return;
+
+    setRedirectModalMode("repeat");
+    setShowRedirectModal(true);
+    scheduleRepeatRedirect(getFinalCtaUrl());
+  }, [getFinalCtaUrl, scheduleRepeatRedirect]);
+
+  useEffect(() => {
+    return () => {
+      if (!repeatRedirectTimerRef.current) return;
+      window.clearTimeout(repeatRedirectTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     const handlePageShow = () => {
       // Back-forward cache can restore the previous React state; force-hide stale modal.
@@ -65,26 +103,33 @@ export default function Experience() {
   const handleTargetOpen = useCallback((target: SceneLinkConfig) => {
     if (target.id !== FINAL_CTA_ID) return true;
 
+    if (isJourneyDevMode) {
+      setRedirectModalMode("countdown");
+      setShowRedirectModal(true);
+      return false;
+    }
+
     const now = Date.now();
     const hasSeenJourney = localStorage.getItem(HAS_SEEN_JOURNEY_KEY) === "true";
     const lastSeenAt = Number(localStorage.getItem(HAS_SEEN_JOURNEY_AT_KEY) ?? "0");
     const isWithinCooldown = hasSeenJourney && lastSeenAt > 0 && now - lastSeenAt < JOURNEY_TTL_MS;
 
     if (isWithinCooldown) {
-      window.location.href = target.url;
+      setRedirectModalMode("repeat");
+      setShowRedirectModal(true);
+      scheduleRepeatRedirect(target.url);
       return false;
     }
 
     localStorage.setItem(HAS_SEEN_JOURNEY_KEY, "true");
     localStorage.setItem(HAS_SEEN_JOURNEY_AT_KEY, String(now));
+    setRedirectModalMode("countdown");
     setShowRedirectModal(true);
     return false;
-  }, []);
+  }, [scheduleRepeatRedirect]);
   const handleRedirectFinish = useCallback(() => {
-    const finalCtaConfig = sceneLinkSettings.links.find((link) => link.id === FINAL_CTA_ID);
-    if (!finalCtaConfig) return;
-    window.location.href = finalCtaConfig.url;
-  }, []);
+    window.location.href = getFinalCtaUrl();
+  }, [getFinalCtaUrl]);
 
   // Intro card (with Okay) until acknowledged, then a "tilt to continue" gate
   // that stays until the device is physically rotated to landscape.
@@ -140,6 +185,7 @@ export default function Experience() {
       {showTiltGate && <MobileTiltPrompt variant="gate" />}
       {showRedirectModal && (
         <RedirectCountdownModal
+          mode={redirectModalMode}
           seconds={REDIRECT_SECONDS}
           destinationLabel="10turtle.ae"
           onFinish={handleRedirectFinish}
