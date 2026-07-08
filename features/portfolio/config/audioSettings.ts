@@ -36,4 +36,10 @@ export const audioSettings = {
     loop: true,
     volume: 0.7,
   },
+  drone: {
+    /** drone001 — plays when the drone is visible on screen */
+    passBy: audioSrc("/Audios/dronesound.mp3"),
+    loop: true,
+    volume: 0.2,
+  },
 } as const;

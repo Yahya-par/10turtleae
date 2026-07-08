@@ -27,6 +27,7 @@ import CarPassAudio from "../audio/CarPassAudio";
 import MetroPassAudio from "../audio/MetroPassAudio";
 import PlanePassAudio from "../audio/PlanePassAudio";
 import CampfirePassAudio from "../audio/CampfirePassAudio";
+import DronePassAudio from "../audio/DronePassAudio";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -204,6 +205,7 @@ export default function DesertModel({
       <MetroPassAudio scene={scene} nodes={nodes} />
       <PlanePassAudio scene={scene} nodes={nodes} />
       <CampfirePassAudio scene={scene} nodes={nodes} />
+      <DronePassAudio scene={scene} nodes={nodes} />
     </>
   );
 }

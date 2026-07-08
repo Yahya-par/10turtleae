@@ -36,17 +36,19 @@ class AudioManager {
   private metroPassActive = false;
   private planePassActive = false;
   private campfirePassActive = false;
+  private dronePassActive = false;
   private listeners = new Set<AudioListener>();
 
   private readonly carPassTrackIndex = 2;
   private readonly metroPassTrackIndex = 3;
   private readonly planePassTrackIndex = 4;
   private readonly campfirePassTrackIndex = 5;
+  private readonly dronePassTrackIndex = 6;
 
   init() {
     if (this.initialized) return;
 
-    const { background, cars, metro, plane, campfire } = audioSettings;
+    const { background, cars, metro, plane, campfire, drone } = audioSettings;
     this.tracks = [
       createTrack(background.drum, background.volume.drum, background.loop),
       createTrack(background.dubai, background.volume.dubai, background.loop),
@@ -54,6 +56,7 @@ class AudioManager {
       createTrack(metro.passBy, metro.volume, metro.loop, false),
       createTrack(plane.passBy, plane.volume, plane.loop, false),
       createTrack(campfire.passBy, campfire.volume, campfire.loop, false),
+      createTrack(drone.passBy, drone.volume, drone.loop, false),
     ];
 
     this.initialized = true;
@@ -74,6 +77,7 @@ class AudioManager {
     this.metroPassActive = false;
     this.planePassActive = false;
     this.campfirePassActive = false;
+    this.dronePassActive = false;
   }
 
   subscribe(listener: AudioListener) {
@@ -264,6 +268,37 @@ class AudioManager {
     const startingPass = !track.shouldPlay;
     track.shouldPlay = true;
     track.element.loop = audioSettings.campfire.loop;
+
+    if (startingPass) {
+      track.element.currentTime = 0;
+    }
+
+    this.syncPlayback();
+  }
+
+  setDronePassActive(active: boolean) {
+    if (this.dronePassActive === active) return;
+
+    this.dronePassActive = active;
+    this.syncDronePassSound();
+  }
+
+  private syncDronePassSound() {
+    const track = this.tracks[this.dronePassTrackIndex];
+    if (!track) return;
+
+    if (!this.dronePassActive) {
+      if (track.shouldPlay) {
+        track.shouldPlay = false;
+        track.element.pause();
+        track.element.currentTime = 0;
+      }
+      return;
+    }
+
+    const startingPass = !track.shouldPlay;
+    track.shouldPlay = true;
+    track.element.loop = audioSettings.drone.loop;
 
     if (startingPass) {
       track.element.currentTime = 0;
