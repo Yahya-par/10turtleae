@@ -1,6 +1,7 @@
 import { useProgress } from "@react-three/drei";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
+import type { SceneLinkConfig } from "@features/portfolio/config/sceneLinkSettings";
 import FixedCamera from "../camera/FixedCamera";
 import OrbitCamera from "../camera/OrbitCamera";
 import ScrollCamera from "../camera/ScrollCamera";
@@ -15,6 +16,7 @@ type SceneProps = ReturnType<typeof useScrollNavigation> & {
     lookAt: { x: number; y: number; z: number };
     fov: number;
   }) => void;
+  onTargetOpen?: (target: SceneLinkConfig) => boolean | void;
 };
 
 // LoadingTracker - the loading tracker component is responsible for the loading tracker UI of the scene
@@ -35,6 +37,7 @@ export default function Scene({
   lerpFactor,
   onReady,
   onOrbitPoseChange,
+  onTargetOpen,
 }: SceneProps) {
   const [sceneFrame, setSceneFrame] = useState<SceneFrame | null>(null);
   const mode = cameraSettings.mode;
@@ -88,6 +91,7 @@ export default function Scene({
           scrollProgress={scrollProgress}
           targetScrollProgress={targetScrollProgress}
           lerpFactor={lerpFactor}
+          onTargetOpen={onTargetOpen}
         />
       </Suspense>
     </>

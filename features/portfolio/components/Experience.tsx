@@ -1,7 +1,8 @@
 import { Canvas } from "@react-three/fiber";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as THREE from "three";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
+import { sceneLinkSettings, type SceneLinkConfig } from "@features/portfolio/config/sceneLinkSettings";
 import { renderSettings } from "@features/portfolio/config/renderSettings";
 import { useScrollNavigation } from "@features/portfolio/hooks/useScrollNavigation";
 import { usePortfolioAudio } from "@features/portfolio/hooks/usePortfolioAudio";
@@ -11,12 +12,18 @@ import { useDeviceType, useIsPortrait } from "@features/portfolio/hooks/useDevic
 import LoaderSelector from "@features/portfolio/components/loading/LoaderSelector";
 import AudioToggle from "@features/portfolio/components/ui/AudioToggle";
 import MobileTiltPrompt from "@features/portfolio/components/ui/MobileTiltPrompt";
+import RedirectCountdownModal from "@features/portfolio/components/ui/RedirectCountdownModal";
 import Scene from "./scene/Scene";
 import Overlay from "./scene/Overlay";
 import CameraHud from "./camera/CameraHud";
 
 const isOrbitMode = cameraSettings.mode === "orbit";
 const isScrollMode = cameraSettings.mode === "scroll";
+const FINAL_CTA_ID = "finalcta001";
+const REDIRECT_SECONDS = 3;
+const HAS_SEEN_JOURNEY_KEY = "hasSeenJourney";
+const HAS_SEEN_JOURNEY_AT_KEY = "hasSeenJourneyAt";
+const JOURNEY_TTL_MS = 24 * 60 * 60 * 1000;
 
 // Experience - the experience component is responsible for the experience of the scene
 export default function Experience() {
@@ -42,7 +49,42 @@ export default function Experience() {
   const isPortrait = useIsPortrait();
   const isHandheld = deviceType !== "desktop";
   const [introAcknowledged, setIntroAcknowledged] = useState(false);
+  const [showRedirectModal, setShowRedirectModal] = useState(false);
   const handleTiltAccept = useCallback(() => setIntroAcknowledged(true), []);
+  useEffect(() => {
+    const handlePageShow = () => {
+      // Back-forward cache can restore the previous React state; force-hide stale modal.
+      setShowRedirectModal(false);
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
+  const handleTargetOpen = useCallback((target: SceneLinkConfig) => {
+    if (target.id !== FINAL_CTA_ID) return true;
+
+    const now = Date.now();
+    const hasSeenJourney = localStorage.getItem(HAS_SEEN_JOURNEY_KEY) === "true";
+    const lastSeenAt = Number(localStorage.getItem(HAS_SEEN_JOURNEY_AT_KEY) ?? "0");
+    const isWithinCooldown = hasSeenJourney && lastSeenAt > 0 && now - lastSeenAt < JOURNEY_TTL_MS;
+
+    if (isWithinCooldown) {
+      window.location.href = target.url;
+      return false;
+    }
+
+    localStorage.setItem(HAS_SEEN_JOURNEY_KEY, "true");
+    localStorage.setItem(HAS_SEEN_JOURNEY_AT_KEY, String(now));
+    setShowRedirectModal(true);
+    return false;
+  }, []);
+  const handleRedirectFinish = useCallback(() => {
+    const finalCtaConfig = sceneLinkSettings.links.find((link) => link.id === FINAL_CTA_ID);
+    if (!finalCtaConfig) return;
+    window.location.href = finalCtaConfig.url;
+  }, []);
 
   // Intro card (with Okay) until acknowledged, then a "tilt to continue" gate
   // that stays until the device is physically rotated to landscape.
@@ -75,6 +117,7 @@ export default function Experience() {
           {...navigation}
           onReady={() => setIsReady(true)}
           onOrbitPoseChange={setOrbitPose}
+          onTargetOpen={handleTargetOpen}
         />
       </Canvas>
       {!loaderDone && (
@@ -95,6 +138,13 @@ export default function Experience() {
         <MobileTiltPrompt variant="intro" onAccept={handleTiltAccept} />
       )}
       {showTiltGate && <MobileTiltPrompt variant="gate" />}
+      {showRedirectModal && (
+        <RedirectCountdownModal
+          seconds={REDIRECT_SECONDS}
+          destinationLabel="10turtle.ae"
+          onFinish={handleRedirectFinish}
+        />
+      )}
     </div>
   );
 }

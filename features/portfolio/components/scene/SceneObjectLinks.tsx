@@ -13,6 +13,7 @@ import {
 type SceneObjectLinksProps = {
   scene: THREE.Object3D;
   nodes: Record<string, THREE.Object3D>;
+  onTargetOpen?: (target: SceneLinkConfig) => boolean | void;
 };
 
 type LinkTarget = SceneLinkConfig & {
@@ -73,6 +74,7 @@ function resolveLinkTarget(
 export default function SceneObjectLinks({
   scene,
   nodes,
+  onTargetOpen,
 }: SceneObjectLinksProps) {
   const { camera, gl } = useThree();
   const targetsRef = useRef<LinkTarget[]>([]);
@@ -166,6 +168,9 @@ export default function SceneObjectLinks({
       const target = getHitTarget();
       if (!target) return;
 
+      const shouldContinue = onTargetOpen?.(target) ?? true;
+      if (!shouldContinue) return;
+
       window.open(target.url, "_blank", "noopener,noreferrer");
     };
 
@@ -185,7 +190,7 @@ export default function SceneObjectLinks({
       canvas.removeEventListener("pointerleave", onPointerLeave);
       canvas.style.cursor = "";
     };
-  }, [camera, gl, pointer, raycaster]);
+  }, [camera, gl, onTargetOpen, pointer, raycaster]);
 
   return null;
 }

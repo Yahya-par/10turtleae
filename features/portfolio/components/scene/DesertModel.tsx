@@ -3,6 +3,7 @@ import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { extractSceneFrame, type SceneFrame } from "@features/portfolio/components/camera/CameraPath";
 import { yachtScrollConfigs, atlantisYachtScrollSettings } from "@features/portfolio/config/yachtScrollSettings";
+import type { SceneLinkConfig } from "@features/portfolio/config/sceneLinkSettings";
 import MetroTrainAnimation from "../animations/MetroTrainAnimation";
 import CarAnimation from "../animations/CarAnimation";
 import CloudAnimation from "../animations/CloudAnimation";
@@ -37,6 +38,7 @@ type DesertModelProps = {
   scrollProgress: RefObject<number>;
   targetScrollProgress: RefObject<number>;
   lerpFactor: number;
+  onTargetOpen?: (target: SceneLinkConfig) => boolean | void;
 };
 
 function buildNodeMap(scene: THREE.Object3D) {
@@ -69,6 +71,7 @@ export default function DesertModel({
   scrollProgress,
   targetScrollProgress,
   lerpFactor,
+  onTargetOpen,
 }: DesertModelProps) {
   const { scene } = useGLTF(MODEL_PATH);
   const nodes = useMemo(() => buildNodeMap(scene), [scene]);
@@ -196,7 +199,7 @@ export default function DesertModel({
       <LanternAnimation scene={scene} nodes={nodes} />
       <BurjKhalifaVideoOverlay scene={scene} nodes={nodes} />
       <DesertSafariVideoOverlay scene={scene} nodes={nodes} />
-      <SceneObjectLinks scene={scene} nodes={nodes} />
+      <SceneObjectLinks scene={scene} nodes={nodes} onTargetOpen={onTargetOpen} />
       <CloudAnimation scene={scene} nodes={nodes} />
       <DroneAnimation scene={scene} nodes={nodes} />
       <BirdAnimation scene={scene} nodes={nodes} />

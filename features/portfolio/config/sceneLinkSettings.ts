@@ -53,5 +53,12 @@ export const sceneLinkSettings = {
       objectMaterial: "burjalarab",
       url: "https://10turtle.ae/web/ui-ux-design",
     },
+    {
+      id: "finalcta001",
+      objectName: "finalcta001",
+      blenderObjectName: "finalcta.001",
+      objectMaterial: "finalcta",
+      url: "https://10turtle.ae",
+    },
   ] satisfies SceneLinkConfig[],
 } as const;
