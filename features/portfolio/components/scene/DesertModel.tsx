@@ -39,6 +39,7 @@ type DesertModelProps = {
   sceneFrame: SceneFrame | null;
   scrollProgress: RefObject<number>;
   targetScrollProgress: RefObject<number>;
+  isScrollLocked: RefObject<boolean>;
   lerpFactor: number;
   onTargetOpen?: (target: SceneLinkConfig) => boolean | void;
 };
@@ -72,6 +73,7 @@ export default function DesertModel({
   sceneFrame,
   scrollProgress,
   targetScrollProgress,
+  isScrollLocked,
   lerpFactor,
   onTargetOpen,
 }: DesertModelProps) {
@@ -117,6 +119,7 @@ export default function DesertModel({
         sceneFrame={sceneFrame}
         scrollProgress={scrollProgress}
         targetScrollProgress={targetScrollProgress}
+        isScrollLocked={isScrollLocked}
         lerpFactor={lerpFactor}
         turtleOnBoatRef={turtleOnBoatRef}
         boatTravelProgressRef={boatTravelProgressRef}

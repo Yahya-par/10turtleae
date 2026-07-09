@@ -34,6 +34,7 @@ export default function Scene({
   scrollProgress,
   targetScrollProgress,
   scrollBounds,
+  isScrollLocked,
   lerpFactor,
   onReady,
   onOrbitPoseChange,
@@ -90,6 +91,7 @@ export default function Scene({
           sceneFrame={sceneFrame}
           scrollProgress={scrollProgress}
           targetScrollProgress={targetScrollProgress}
+          isScrollLocked={isScrollLocked}
           lerpFactor={lerpFactor}
           onTargetOpen={onTargetOpen}
         />

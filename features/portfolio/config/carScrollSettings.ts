@@ -23,7 +23,7 @@ export const carScrollSettings = {
   startInset: 0,
   endInset: 0,
   roadOffset: { x: 0, y: 0.5, z: 0 },
-  carrierOffset: { x: 0, y: 0, z: 0 },
+  carrierOffset: { x: 0, y: 0, z: -0.5 },
 
   /** 1 = linear scroll mapping along the full car route. */
   travelExponent: 1,
@@ -40,6 +40,8 @@ export const carScrollSettings = {
   transferArcHeight: 0.85,
   transferDuration: 1.85,
   reverseTransferScrollHold: 0.15,
+  /** Car must reach road end before handing off turtle to jetski. */
+  carToJetskiTransferStartProgress: 0.995,
 
   /** Fraction of car height to pull seat down from the roof (higher = lower on roof). */
   turtleCarRoofInset: 0.3,
