@@ -1,39 +1,40 @@
+import { assetNames } from "./assetNames";
+
 /**
- * Free-placed belly dancer GIF — not bound to any Blender billboard.
+ * Belly dancer GIF — screen overlay anchored to `safariland001`.
  * Edit this file and hot-reload to move / resize.
  *
- * POSITION (pick ONE approach):
- * 1) Absolute world coords — set `useAbsolutePosition: true` and edit `position`
- * 2) Offset from SafariCamp — set `useAbsolutePosition: false` and edit `campOffset`
+ * ANCHOR (on safariland001 bounds, 0–1):
+ *   u = left → right across the land panel
+ *   v = bottom → top on the panel
+ *   w = back → front depth
  *
- *   X = left (−) / right (+) along the scroll path
- *   Y = down (−) / up (+)
- *   Z = back (−) / toward camera (+)
+ * screenOffset = pixel nudge after projection
+ * screen.width = display width in px (height follows GIF portrait ratio)
  */
 export const desertSafariVideoSettings = {
   videoUrl: "/Videos/BELLYDANCERVIDEO.gif",
   overlayName: "DesertSafariBellyDancerVideoOverlay",
 
-  /** true = use `position` below. false = SafariCamp center + `campOffset`. */
-  useAbsolutePosition: true,
+  anchorAsset: assetNames.safari.land,
+  anchorAssetBlender: assetNames.safari.landBlender,
 
-  /** Absolute world XYZ (used when useAbsolutePosition is true). */
-  position: [-126, 3.7, 8] as const,
+  /** Point on safariland001 used for screen placement. */
+  anchorUVW: [0.3, 0.3, 1.7] as const,
 
-  /** Offset from SafariCamp center (used when useAbsolutePosition is false). */
-  campOffset: [-2.2, 1.4, 0.6] as const,
+  /** Pixel nudge after projecting the anchor (x = right, y = down). */
+  screenOffset: { x: 0, y: 0 },
 
-  /** Absolute fallback if camp mesh is missing. */
-  fallbackPosition: [-124.5, 2.6, 8.4] as const,
+  /** Extra scroll-progress padding around safariland001 X span. */
+  visibleProgressPadding: 0.03,
 
-  /**
-   * Plane size in world units (manual scale).
-   * Keep height ≈ width × (405/228) ≈ width × 1.78 for correct portrait ratio.
-   * Smaller numbers = smaller on screen. Edit these and hot-reload.
-   */
-  width: 0.2,
-  height: 0.3,
+  /** Fallback if safariland bounds are unavailable (safari is low progress, not high). */
+  visibleBetweenProgress: [0.02, 0.18] as const,
 
-  /** Keep the plane facing the camera each frame. */
-  faceCamera: true,
+  screen: {
+    /** Display width in px. */
+    width: 72,
+    /** Center the overlay on the projected anchor. */
+    center: true,
+  },
 } as const;

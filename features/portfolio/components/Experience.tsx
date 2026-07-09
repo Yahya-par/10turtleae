@@ -17,6 +17,7 @@ import RedirectCountdownModal from "@features/portfolio/components/ui/RedirectCo
 import Scene from "./scene/Scene";
 import Overlay from "./scene/Overlay";
 import CameraHud from "./camera/CameraHud";
+import DesertSafariVideoOverlay from "./animations/DesertSafariVideoOverlay";
 
 const isOrbitMode = cameraSettings.mode === "orbit";
 const isScrollMode = cameraSettings.mode === "scroll";
@@ -176,6 +177,11 @@ export default function Experience() {
         progress={navigation.targetScrollProgress}
         scrollBounds={navigation.scrollBounds}
         mode={cameraSettings.mode}
+      />
+      <DesertSafariVideoOverlay
+        enabled={loaderDone}
+        scrollProgress={navigation.scrollProgress}
+        scrollBounds={navigation.scrollBounds}
       />
       <AudioToggle isMuted={isMuted} onToggle={toggleMute} visible={loaderDone} />
       {isOrbitMode && loaderDone && isReady && <CameraHud {...orbitPose} />}
