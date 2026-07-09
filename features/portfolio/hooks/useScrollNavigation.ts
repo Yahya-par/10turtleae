@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import normalizeWheel from "normalize-wheel";
+import normalizeWheel from "normalize-wheel"; // normalize the wheel event to get the pixelY value
 import {
   getScrollProgressBounds,
   type ScrollProgressBounds,
