@@ -318,6 +318,8 @@ export default function YachtScrollMovement({
   const trackEndRef = useRef<THREE.Object3D | null>(null);
   const sceneStartRef = useRef<THREE.Object3D | null>(null);
   const sceneEndRef = useRef<THREE.Object3D | null>(null);
+  const prevTurtleBoardedRef = useRef(true);
+  const safariHandoffLatchUntilRef = useRef(0);
 
   useLayoutEffect(() => {
     scene.updateMatrixWorld(true);
@@ -464,6 +466,7 @@ export default function YachtScrollMovement({
     const sceneEnd = sceneEndRef.current;
     const rig = rigRef.current;
     if (!water || !rig) return;
+    rig.carrier.visible = true;
     if (!settings.useWaterBounds && (!trackEndObject || !sceneStart || !sceneEnd)) {
       return;
     }
@@ -507,6 +510,7 @@ export default function YachtScrollMovement({
 
     const isAtlantisYacht = settings.carrierName === "YachtScrollCarrier001";
     const isSafariHandoffYacht = settings.carrierName === "YachtScrollCarrier002";
+    const now = performance.now();
 
     if (
       isAtlantisYacht &&
@@ -521,20 +525,12 @@ export default function YachtScrollMovement({
       return;
     }
 
-    if (isSafariHandoffYacht && carPassState.safariCamelToYachtTransfer) {
-      placeCarrier(start.x, start.y, start.z);
-      rig.lastX = start.x;
-      if (travelProgressRef) {
-        travelProgressRef.current = 0;
-      }
-      return;
-    }
-
     const progress = THREE.MathUtils.lerp(
       scrollProgress.current,
       targetScrollProgress.current,
       lerpFactor,
     );
+    const turtleBoarded = !turtleOnYachtRef || turtleOnYachtRef.current;
 
     let winStart: number;
     let winEnd: number;
@@ -568,11 +564,36 @@ export default function YachtScrollMovement({
     }
 
     const inWindow = isInScrollWindow(progress, winStart, winEnd);
-    rig.carrier.visible = true;
+    if (isSafariHandoffYacht && turtleBoarded && !prevTurtleBoardedRef.current) {
+      // Keep yacht002 stable briefly right after camel -> yacht mount.
+      safariHandoffLatchUntilRef.current = now + 350;
+    }
+    prevTurtleBoardedRef.current = turtleBoarded;
 
-    const turtleBoarded = !turtleOnYachtRef || turtleOnYachtRef.current;
+    if (
+      isSafariHandoffYacht &&
+      (carPassState.safariCamelToYachtTransfer ||
+        now < safariHandoffLatchUntilRef.current)
+    ) {
+      // Keep yacht002 parked at the nearest edge for the current scroll position.
+      // This avoids one-frame jumps to an off-screen dock during handoff.
+      const distToStart = Math.abs(progress - winStart);
+      const distToEnd = Math.abs(progress - winEnd);
+      const parked = distToStart <= distToEnd ? start : end;
+      placeCarrier(parked.x, parked.y, parked.z);
+      rig.lastX = parked.x;
+      if (travelProgressRef) {
+        travelProgressRef.current = parked === start ? 0 : 1;
+      }
+      return;
+    }
 
     if (!inWindow) {
+      if (isSafariHandoffYacht) {
+        // yacht002: keep last valid transform outside window to avoid
+        // disappearance from start/end snap during handoff transitions.
+        return;
+      }
       const parkedAtStart =
         !carPassState.yachtDockedAtEnd &&
         (winEnd < winStart

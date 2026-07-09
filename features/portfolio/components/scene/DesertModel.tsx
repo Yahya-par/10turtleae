@@ -208,11 +208,7 @@ export default function DesertModel({
                 ? mosqueYachtTravelProgressRef
                 : undefined
           }
-          turtleOnYachtRef={
-            settings.carrierName === atlantisYachtScrollSettings.carrierName
-              ? turtleOnYachtRef
-              : undefined
-          }
+          turtleOnYachtRef={turtleOnYachtRef}
         />
       ))}
       <PlaneScrollMovement
