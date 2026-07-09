@@ -572,19 +572,26 @@ export default function YachtScrollMovement({
 
     const turtleBoarded = !turtleOnYachtRef || turtleOnYachtRef.current;
 
-    if (!inWindow || !turtleBoarded) {
+    if (!inWindow) {
       const parkedAtStart =
         !carPassState.yachtDockedAtEnd &&
-        (!turtleBoarded
-          ? true
-          : winEnd < winStart
-            ? progress > winStart
-            : progress < winStart);
+        (winEnd < winStart
+          ? progress > winStart
+          : progress < winStart);
       const parked = parkedAtStart ? start : end;
       placeCarrier(parked.x, parked.y, parked.z);
       rig.lastX = parked.x;
       if (travelProgressRef) {
         travelProgressRef.current = parkedAtStart ? 0 : 1;
+      }
+      return;
+    }
+
+    // During turtle transfer, keep the yacht anchored at its current position
+    // instead of teleporting to route start/end, which causes visible flicker.
+    if (!turtleBoarded) {
+      if (travelProgressRef) {
+        travelProgressRef.current = getTrackProgress(progress, winStart, winEnd);
       }
       return;
     }

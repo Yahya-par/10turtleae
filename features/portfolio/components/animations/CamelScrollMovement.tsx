@@ -106,6 +106,7 @@ type CamelScrollMovementProps = {
   sceneFrame: SceneFrame | null;
   scrollProgress: RefObject<number>;
   targetScrollProgress: RefObject<number>;
+  isScrollLocked: RefObject<boolean>;
   lerpFactor: number;
   turtleOnBoatRef: RefObject<boolean>;
   boatTravelProgressRef: RefObject<number>;
@@ -1077,6 +1078,7 @@ export default function CamelScrollMovement({
   sceneFrame,
   scrollProgress,
   targetScrollProgress,
+  isScrollLocked,
   lerpFactor,
   turtleOnBoatRef,
   boatTravelProgressRef,
@@ -1097,6 +1099,7 @@ export default function CamelScrollMovement({
   const settingsRevision = useEndCamelScrollSettingsHmr();
 
   useLayoutEffect(() => {
+    isScrollLocked.current = false;
     turtleOnBoatRef.current = false;
     turtleOnCarRef.current = false;
     turtleOnJetskiRef.current = false;
@@ -1137,6 +1140,7 @@ export default function CamelScrollMovement({
       carPassState.yachtToSafariCamelTransfer = false;
       carPassState.yachtDockedAtEnd = false;
       carPassState.safariCamelToYachtTransfer = false;
+      isScrollLocked.current = false;
       rigRef.current = null;
     };
   }, [
@@ -1157,6 +1161,7 @@ export default function CamelScrollMovement({
     turtleReturnedFromYachtRef,
     turtleOnSafariCamelRef,
     safariCamelTravelProgressRef,
+    isScrollLocked,
   ]);
 
   useFrame((_, delta) => {
@@ -1815,7 +1820,9 @@ export default function CamelScrollMovement({
       rig.onYacht = false;
 
       const atCarStart = carTravelProgressRef.current <= 0.05;
-      const atCarEnd = carTravelProgressRef.current >= 0.94;
+      const atCarEnd =
+        carTravelProgressRef.current >=
+        carScrollSettings.carToJetskiTransferStartProgress;
 
       if (
         turtleReturnedFromJetskiRef.current &&
@@ -2100,6 +2107,11 @@ export default function CamelScrollMovement({
     }
 
     rig.lastScrollProgress = progress;
+  });
+
+  useFrame(() => {
+    const rig = rigRef.current;
+    isScrollLocked.current = Boolean(rig && rig.transferMode !== "idle");
   });
 
   return null;

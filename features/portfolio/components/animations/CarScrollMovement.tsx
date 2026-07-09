@@ -626,7 +626,7 @@ export default function CarScrollMovement({
       rig.carScrollEnd,
     );
 
-    if (rig.carProgress >= 0.94) {
+    if (rig.carProgress >= 0.90) {
       rig.dockedAtEnd = true;
     } else {
       rig.dockedAtEnd = false;

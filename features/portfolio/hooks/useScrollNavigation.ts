@@ -8,8 +8,8 @@ import {
 
 const BASE_SCROLL_SPEED = 0.0048;
 const LERP_FACTOR = 0.12;
-/** 1: scroll up moves forward through the diorama (progress decreases toward deeper scenes) */
-const SCROLL_DIRECTION = 1;
+/** -1: scroll down moves forward through the diorama (progress decreases) */
+const SCROLL_DIRECTION = -1;
 
 function clampScrollProgress(
   progress: number,
@@ -29,6 +29,7 @@ export function useScrollNavigation(enabled: boolean) {
   const mouseRotationOffset = useRef(new THREE.Euler());
   const isDragging = useRef(false);
   const lastTouchY = useRef<number | null>(null);
+  const isScrollLocked = useRef(false);
 
   useEffect(() => {
     if (!enabled) return;
@@ -40,6 +41,10 @@ export function useScrollNavigation(enabled: boolean) {
 
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
+      if (isScrollLocked.current) {
+        targetScrollProgress.current = scrollProgress.current;
+        return;
+      }
       const normalized = normalizeWheel(event);
       targetScrollProgress.current += SCROLL_DIRECTION
         * Math.sign(normalized.pixelY)
@@ -62,6 +67,10 @@ export function useScrollNavigation(enabled: boolean) {
       mouseRotationOffset.current.y = mouseX * 0.05;
 
       if (isDragging.current) {
+        if (isScrollLocked.current) {
+          targetScrollProgress.current = scrollProgress.current;
+          return;
+        }
         targetScrollProgress.current += SCROLL_DIRECTION
           * Math.sign(event.movementY)
           * BASE_SCROLL_SPEED
@@ -88,6 +97,11 @@ export function useScrollNavigation(enabled: boolean) {
 
     const handleTouchMove = (event: TouchEvent) => {
       if (!isDragging.current || lastTouchY.current === null) return;
+      if (isScrollLocked.current) {
+        targetScrollProgress.current = scrollProgress.current;
+        lastTouchY.current = event.touches[0].clientY;
+        return;
+      }
       const deltaY = event.touches[0].clientY - lastTouchY.current;
       targetScrollProgress.current += SCROLL_DIRECTION
         * Math.sign(deltaY)
@@ -124,12 +138,28 @@ export function useScrollNavigation(enabled: boolean) {
     };
   }, [enabled]);
 
+  useEffect(() => {
+    if (!enabled) return;
+
+    let frameId = 0;
+    const keepScrollFrozen = () => {
+      if (isScrollLocked.current) {
+        targetScrollProgress.current = scrollProgress.current;
+      }
+      frameId = window.requestAnimationFrame(keepScrollFrozen);
+    };
+
+    frameId = window.requestAnimationFrame(keepScrollFrozen);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [enabled]);
+
   return {
     scrollProgress,
     targetScrollProgress,
     scrollBounds,
     mousePositionOffset,
     mouseRotationOffset,
+    isScrollLocked,
     lerpFactor: LERP_FACTOR,
   };
 }

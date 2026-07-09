@@ -7,5 +7,5 @@ export type LoaderType =
   | 'loader6';
 
 export const loaderSettings = {
-  activeLoader: 'loader2' as LoaderType,
+  activeLoader: 'loader4' as LoaderType,
 } as const; 
