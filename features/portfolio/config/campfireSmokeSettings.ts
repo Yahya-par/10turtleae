@@ -10,8 +10,14 @@ export const campfireSmokeSettings = {
    */
   fallbackWorldPosition: [-122.334, 2.35, 8.237] as const,
   text: "10Turtle",
-  textCanvasSize: [512, 192] as const,
-  textSampleGap: 3,
+  /** Canvas used to rasterize the label before particles sample it. Wider = sharper last letters. */
+  textCanvasSize: [640, 192] as const,
+  /** Pixels between glyph sample points — lower captures small holes (like the “e” counter). */
+  textSampleGap: 2,
+  textFontFamily: "Arial, sans-serif",
+  textFontWeight: 700,
+  /** Extra canvas spacing between characters (pixels). */
+  textLetterSpacing: 3,
   textWidth: 4.8,
   textHeight: 1.05,
   textLift: 0.18,

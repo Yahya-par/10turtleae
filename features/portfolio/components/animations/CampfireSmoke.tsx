@@ -141,7 +141,10 @@ function createTextTargets() {
     text,
     textCanvasSize,
     textDepth,
+    textFontFamily,
+    textFontWeight,
     textHeight,
+    textLetterSpacing,
     textSampleGap,
     textWidth,
   } = campfireSmokeSettings;
@@ -161,15 +164,20 @@ function createTextTargets() {
   context.textBaseline = "middle";
 
   let fontSize = Math.floor(canvasHeight * 0.72);
+  const buildFont = (size: number) =>
+    `${textFontWeight} ${size}px ${textFontFamily}`;
   do {
-    context.font = `700 ${fontSize}px Arial, sans-serif`;
+    context.font = buildFont(fontSize);
     fontSize -= 4;
   } while (
     fontSize > 32 &&
     context.measureText(text).width > canvasWidth * 0.9
   );
 
-  context.font = `700 ${fontSize}px Arial, sans-serif`;
+  context.font = buildFont(fontSize);
+  if (textLetterSpacing > 0) {
+    context.letterSpacing = `${textLetterSpacing}px`;
+  }
   context.fillText(text, canvasWidth * 0.5, canvasHeight * 0.53);
 
   const { data } = context.getImageData(0, 0, canvasWidth, canvasHeight);
@@ -563,6 +571,7 @@ export default function CampfireSmoke({ scene }: CampfireSmokeProps) {
   const settingsRevision = useCampfireSmokeSettingsHmr();
 
   useEffect(() => {
+    cachedTextTargets = null;
     const mounted = systemRef.current;
     if (mounted) {
       disposeSmokeSystem(mounted);
