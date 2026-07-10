@@ -36,6 +36,6 @@ export const jetskiScrollSettings = {
 
   turtleSeatOffsetX: 0.7,
   turtleSeatOffsetY: 0.05,
-  turtleSeatOffsetZ: 0.08,
+  turtleSeatOffsetZ: 0.2,
   turtleSeatHeightFactor: 0.55,
 } as const;
