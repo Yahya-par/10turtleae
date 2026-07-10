@@ -1,5 +1,6 @@
 "use client";
 
+import { acceptEndCamelScrollSettingsUpdate } from "@features/portfolio/hooks/acceptEndCamelScrollSettingsHmr";
 import { useEndCamelScrollSettingsHmr } from "@features/portfolio/hooks/useEndCamelScrollSettingsHmr";
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef, type RefObject } from "react";
@@ -12,10 +13,12 @@ import {
   type SceneFrame,
 } from "@features/portfolio/components/camera/CameraPath";
 import {
+  isTurtleSceneObject,
+} from "@features/portfolio/utils/safariCamelSeat";
+import {
   attachAnimationCarrier,
   attachObjectToCarrier,
   findSceneObject,
-  getObjectBounds,
   getScene1TravelProgress,
   resolveSafariCamelTrack,
   setObjectWorldPosition,
@@ -87,7 +90,8 @@ function setupSafariCarrier(
   nodes: Record<string, THREE.Object3D>,
   camelBody: THREE.Object3D,
 ) {
-  const { carrierName, legs, legsBlender } = endCamelScrollSettings;
+  const { carrierName, legs, legsBlender, carrierRenderOrder } =
+    endCamelScrollSettings;
   const resolvedLegs = legs
     .map((runtimeName, index) =>
       resolveObject(scene, nodes, runtimeName, legsBlender[index]),
@@ -114,9 +118,10 @@ function setupSafariCarrier(
     if (leg) attachObjectToCarrier(carrier, leg);
   }
 
-  carrier.renderOrder = 12;
+  carrier.renderOrder = carrierRenderOrder;
   carrier.traverse((child) => {
-    child.renderOrder = 12;
+    if (isTurtleSceneObject(child)) return;
+    child.renderOrder = carrierRenderOrder;
   });
 
   return carrier;
@@ -130,44 +135,6 @@ function setCarrierWorldPosition(
 ) {
   tempOffset.set(worldX, worldY, worldZ);
   setObjectWorldPosition(carrier, tempOffset);
-}
-
-export function getSafariCamelSeatWorld(
-  camel: THREE.Object3D,
-  turtle: THREE.Object3D | null = null,
-  target = new THREE.Vector3(),
-) {
-  const bounds = getObjectBounds(camel);
-  const center = bounds.getCenter(new THREE.Vector3());
-  const size = bounds.getSize(tempOffset);
-  const {
-    saddleHeightFactor,
-    saddleOffsetXFactor,
-    turtleSeatOffsetX,
-    turtleSeatOffsetY,
-    turtleSeatOffsetZ,
-  } = endCamelScrollSettings;
-
-  const saddleY = bounds.min.y + size.y * saddleHeightFactor;
-  const saddleX = center.x + size.x * saddleOffsetXFactor;
-
-  // Place the turtle mesh bottom on the saddle, not the pivot point.
-  let pivotToBottom = 0;
-  if (turtle) {
-    turtle.updateMatrixWorld(true);
-    const turtleBounds = getObjectBounds(turtle);
-    const turtleOrigin = new THREE.Vector3();
-    turtle.getWorldPosition(turtleOrigin);
-    pivotToBottom = turtleOrigin.y - turtleBounds.min.y;
-  }
-
-  target.set(
-    saddleX + turtleSeatOffsetX,
-    saddleY + pivotToBottom + turtleSeatOffsetY,
-    center.z + turtleSeatOffsetZ,
-  );
-
-  return target;
 }
 
 function buildRig(
@@ -242,6 +209,8 @@ function getTrackWorldX(
   return THREE.MathUtils.lerp(track.startX, track.endX, travelT);
 }
 
+acceptEndCamelScrollSettingsUpdate();
+
 export default function SafariCamelScrollMovement({
   scene,
   nodes,
@@ -256,6 +225,7 @@ export default function SafariCamelScrollMovement({
   const rigRef = useRef<SafariCamelRig | null>(null);
   const sessionActiveRef = useRef(false);
   const settingsRevision = useEndCamelScrollSettingsHmr();
+  const prevSettingsRevisionRef = useRef(settingsRevision);
 
   useLayoutEffect(() => {
     if (!sceneFrame) {
@@ -266,14 +236,36 @@ export default function SafariCamelScrollMovement({
     }
     rigRef.current = buildRig(scene, nodes, sceneFrame);
     safariCamelTravelProgressRef.current = 0;
+    sessionActiveRef.current = false;
     return () => {
       rigRef.current = null;
       safariCamelTravelProgressRef.current = 0;
       carPassState.yachtToSafariCamelTransfer = false;
       carPassState.yachtDockedAtEnd = false;
       carPassState.safariCamelToYachtTransfer = false;
+      sessionActiveRef.current = false;
     };
-  }, [scene, nodes, sceneFrame, safariCamelTravelProgressRef, settingsRevision]);
+  }, [scene, nodes, sceneFrame, safariCamelTravelProgressRef]);
+
+  useLayoutEffect(() => {
+    if (prevSettingsRevisionRef.current === settingsRevision) return;
+    prevSettingsRevisionRef.current = settingsRevision;
+    if (settingsRevision === 0 || !sceneFrame) return;
+
+    const rig = rigRef.current ?? buildRig(scene, nodes, sceneFrame);
+    if (!rig) return;
+
+    rigRef.current = rig;
+    const heldProgress = safariCamelTravelProgressRef.current;
+    rig.travelProgress = heldProgress;
+
+    const heldX = THREE.MathUtils.lerp(
+      rig.restX,
+      rig.trackEndX,
+      THREE.MathUtils.clamp(heldProgress, 0, 1),
+    );
+    setCarrierWorldPosition(rig.carrier, heldX, rig.baseY, rig.baseZ);
+  }, [settingsRevision, scene, nodes, sceneFrame, safariCamelTravelProgressRef]);
 
   useFrame(() => {
     void settingsRevision;
@@ -355,11 +347,4 @@ export default function SafariCamelScrollMovement({
   });
 
   return null;
-}
-
-const hot = import.meta.hot;
-if (hot) {
-  hot.accept("@features/portfolio/config/endCamelScrollSettings", () => {
-    hot.invalidate();
-  });
 }

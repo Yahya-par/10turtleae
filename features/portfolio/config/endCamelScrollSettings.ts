@@ -32,9 +32,13 @@ export const endCamelScrollSettings = {
   startInset: 1.2,
   endInset: 1.2,
 
-  turtleSeatOffsetX: 0.45,
-  turtleSeatOffsetY: -0.33,
+  turtleSeatOffsetX: 0.4,
+  turtleSeatOffsetY: -0.35,
   turtleSeatOffsetZ: 0,
+  /** Safari camel carrier + mesh draw order. */
+  carrierRenderOrder: 12,
+  /** Draw turtle above the safari camel — must be greater than carrierRenderOrder. */
+  turtleRenderOrder: 13,
   /** Saddle blanket height as a fraction of camel body height. */
   saddleHeightFactor: 0.54,
   /** Shift seat aft of bbox center (hump sits behind the mesh midpoint). */

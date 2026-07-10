@@ -1,5 +1,6 @@
 "use client";
 
+import { acceptEndCamelScrollSettingsUpdate } from "@features/portfolio/hooks/acceptEndCamelScrollSettingsHmr";
 import { useEndCamelScrollSettingsHmr } from "@features/portfolio/hooks/useEndCamelScrollSettingsHmr";
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef, type RefObject } from "react";
@@ -360,6 +361,8 @@ function applySwing(rig: WalkRig, walkPhase: number, isWalking: boolean) {
     rig.body.rotation.z = rig.bodyBaseRotation.z + rock;
   }
 }
+
+acceptEndCamelScrollSettingsUpdate();
 
 export default function SafariCamelWalkAnimation({
   scene,

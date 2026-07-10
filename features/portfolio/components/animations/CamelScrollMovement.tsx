@@ -12,8 +12,13 @@ import {
 import { getCarSeatWorld, resolveCarScrollWindow } from "@features/portfolio/components/animations/CarScrollMovement";
 import { getJetskiDriverSeatWorld, resolveJetskiScrollWindow, resolveJetskiTrackEndX } from "@features/portfolio/components/animations/JetskiScrollMovement";
 import { getYachtSeatWorld } from "@features/portfolio/components/animations/YachtScrollMovement";
-import { getSafariCamelSeatWorld } from "@features/portfolio/components/animations/SafariCamelScrollMovement";
+import { acceptEndCamelScrollSettingsUpdate } from "@features/portfolio/hooks/acceptEndCamelScrollSettingsHmr";
 import { useEndCamelScrollSettingsHmr } from "@features/portfolio/hooks/useEndCamelScrollSettingsHmr";
+import {
+  applySafariTurtleRenderOrder,
+  clearTurtleRenderOrder,
+  getSafariCamelSeatWorld,
+} from "@features/portfolio/utils/safariCamelSeat";
 import { endCamelScrollSettings } from "@features/portfolio/config/endCamelScrollSettings";
 import {
   attachAnimationCarrier,
@@ -340,10 +345,13 @@ function detachToTransferCarrier(
   turtle.position.set(0, 0, 0);
   turtle.rotation.set(0, 0, 0);
   turtle.scale.set(1, 1, 1);
+  clearTurtleRenderOrder(turtle);
 }
 
 function mountTurtleOnCamel(rig: CamelRig, preserveWorld = false) {
   if (!rig.turtle) return;
+
+  clearTurtleRenderOrder(rig.turtle);
 
   if (rig.turtle.parent !== rig.carrier) {
     if (preserveWorld) {
@@ -364,6 +372,7 @@ function mountTurtleOnCamel(rig: CamelRig, preserveWorld = false) {
 function mountTurtleOnBoat(rig: CamelRig) {
   if (!rig.turtle || !rig.boat) return;
 
+  clearTurtleRenderOrder(rig.turtle);
   getBoatSeatWorld(rig.boat, rig.turtleFootLift, tempVec3);
 
   if (rig.turtle.parent !== rig.boat) {
@@ -380,6 +389,7 @@ function mountTurtleOnBoat(rig: CamelRig) {
 function mountTurtleOnCar(rig: CamelRig) {
   if (!rig.turtle || !rig.car) return;
 
+  clearTurtleRenderOrder(rig.turtle);
   if (rig.turtle.parent !== rig.car) {
     getCarSeatWorld(rig.car, 0, tempVec3);
     reparentPreserveWorld(rig.turtle, rig.car);
@@ -396,6 +406,7 @@ function mountTurtleOnCar(rig: CamelRig) {
 function mountTurtleOnJetski(rig: CamelRig) {
   if (!rig.turtle || !rig.jetskiDriver) return;
 
+  clearTurtleRenderOrder(rig.turtle);
   if (rig.turtle.parent !== rig.jetskiDriver) {
     getJetskiDriverSeatWorld(rig.jetskiDriver, rig.turtleFootLift, tempVec3);
     reparentPreserveWorld(rig.turtle, rig.jetskiDriver);
@@ -413,6 +424,7 @@ function mountTurtleOnYacht(rig: CamelRig) {
   if (!rig.turtle || !rig.yacht) return;
   const yachtSeatSettings = getYachtSeatSettingsForObject(rig.yacht);
 
+  clearTurtleRenderOrder(rig.turtle);
   if (rig.turtle.parent !== rig.yacht) {
     getYachtSeatWorld(rig.yacht, yachtSeatSettings, tempVec3);
     reparentPreserveWorld(rig.turtle, rig.yacht);
@@ -464,6 +476,7 @@ function mountTurtleOnSafariCamel(
   tempVec3.applyMatrix4(tempMatrix);
   rig.turtleLocalOnSafariCamel.copy(tempVec3);
   rig.turtle.position.copy(rig.turtleLocalOnSafariCamel);
+  applySafariTurtleRenderOrder(rig.turtle);
   rig.mount = "safariCamel";
 }
 
@@ -1141,6 +1154,8 @@ function buildRig(
   };
 }
 
+acceptEndCamelScrollSettingsUpdate();
+
 export default function CamelScrollMovement({
   scene,
   nodes,
@@ -1166,6 +1181,7 @@ export default function CamelScrollMovement({
 }: CamelScrollMovementProps) {
   const rigRef = useRef<CamelRig | null>(null);
   const settingsRevision = useEndCamelScrollSettingsHmr();
+  const prevSafariSettingsRevisionRef = useRef(settingsRevision);
 
   useLayoutEffect(() => {
     isScrollLocked.current = false;
@@ -1232,6 +1248,50 @@ export default function CamelScrollMovement({
     safariCamelTravelProgressRef,
     isScrollLocked,
   ]);
+
+  useLayoutEffect(() => {
+    if (prevSafariSettingsRevisionRef.current === settingsRevision) return;
+    prevSafariSettingsRevisionRef.current = settingsRevision;
+    if (settingsRevision === 0) return;
+
+    const rig = rigRef.current;
+    if (!rig?.turtle) return;
+
+    const safariCamel =
+      resolveObject(
+        scene,
+        nodes,
+        endCamelScrollSettings.body,
+        endCamelScrollSettings.bodyBlender,
+      ) ?? findObjectByNamePattern(scene, /camel\.?002/i);
+    if (safariCamel) {
+      rig.safariCamel = safariCamel;
+    }
+
+    if (
+      rig.transferMode === "toSafariCamel" ||
+      rig.transferMode === "toSafariCamelFromYacht"
+    ) {
+      if (rig.safariCamel) {
+        getSafariCamelSeatWorld(rig.safariCamel, rig.turtle, rig.transferEndWorld);
+      }
+      return;
+    }
+
+    if (
+      rig.transferMode === "toYachtFromSafariCamel" ||
+      rig.transferMode === "toAtlantisYachtFromSafariCamel"
+    ) {
+      if (rig.safariCamel) {
+        getSafariCamelSeatWorld(rig.safariCamel, rig.turtle, rig.transferStartWorld);
+      }
+      return;
+    }
+
+    if (isTurtleInSafariCamelPhase(rig, turtleOnSafariCamelRef)) {
+      mountTurtleOnSafariCamel(rig, scene, nodes);
+    }
+  }, [settingsRevision, scene, nodes, turtleOnSafariCamelRef]);
 
   useFrame((_, delta) => {
     void settingsRevision;
