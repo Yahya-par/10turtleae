@@ -44,11 +44,15 @@ class AudioManager {
   private readonly planePassTrackIndex = 4;
   private readonly campfirePassTrackIndex = 5;
   private readonly dronePassTrackIndex = 6;
+  private readonly oldDubaiTextTrackIndex = 7;
+  private readonly frameTextTrackIndex = 8;
+  private readonly desertTextTrackIndex = 9;
 
   init() {
     if (this.initialized) return;
 
-    const { background, cars, metro, plane, campfire, drone } = audioSettings;
+    const { background, cars, metro, plane, campfire, drone, oldDubaiText, frameText, desertText } =
+      audioSettings;
     this.tracks = [
       createTrack(background.drum, background.volume.drum, background.loop),
       createTrack(background.dubai, background.volume.dubai, background.loop),
@@ -57,7 +61,36 @@ class AudioManager {
       createTrack(plane.passBy, plane.volume, plane.loop, false),
       createTrack(campfire.passBy, campfire.volume, campfire.loop, false),
       createTrack(drone.passBy, drone.volume, drone.loop, false),
+      createTrack(
+        oldDubaiText.cue,
+        oldDubaiText.volume,
+        oldDubaiText.loop,
+        false,
+      ),
+      createTrack(frameText.cue, frameText.volume, frameText.loop, false),
+      createTrack(desertText.cue, desertText.volume, desertText.loop, false),
     ];
+
+    const oldDubaiTrack = this.tracks[this.oldDubaiTextTrackIndex];
+    if (oldDubaiTrack) {
+      oldDubaiTrack.element.addEventListener("ended", () => {
+        oldDubaiTrack.shouldPlay = false;
+      });
+    }
+
+    const frameTextTrack = this.tracks[this.frameTextTrackIndex];
+    if (frameTextTrack) {
+      frameTextTrack.element.addEventListener("ended", () => {
+        frameTextTrack.shouldPlay = false;
+      });
+    }
+
+    const desertTextTrack = this.tracks[this.desertTextTrackIndex];
+    if (desertTextTrack) {
+      desertTextTrack.element.addEventListener("ended", () => {
+        desertTextTrack.shouldPlay = false;
+      });
+    }
 
     this.initialized = true;
     this.syncPlayback();
@@ -309,6 +342,36 @@ class AudioManager {
 
   setBackgroundCarsActive(active: boolean) {
     this.setCarPassActive("rangeRover", active);
+  }
+
+  playOldDubaiTextCue() {
+    const track = this.tracks[this.oldDubaiTextTrackIndex];
+    if (!track) return;
+
+    track.shouldPlay = true;
+    track.element.loop = audioSettings.oldDubaiText.loop;
+    track.element.currentTime = 0;
+    this.syncPlayback();
+  }
+
+  playFrameTextCue() {
+    const track = this.tracks[this.frameTextTrackIndex];
+    if (!track) return;
+
+    track.shouldPlay = true;
+    track.element.loop = audioSettings.frameText.loop;
+    track.element.currentTime = 0;
+    this.syncPlayback();
+  }
+
+  playDesertTextCue() {
+    const track = this.tracks[this.desertTextTrackIndex];
+    if (!track) return;
+
+    track.shouldPlay = true;
+    track.element.loop = audioSettings.desertText.loop;
+    track.element.currentTime = 0;
+    this.syncPlayback();
   }
 
   private syncPlayback() {

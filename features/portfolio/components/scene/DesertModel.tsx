@@ -31,6 +31,9 @@ import MetroPassAudio from "../audio/MetroPassAudio";
 import PlanePassAudio from "../audio/PlanePassAudio";
 import CampfirePassAudio from "../audio/CampfirePassAudio";
 import DronePassAudio from "../audio/DronePassAudio";
+import OldDubaiTextAudio from "../audio/OldDubaiTextAudio";
+import FrameTextAudio from "../audio/FrameTextAudio";
+import SafariCampTextAudio from "../audio/SafariCampTextAudio";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -238,6 +241,9 @@ export default function DesertModel({
       <PlanePassAudio scene={scene} nodes={nodes} />
       <CampfirePassAudio scene={scene} nodes={nodes} />
       <DronePassAudio scene={scene} nodes={nodes} />
+      <OldDubaiTextAudio scene={scene} nodes={nodes} />
+      <FrameTextAudio scene={scene} nodes={nodes} />
+      <SafariCampTextAudio scene={scene} nodes={nodes} />
     </>
   );
 }

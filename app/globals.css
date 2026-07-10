@@ -1761,6 +1761,57 @@ body {
   box-shadow: 0 8px 24px rgba(201, 123, 79, 0.24);
 }
 
+.fullscreen-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  pointer-events: none;
+}
+
+.fullscreen-notice__card {
+  width: min(30rem, calc(100vw - 3rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(165deg, rgba(45, 34, 27, 0.95) 0%, rgba(23, 18, 14, 0.96) 100%);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.42);
+  color: #f7eee2;
+  text-align: center;
+  animation: redirect-modal-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.fullscreen-notice__title {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.3vw, 1.25rem);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.fullscreen-notice__text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: rgba(247, 238, 226, 0.86);
+}
+
+.fullscreen-notice__hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(247, 238, 226, 0.74);
+}
+
+.fullscreen-notice__button {
+  margin-top: 0.55rem;
+  pointer-events: auto;
+}
+
 @keyframes redirect-modal-fade-in {
   from {
     opacity: 0;

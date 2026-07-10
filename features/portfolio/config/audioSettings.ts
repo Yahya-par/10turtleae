@@ -42,4 +42,22 @@ export const audioSettings = {
     loop: true,
     volume: 0.2,
   },
+  oldDubaiText: {
+    /** olddubaitext001 — plays once when the Old Dubai text enters view */
+    cue: audioSrc("/Audios/olddubaitext.mp3"),
+    loop: false,
+    volume: 1.00,
+  },
+  frameText: {
+    /** frametext001 — plays once when the Dubai Frame text enters view */
+    cue: audioSrc("/Audios/frametext.mp3"),
+    loop: false,
+    volume: 1.0,
+  },
+  desertText: {
+    /** SafariCamp001 — plays once when the safari camp enters view */
+    cue: audioSrc("/Audios/desertext.mp3"),
+    loop: false,
+    volume: 1.0,
+  },
 } as const;

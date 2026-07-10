@@ -182,6 +182,14 @@ export const assetNames = {
     ain: "ain",
     ainDubaiLegs: "aindubailegs001",
   },
+  text: {
+    /** Blender: olddubaitext.001 */
+    oldDubai: "olddubaitext001",
+    oldDubaiBlender: "olddubaitext.001",
+    /** Blender: frametext.001 */
+    frame: "frametext001",
+    frameBlender: "frametext.001",
+  },
   cameraWaypoints: /^Empty\.\d+$/,
   sceneMeshes:
     /^(Plane|Sand_Dunes|Cloud|Desert_Scene_Floor|Floor_Img|Backdrop)/,

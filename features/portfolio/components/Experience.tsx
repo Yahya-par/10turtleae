@@ -27,6 +27,53 @@ const REPEAT_REDIRECT_DELAY_MS = 1400;
 const HAS_SEEN_JOURNEY_KEY = "hasSeenJourney";
 const HAS_SEEN_JOURNEY_AT_KEY = "hasSeenJourneyAt";
 const JOURNEY_TTL_MS = 24 * 60 * 60 * 1000;
+const FULLSCREEN_NOTICE_MS = 2800;
+
+type FullscreenCapableElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+  msRequestFullscreen?: () => Promise<void> | void;
+};
+
+type FullscreenCapableDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
+};
+
+function isIOSBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+function isStandaloneDisplayMode(): boolean {
+  if (typeof window === "undefined") return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
+}
+
+function isFullscreenActive(): boolean {
+  if (typeof document === "undefined") return false;
+  const doc = document as FullscreenCapableDocument;
+  return Boolean(doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement);
+}
+
+async function requestLandscapeFullscreen(): Promise<boolean> {
+  if (typeof document === "undefined") return false;
+  if (isFullscreenActive()) return true;
+  const element = document.documentElement as FullscreenCapableElement;
+  if (typeof element.requestFullscreen === "function") {
+    await element.requestFullscreen();
+    return isFullscreenActive();
+  }
+  if (typeof element.webkitRequestFullscreen === "function") {
+    await element.webkitRequestFullscreen();
+    return isFullscreenActive();
+  }
+  if (typeof element.msRequestFullscreen === "function") {
+    await element.msRequestFullscreen();
+    return isFullscreenActive();
+  }
+  return false;
+}
 
 // Experience - the experience component is responsible for the experience of the scene
 export default function Experience() {
@@ -38,9 +85,6 @@ export default function Experience() {
   const [isReady, setIsReady] = useState(false);
   const [loaderDone, setLoaderDone] = useState(false);
   const handleLoaderComplete = useCallback(() => setLoaderDone(true), []);
-  const handleCanvasPointerDown = useCallback(() => {
-    void audioManager.unlock();
-  }, []);
   const { isMuted, toggleMute } = usePortfolioAudio(loaderDone);
   const [orbitPose, setOrbitPose] = useState({
     position: { ...cameraSettings.orbit.position },
@@ -54,7 +98,36 @@ export default function Experience() {
   const [introAcknowledged, setIntroAcknowledged] = useState(false);
   const [showRedirectModal, setShowRedirectModal] = useState(false);
   const [redirectModalMode, setRedirectModalMode] = useState<"countdown" | "repeat">("countdown");
+  const [showFullscreenNotice, setShowFullscreenNotice] = useState(false);
+  const [needsFullscreenTapRetry, setNeedsFullscreenTapRetry] = useState(false);
+  const [showIosFullscreenGuide, setShowIosFullscreenGuide] = useState(false);
   const repeatRedirectTimerRef = useRef<number | null>(null);
+  const fullscreenNoticeTimerRef = useRef<number | null>(null);
+  const wasPortraitRef = useRef(isPortrait);
+  const handleCanvasPointerDown = useCallback(() => {
+    void audioManager.unlock();
+    if (!needsFullscreenTapRetry) return;
+    void requestLandscapeFullscreen()
+      .then((enteredFullscreen) => {
+        if (!enteredFullscreen) return;
+        setNeedsFullscreenTapRetry(false);
+        setShowFullscreenNotice(false);
+      })
+      .catch(() => {
+        // Ignore and allow another tap retry.
+      });
+  }, [needsFullscreenTapRetry]);
+  const handleEnterFullscreen = useCallback(() => {
+    void requestLandscapeFullscreen()
+      .then((enteredFullscreen) => {
+        if (!enteredFullscreen) return;
+        setNeedsFullscreenTapRetry(false);
+        setShowFullscreenNotice(false);
+      })
+      .catch(() => {
+        setNeedsFullscreenTapRetry(true);
+      });
+  }, []);
   const handleTiltAccept = useCallback(() => setIntroAcknowledged(true), []);
   const getFinalCtaUrl = useCallback(() => {
     return sceneLinkSettings.links.find((link) => link.id === FINAL_CTA_ID)?.url ?? "https://10turtle.ae";
@@ -91,6 +164,30 @@ export default function Experience() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (!fullscreenNoticeTimerRef.current) return;
+      window.clearTimeout(fullscreenNoticeTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncWithFullscreenState = () => {
+      if (!isFullscreenActive()) return;
+      setNeedsFullscreenTapRetry(false);
+      setShowFullscreenNotice(false);
+    };
+
+    document.addEventListener("fullscreenchange", syncWithFullscreenState);
+    document.addEventListener("webkitfullscreenchange", syncWithFullscreenState as EventListener);
+    document.addEventListener("MSFullscreenChange", syncWithFullscreenState as EventListener);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncWithFullscreenState);
+      document.removeEventListener("webkitfullscreenchange", syncWithFullscreenState as EventListener);
+      document.removeEventListener("MSFullscreenChange", syncWithFullscreenState as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     const handlePageShow = () => {
       // Back-forward cache can restore the previous React state; force-hide stale modal.
       setShowRedirectModal(false);
@@ -101,6 +198,44 @@ export default function Experience() {
       window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
+
+  useEffect(() => {
+    const wasPortrait = wasPortraitRef.current;
+    const rotatedToLandscape = wasPortrait && !isPortrait;
+    wasPortraitRef.current = isPortrait;
+
+    if (!isHandheld || !rotatedToLandscape) return;
+
+    const shouldShowIosGuide = isIOSBrowser() && !isStandaloneDisplayMode();
+    setShowIosFullscreenGuide(shouldShowIosGuide);
+    setShowFullscreenNotice(true);
+    void requestLandscapeFullscreen()
+      .then((enteredFullscreen) => {
+        if (shouldShowIosGuide) {
+          setNeedsFullscreenTapRetry(false);
+          return;
+        }
+        if (enteredFullscreen) {
+          setNeedsFullscreenTapRetry(false);
+          if (fullscreenNoticeTimerRef.current) {
+            window.clearTimeout(fullscreenNoticeTimerRef.current);
+          }
+          fullscreenNoticeTimerRef.current = window.setTimeout(() => {
+            setShowFullscreenNotice(false);
+          }, FULLSCREEN_NOTICE_MS);
+          return;
+        }
+        setNeedsFullscreenTapRetry(true);
+      })
+      .catch(() => {
+        // Some mobile browsers may block fullscreen without a trusted gesture.
+        setNeedsFullscreenTapRetry(!shouldShowIosGuide);
+      });
+
+    if (fullscreenNoticeTimerRef.current) {
+      window.clearTimeout(fullscreenNoticeTimerRef.current);
+    }
+  }, [isHandheld, isPortrait]);
   const handleTargetOpen = useCallback((target: SceneLinkConfig) => {
     if (target.id !== FINAL_CTA_ID) return true;
 
@@ -196,6 +331,36 @@ export default function Experience() {
           destinationLabel="10turtle.ae"
           onFinish={handleRedirectFinish}
         />
+      )}
+      {showFullscreenNotice && (
+        <div className="fullscreen-notice" role="dialog" aria-modal="true">
+          <div className="fullscreen-notice__card">
+            <h2 className="fullscreen-notice__title">Entering fullscreen</h2>
+            <p className="fullscreen-notice__text">
+              For the best experience, you are now in fullscreen mode. Press back to exit it.
+            </p>
+            {showIosFullscreenGuide && (
+              <p className="fullscreen-notice__hint">
+                iPhone Safari blocks true fullscreen in browser tabs. Use Share {"->"} Add
+                to Home Screen, then open this app from your home screen.
+              </p>
+            )}
+            {needsFullscreenTapRetry && (
+              <p className="fullscreen-notice__hint">
+                If fullscreen did not open automatically, tap once to continue.
+              </p>
+            )}
+            {needsFullscreenTapRetry && (
+              <button
+                type="button"
+                className="tilt-prompt__button fullscreen-notice__button"
+                onClick={handleEnterFullscreen}
+              >
+                Enter Fullscreen
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
