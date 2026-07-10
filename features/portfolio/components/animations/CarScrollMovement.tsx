@@ -23,6 +23,7 @@ import {
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
   getScrollRange,
+  getScrollProgressBounds,
   type SceneFrame,
 } from "@features/portfolio/components/camera/CameraPath";
 
@@ -251,12 +252,18 @@ function getCarTravelProgress(
   scrollProgress: number,
   carScrollStart: number,
   carScrollEnd: number,
+  sceneFrame: SceneFrame | null,
 ) {
-  const span = carScrollStart - carScrollEnd;
+  const effectiveScrollStart = Math.min(
+    carScrollStart,
+    getScrollProgressBounds(sceneFrame).max,
+  );
+  const span = effectiveScrollStart - carScrollEnd;
   if (span <= 0) return 0;
 
   return THREE.MathUtils.clamp(
-    ((carScrollStart - scrollProgress) / span) * carScrollSettings.travelExponent,
+    ((effectiveScrollStart - scrollProgress) / span) *
+      carScrollSettings.travelExponent,
     0,
     1,
   );
@@ -502,6 +509,7 @@ export default function CarScrollMovement({
       rigRef.current = null;
       carTravelProgressRef.current = 0;
       carPassState.boatToCarTransfer = false;
+      carPassState.carToBoatTransfer = false;
       carParkedRef.current = false;
       carPassState.scrollCarParked = true;
     };
@@ -539,7 +547,9 @@ export default function CarScrollMovement({
     if (
       turtleOnCarRef.current ||
       carTravelProgressRef.current > 0.01 ||
-      rig.dockedAtEnd
+      rig.dockedAtEnd ||
+      carPassState.boatToCarTransfer ||
+      carPassState.carToBoatTransfer
     ) {
       carSessionActiveRef.current = true;
     }
@@ -549,14 +559,16 @@ export default function CarScrollMovement({
       rig.carProgress = 0;
       rig.dockedAtEnd = false;
       carTravelProgressRef.current = 0;
-      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
-      rig.lastX = rig.restX;
+      if (Math.abs(rig.carrier.position.x - rig.restX) > 0.05) {
+        rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
+        rig.lastX = rig.restX;
+      }
       carParkedRef.current = true;
       carPassState.scrollCarParked = true;
       return;
     }
 
-    if (carPassState.boatToCarTransfer) {
+    if (carPassState.boatToCarTransfer || carPassState.carToBoatTransfer) {
       carSessionActiveRef.current = false;
       rig.carProgress = 0;
       rig.dockedAtEnd = false;
@@ -624,6 +636,7 @@ export default function CarScrollMovement({
       progress,
       rig.carScrollStart,
       rig.carScrollEnd,
+      sceneFrame,
     );
 
     if (rig.carProgress >= 0.90) {

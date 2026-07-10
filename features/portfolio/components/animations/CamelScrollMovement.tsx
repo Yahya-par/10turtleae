@@ -523,6 +523,7 @@ function beginTransferToBoatFromCar(rig: CamelRig, scene: THREE.Object3D) {
   rig.transferProgress = 0;
   rig.onCar = false;
   rig.onBoat = false;
+  carPassState.carToBoatTransfer = true;
 }
 
 function beginTransferToJetski(rig: CamelRig, scene: THREE.Object3D) {
@@ -1320,6 +1321,7 @@ export default function CamelScrollMovement({
         turtleOnCarRef.current = false;
         turtleReturnedFromCarRef.current = true;
         carTravelProgressRef.current = 0;
+        carPassState.carToBoatTransfer = false;
         rig.reverseScrollHold = 0;
         rig.forwardScrollHold = 0;
       } else {
@@ -1819,7 +1821,7 @@ export default function CamelScrollMovement({
       rig.onJetski = false;
       rig.onYacht = false;
 
-      const atCarStart = carTravelProgressRef.current <= 0.05;
+      const atCarStart = carTravelProgressRef.current <= 0.01;
       const atCarEnd =
         carTravelProgressRef.current >=
         carScrollSettings.carToJetskiTransferStartProgress;
