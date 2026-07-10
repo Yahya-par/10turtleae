@@ -256,6 +256,34 @@ function applyManualPositions(
   }
 }
 
+function isTurtleOnCarrier(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  carrier: THREE.Object3D,
+) {
+  const turtle =
+    findSceneObject(scene, nodes, "turtlechar001", "turtlechar.001") ??
+    findObjectByNamePattern(scene, /turtlechar/i);
+  if (!turtle) return false;
+
+  let node: THREE.Object3D | null = turtle;
+  while (node) {
+    if (node === carrier) return true;
+    node = node.parent;
+  }
+  return false;
+}
+
+function trackTFromCarrierX(
+  carrierX: number,
+  startX: number,
+  endX: number,
+) {
+  const span = endX - startX;
+  if (Math.abs(span) < 1e-6) return 0;
+  return THREE.MathUtils.clamp((carrierX - startX) / span, 0, 1);
+}
+
 function setCarrierWorldPosition(
   carrier: THREE.Object3D,
   worldX: number,
@@ -331,7 +359,10 @@ export default function YachtScrollMovement({
   const sceneStartRef = useRef<THREE.Object3D | null>(null);
   const sceneEndRef = useRef<THREE.Object3D | null>(null);
   const prevTurtleBoardedRef = useRef(true);
+  const prevTurtleOnThisYachtRef = useRef(false);
   const safariHandoffLatchUntilRef = useRef(0);
+  const lastRideProgressRef = useRef<number | null>(null);
+  const rideTrackTRef = useRef(0);
 
   useLayoutEffect(() => {
     scene.updateMatrixWorld(true);
@@ -581,29 +612,76 @@ export default function YachtScrollMovement({
     }
 
     const inWindow = isInScrollWindow(progress, winStart, winEnd);
+    const turtleOnThisYacht =
+      turtleBoarded && isTurtleOnCarrier(scene, nodes, rig.carrier);
+
     if (isSafariHandoffYacht && turtleBoarded && !prevTurtleBoardedRef.current) {
-      // Keep yacht002 stable briefly right after camel -> yacht mount.
       safariHandoffLatchUntilRef.current = now + 350;
     }
     prevTurtleBoardedRef.current = turtleBoarded;
 
     if (
       isSafariHandoffYacht &&
-      (!turtleOnYachtRef || !turtleOnYachtRef.current) &&
-      (carPassState.safariCamelToYachtTransfer ||
-        now < safariHandoffLatchUntilRef.current)
+      !turtleOnThisYacht &&
+      carPassState.safariCamelToYachtTransfer
     ) {
-      // Keep yacht002 parked at the nearest edge for the current scroll position.
-      // This avoids one-frame jumps to an off-screen dock during handoff.
-      const distToStart = Math.abs(progress - winStart);
-      const distToEnd = Math.abs(progress - winEnd);
-      const parked = distToStart <= distToEnd ? start : end;
-      placeCarrier(parked.x, parked.y, parked.z);
-      rig.lastX = parked.x;
+      placeCarrier(start.x, start.y, start.z);
+      rig.lastX = start.x;
+      rideTrackTRef.current = 0;
       if (travelProgressRef) {
-        travelProgressRef.current = parked === start ? 0 : 1;
+        travelProgressRef.current = 0;
       }
       return;
+    }
+
+    if (
+      isSafariHandoffYacht &&
+      !turtleOnThisYacht &&
+      now < safariHandoffLatchUntilRef.current
+    ) {
+      return;
+    }
+
+    if (isSafariHandoffYacht && !turtleOnThisYacht) {
+      lastRideProgressRef.current = null;
+    }
+
+    if (isSafariHandoffYacht && turtleOnThisYacht) {
+      const justBoardedOnThisYacht =
+        turtleOnThisYacht && !prevTurtleOnThisYachtRef.current;
+      prevTurtleOnThisYachtRef.current = true;
+
+      const scrollSpan = winEnd - winStart;
+      let trackT = rideTrackTRef.current;
+
+      if (justBoardedOnThisYacht || lastRideProgressRef.current === null) {
+        rig.carrier.updateMatrixWorld(true);
+        const carrierX = rig.carrier.getWorldPosition(tempPosition).x;
+        trackT = trackTFromCarrierX(carrierX, start.x, end.x);
+        rideTrackTRef.current = trackT;
+        lastRideProgressRef.current = progress;
+      } else if (Math.abs(scrollSpan) > 1e-6) {
+        trackT = THREE.MathUtils.clamp(
+          rideTrackTRef.current +
+            (progress - lastRideProgressRef.current) / scrollSpan,
+          0,
+          1,
+        );
+        rideTrackTRef.current = trackT;
+        lastRideProgressRef.current = progress;
+      }
+
+      if (travelProgressRef) {
+        travelProgressRef.current = trackT;
+      }
+      tempPosition.copy(start).lerp(end, trackT);
+      placeCarrier(tempPosition.x, tempPosition.y, tempPosition.z);
+      rig.lastX = tempPosition.x;
+      return;
+    }
+
+    if (isSafariHandoffYacht && !turtleOnThisYacht) {
+      prevTurtleOnThisYachtRef.current = false;
     }
 
     if (!inWindow) {
