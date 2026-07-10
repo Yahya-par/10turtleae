@@ -552,11 +552,16 @@ function captureJetskiDockedHandoffX(rig: CamelRig) {
   carPassState.jetskiDockedHandoffX = carrier.getWorldPosition(tempVec3).x;
 }
 
-function beginTransferToJetski(rig: CamelRig, scene: THREE.Object3D) {
+function beginTransferToJetski(
+  rig: CamelRig,
+  scene: THREE.Object3D,
+  turtleReturnedFromJetskiRef: RefObject<boolean>,
+) {
   if (!rig.turtle || !rig.car || !rig.jetskiDriver) return;
 
   captureCarDockedHandoffX(rig);
   carPassState.carBoardScrollProgress = null;
+  turtleReturnedFromJetskiRef.current = false;
   getCarSeatWorld(rig.car, rig.turtleFootLift, rig.transferStartWorld);
   getJetskiDriverSeatWorld(rig.jetskiDriver, rig.turtleFootLift, rig.transferEndWorld);
   detachToTransferCarrier(rig.turtle, rig.transferCarrier, scene);
@@ -620,8 +625,8 @@ function beginTransferToJetskiFromYacht(rig: CamelRig, scene: THREE.Object3D) {
 function beginTransferToCarFromJetski(rig: CamelRig, scene: THREE.Object3D) {
   if (!rig.turtle || !rig.car || !rig.jetskiDriver) return;
 
+  captureJetskiDockedHandoffX(rig);
   carPassState.jetskiBoardScrollProgress = null;
-  carPassState.jetskiDockedHandoffX = null;
   carPassState.jetskiFromYachtTransfer = false;
   getJetskiDriverSeatWorld(rig.jetskiDriver, rig.turtleFootLift, rig.transferStartWorld);
   getCarSeatWorld(rig.car, rig.turtleFootLift, rig.transferEndWorld);
@@ -755,6 +760,7 @@ function isTurtleInCarPhase(
       rig,
       turtleOnJetskiRef,
       jetskiTravelProgressRef,
+      turtleOnCarRef,
       turtleOnYachtRef,
       yachtTravelProgressRef,
       turtleOnSafariCamelRef,
@@ -781,11 +787,19 @@ function isTurtleInJetskiPhase(
   rig: CamelRig,
   turtleOnJetskiRef: RefObject<boolean>,
   jetskiTravelProgressRef: RefObject<number>,
+  turtleOnCarRef: RefObject<boolean>,
   turtleOnYachtRef: RefObject<boolean>,
   yachtTravelProgressRef: RefObject<number>,
   turtleOnSafariCamelRef: RefObject<boolean>,
 ) {
   if (isTurtleInYachtPhase(rig, turtleOnYachtRef, yachtTravelProgressRef, turtleOnSafariCamelRef)) {
+    return false;
+  }
+
+  const parentIsCar = Boolean(
+    rig.turtle && rig.car && rig.turtle.parent === rig.car,
+  );
+  if (rig.onCar || parentIsCar || turtleOnCarRef.current) {
     return false;
   }
 
@@ -1430,6 +1444,8 @@ export default function CamelScrollMovement({
         turtleOnJetskiRef.current = true;
         turtleOnCarRef.current = false;
         carPassState.carToJetskiTransfer = false;
+        carPassState.jetskiDockedHandoffX = null;
+        carPassState.jetskiBoardScrollProgress = null;
         rig.reverseScrollHold = 0;
         rig.forwardScrollHold = 0;
       } else {
@@ -1456,12 +1472,15 @@ export default function CamelScrollMovement({
         turtleOnCarRef.current = true;
         turtleOnJetskiRef.current = false;
         turtleReturnedFromJetskiRef.current = true;
-        jetskiTravelProgressRef.current = 0;
         carTravelProgressRef.current = 1;
-        carPassState.carBoardScrollProgress = progress;
+        carPassState.carBoardScrollProgress = Math.max(
+          progress,
+          targetScrollProgress.current,
+        );
         carPassState.jetskiToCarTransfer = false;
         rig.reverseScrollHold = 0;
         rig.forwardScrollHold = 0;
+        rig.suppressForwardTransfer = true;
       } else {
         turtleOnCarRef.current = false;
         turtleOnJetskiRef.current = false;
@@ -1716,6 +1735,7 @@ export default function CamelScrollMovement({
       rig,
       turtleOnJetskiRef,
       jetskiTravelProgressRef,
+      turtleOnCarRef,
       turtleOnYachtRef,
       yachtTravelProgressRef,
       turtleOnSafariCamelRef,
@@ -1891,8 +1911,19 @@ export default function CamelScrollMovement({
         carScrollSettings.carToJetskiTransferStartProgress;
 
       if (
+        rig.suppressForwardTransfer &&
+        rig.forwardScrollHold >= forwardTransferScrollHold
+      ) {
+        rig.suppressForwardTransfer = false;
+      }
+
+      if (
         turtleReturnedFromJetskiRef.current &&
-        (rig.forwardScrollHold >= forwardTransferScrollHold || atCarStart)
+        (rig.forwardScrollHold >= forwardTransferScrollHold ||
+          atCarStart ||
+          (scrollingBack &&
+            rig.reverseScrollHold >=
+              carScrollSettings.reverseTransferScrollHold))
       ) {
         turtleReturnedFromJetskiRef.current = false;
       }
@@ -1900,10 +1931,11 @@ export default function CamelScrollMovement({
       const mayTransferCarToJetski =
         !scrollingBack &&
         rig.forwardScrollHold >= forwardTransferScrollHold &&
-        !turtleReturnedFromJetskiRef.current;
+        !turtleReturnedFromJetskiRef.current &&
+        !rig.suppressForwardTransfer;
 
       if (atCarEnd && mayTransferCarToJetski && rig.jetskiDriver) {
-        beginTransferToJetski(rig, scene);
+        beginTransferToJetski(rig, scene, turtleReturnedFromJetskiRef);
         turtleOnCarRef.current = false;
         rig.lastScrollProgress = progress;
         return;
@@ -1975,6 +2007,7 @@ export default function CamelScrollMovement({
         rig,
         turtleOnJetskiRef,
         jetskiTravelProgressRef,
+        turtleOnCarRef,
         turtleOnYachtRef,
         yachtTravelProgressRef,
         turtleOnSafariCamelRef,

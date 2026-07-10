@@ -565,22 +565,13 @@ export default function JetskiScrollMovement({
       jetskiSessionActiveRef.current = true;
     }
 
-    if (carPassState.carToJetskiTransfer || carPassState.jetskiToCarTransfer) {
-      jetskiSessionActiveRef.current = true;
-      rig.jetskiProgress = getJetskiTravelProgress(
-        progress,
-        rig.jetskiScrollStart,
-        rig.jetskiScrollEnd,
-      );
-      if (!jetskiScrollSettings.lockToModelPosition) {
-        const nextX = THREE.MathUtils.lerp(
-          rig.restX,
-          rig.trackEndX,
-          rig.jetskiProgress,
-        );
-        setCarrierWorldPosition(rig.carrier, nextX, rig.baseY, rig.baseZ);
-      }
-      jetskiTravelProgressRef.current = rig.jetskiProgress;
+    if (carPassState.jetskiToCarTransfer) {
+      parkJetskiAtHandoff(rig, jetskiTravelProgressRef);
+      return;
+    }
+
+    if (carPassState.carToJetskiTransfer) {
+      parkJetskiAtHandoff(rig, jetskiTravelProgressRef);
       return;
     }
 
@@ -601,11 +592,7 @@ export default function JetskiScrollMovement({
 
     if (turtleOnCarRef.current && !turtleOnJetskiRef.current) {
       jetskiSessionActiveRef.current = false;
-      rig.jetskiProgress = 0;
-      jetskiTravelProgressRef.current = 0;
-      if (!jetskiScrollSettings.lockToModelPosition) {
-        setCarrierWorldPosition(rig.carrier, rig.restX, rig.baseY, rig.baseZ);
-      }
+      parkJetskiAtHandoff(rig, jetskiTravelProgressRef);
       return;
     }
 
