@@ -15,6 +15,7 @@ import CamelWalkAnimation from "../animations/CamelWalkAnimation";
 import SafariCamelScrollMovement from "../animations/SafariCamelScrollMovement";
 import SafariCamelWalkAnimation from "../animations/SafariCamelWalkAnimation";
 import SceneObjectLinks from "./SceneObjectLinks";
+import SceneMeshLayerFix from "./SceneMeshLayerFix";
 import CamelScrollMovement from "../animations/CamelScrollMovement";
 import BirdAnimation from "../animations/BirdAnimation";
 import BoatScrollMovement from "../animations/BoatScrollMovement";
@@ -105,6 +106,7 @@ export default function DesertModel({
   return (
     <>
       <primitive object={scene} />
+      <SceneMeshLayerFix scene={scene} nodes={nodes} />
       <SafariCamelScrollMovement
         scene={scene}
         nodes={nodes}
