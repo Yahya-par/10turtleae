@@ -28,13 +28,18 @@ export type YachtScrollSettings = {
   startOffsetX: number;
   endOffsetX: number;
   positionOffset: { x: number; y: number; z: number };
+  /**
+   * Uniform XYZ offset for this yacht — applied to every placed position.
+   * x: left (−) / right (+)   y: down (−) / up (+)   z: back (−) / forward (+)
+   */
+  manualPosition?: { x: number; y: number; z: number };
+  /** @deprecated Prefer manualPosition — extra nudge on route start only. */
+  manualStartPosition?: { x: number; y: number; z: number };
+  /** @deprecated Prefer manualPosition — extra nudge on route end only. */
+  manualEndPosition?: { x: number; y: number; z: number };
   scrollStart: number | null;
   scrollEnd: number | null;
   scrollFallback: { scrollStart: number; scrollEnd: number };
-  /** Extra nudge on route start (x/y/z). Only used when set — see mosqueYachtScrollSettings. */
-  manualStartPosition?: { x: number; y: number; z: number };
-  /** Extra nudge on route end (x/y/z). Only used when set — see mosqueYachtScrollSettings. */
-  manualEndPosition?: { x: number; y: number; z: number };
   turtleSeatOffsetX?: number;
   turtleSeatOffsetY?: number;
   turtleSeatOffsetZ?: number;
@@ -78,6 +83,18 @@ export const atlantisYachtScrollSettings: YachtScrollSettings = {
   reverseTransferScrollHold: 0.15,
 };
 
+/**
+ * yacht002 manual position — edit these three values.
+ *
+ * File: features/portfolio/config/yachtScrollSettings.ts
+ * Object: yacht002 (runtime name `yacht002`, carrier `YachtScrollCarrier002`)
+ */
+export const yacht002ManualPosition = {
+  x: 0,
+  y: 0.45,
+  z: -1.5,
+} as const;
+
 /** Abu Dhabi Mosque → Dubai Marina → Blue Waters — yacht.002 */
 export const mosqueYachtScrollSettings: YachtScrollSettings = {
   label: "Mosque → Marina → Blue Waters",
@@ -104,12 +121,7 @@ export const mosqueYachtScrollSettings: YachtScrollSettings = {
   scrollEnd: null,
   scrollFallback: { scrollStart: 0.08, scrollEnd: 0 },
 
-  /**
-   * yacht.002 position — edit these only.
-   * x: left (−) / right (+)   y: down (−) / up (+)   z: back (−) / forward (+)
-   */
-  manualStartPosition: { x: 0, y: 0.45, z: -1 },
-  manualEndPosition: { x: 0, y: 0.45, z: -1 },
+  manualPosition: yacht002ManualPosition,
   // Keep turtle behind yacht.002 during the final yacht segment.
   turtleSeatOffsetX: 0.2,
   turtleSeatOffsetY: 0,

@@ -226,6 +226,18 @@ function getWaterTrack(
   };
 }
 
+function applyManualPositionOffset(
+  x: number,
+  y: number,
+  z: number,
+  settings: YachtScrollSettings,
+  target = tempPosition,
+) {
+  const offset = settings.manualPosition ?? { x: 0, y: 0, z: 0 };
+  target.set(x + offset.x, y + offset.y, z + offset.z);
+  return target;
+}
+
 function applyManualPositions(
   start: THREE.Vector3,
   end: THREE.Vector3,
@@ -500,10 +512,15 @@ export default function YachtScrollMovement({
     applyManualPositions(start, end, settings);
 
     const placeCarrier = (x: number, y: number, z: number) => {
+      applyManualPositionOffset(x, y, z, settings);
       if (settings.useWaterBounds) {
-        setCarrierWorldPosition(rig.carrier, x, y, z);
+        setCarrierWorldPosition(
+          rig.carrier,
+          tempPosition.x,
+          tempPosition.y,
+          tempPosition.z,
+        );
       } else {
-        tempPosition.set(x, y, z);
         rig.carrier.position.copy(tempPosition);
       }
     };
