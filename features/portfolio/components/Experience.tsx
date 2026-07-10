@@ -13,7 +13,14 @@ import { useDeviceType, useIsPortrait } from "@features/portfolio/hooks/useDevic
 import LoaderSelector from "@features/portfolio/components/loading/LoaderSelector";
 import AudioToggle from "@features/portfolio/components/ui/AudioToggle";
 import MobileTiltPrompt from "@features/portfolio/components/ui/MobileTiltPrompt";
+import IosInstallPrompt from "@features/portfolio/components/ui/IosInstallPrompt";
 import RedirectCountdownModal from "@features/portfolio/components/ui/RedirectCountdownModal";
+import {
+  isIosInstallDismissed,
+  isIOSBrowser,
+  isStandaloneDisplayMode,
+  needsIosInstallPrompt,
+} from "@features/portfolio/utils/iosStandalone";
 import Scene from "./scene/Scene";
 import Overlay from "./scene/Overlay";
 import CameraHud from "./camera/CameraHud";
@@ -38,17 +45,6 @@ type FullscreenCapableDocument = Document & {
   webkitFullscreenElement?: Element | null;
   msFullscreenElement?: Element | null;
 };
-
-function isIOSBrowser(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
-
-function isStandaloneDisplayMode(): boolean {
-  if (typeof window === "undefined") return false;
-  const nav = window.navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
-}
 
 function isFullscreenActive(): boolean {
   if (typeof document === "undefined") return false;
@@ -100,7 +96,7 @@ export default function Experience() {
   const [redirectModalMode, setRedirectModalMode] = useState<"countdown" | "repeat">("countdown");
   const [showFullscreenNotice, setShowFullscreenNotice] = useState(false);
   const [needsFullscreenTapRetry, setNeedsFullscreenTapRetry] = useState(false);
-  const [showIosFullscreenGuide, setShowIosFullscreenGuide] = useState(false);
+  const [showIosInstallPrompt, setShowIosInstallPrompt] = useState(false);
   const repeatRedirectTimerRef = useRef<number | null>(null);
   const fullscreenNoticeTimerRef = useRef<number | null>(null);
   const wasPortraitRef = useRef(isPortrait);
@@ -129,6 +125,7 @@ export default function Experience() {
       });
   }, []);
   const handleTiltAccept = useCallback(() => setIntroAcknowledged(true), []);
+  const handleIosInstallDismiss = useCallback(() => setShowIosInstallPrompt(false), []);
   const getFinalCtaUrl = useCallback(() => {
     return sceneLinkSettings.links.find((link) => link.id === FINAL_CTA_ID)?.url ?? "https://10turtle.ae";
   }, []);
@@ -139,6 +136,12 @@ export default function Experience() {
     repeatRedirectTimerRef.current = window.setTimeout(() => {
       window.location.href = url;
     }, REPEAT_REDIRECT_DELAY_MS);
+  }, []);
+
+  useEffect(() => {
+    if (!needsIosInstallPrompt()) return;
+    setShowFullscreenNotice(false);
+    setNeedsFullscreenTapRetry(false);
   }, []);
 
   useEffect(() => {
@@ -189,8 +192,10 @@ export default function Experience() {
 
   useEffect(() => {
     const handlePageShow = () => {
-      // Back-forward cache can restore the previous React state; force-hide stale modal.
+      // Back-forward cache can restore the previous React state; force-hide stale modals.
       setShowRedirectModal(false);
+      setShowFullscreenNotice(false);
+      setShowIosInstallPrompt(false);
     };
 
     window.addEventListener("pageshow", handlePageShow);
@@ -206,15 +211,25 @@ export default function Experience() {
 
     if (!isHandheld || !rotatedToLandscape) return;
 
-    const shouldShowIosGuide = isIOSBrowser() && !isStandaloneDisplayMode();
-    setShowIosFullscreenGuide(shouldShowIosGuide);
+    // iOS Safari tabs cannot enter true fullscreen — never show that notice.
+    if (needsIosInstallPrompt()) {
+      setShowFullscreenNotice(false);
+      setNeedsFullscreenTapRetry(false);
+      if (!isIosInstallDismissed()) {
+        setShowIosInstallPrompt(true);
+      }
+      return;
+    }
+
+    // iOS Home Screen app already runs without Safari toolbar.
+    if (isIOSBrowser() && isStandaloneDisplayMode()) {
+      setShowFullscreenNotice(false);
+      return;
+    }
+
     setShowFullscreenNotice(true);
     void requestLandscapeFullscreen()
       .then((enteredFullscreen) => {
-        if (shouldShowIosGuide) {
-          setNeedsFullscreenTapRetry(false);
-          return;
-        }
         if (enteredFullscreen) {
           setNeedsFullscreenTapRetry(false);
           if (fullscreenNoticeTimerRef.current) {
@@ -228,8 +243,7 @@ export default function Experience() {
         setNeedsFullscreenTapRetry(true);
       })
       .catch(() => {
-        // Some mobile browsers may block fullscreen without a trusted gesture.
-        setNeedsFullscreenTapRetry(!shouldShowIosGuide);
+        setNeedsFullscreenTapRetry(true);
       });
 
     if (fullscreenNoticeTimerRef.current) {
@@ -332,19 +346,16 @@ export default function Experience() {
           onFinish={handleRedirectFinish}
         />
       )}
-      {showFullscreenNotice && (
+      {showIosInstallPrompt && (
+        <IosInstallPrompt onDismiss={handleIosInstallDismiss} />
+      )}
+      {showFullscreenNotice && !needsIosInstallPrompt() && (
         <div className="fullscreen-notice" role="dialog" aria-modal="true">
           <div className="fullscreen-notice__card">
             <h2 className="fullscreen-notice__title">Entering fullscreen</h2>
             <p className="fullscreen-notice__text">
               For the best experience, you are now in fullscreen mode. Press back to exit it.
             </p>
-            {showIosFullscreenGuide && (
-              <p className="fullscreen-notice__hint">
-                iPhone Safari blocks true fullscreen in browser tabs. Use Share {"->"} Add
-                to Home Screen, then open this app from your home screen.
-              </p>
-            )}
             {needsFullscreenTapRetry && (
               <p className="fullscreen-notice__hint">
                 If fullscreen did not open automatically, tap once to continue.
