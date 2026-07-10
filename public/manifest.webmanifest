@@ -1,0 +1,25 @@
+{
+  "name": "Desert Portfolio",
+  "short_name": "Desert",
+  "description": "A scroll-driven 3D portfolio experience",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#e8d9c0",
+  "theme_color": "#e8d9c0",
+  "icons": [
+    {
+      "src": "/Images/whitemobilerotate.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Images/whitemobilerotate.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

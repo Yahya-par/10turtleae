@@ -11,6 +11,8 @@ import { useInspectProtection } from "@features/portfolio/hooks/useInspectProtec
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
+  { rel: "manifest", href: "/manifest.webmanifest" },
+  { rel: "apple-touch-icon", href: "/Images/whitemobilerotate.png" },
 ];
 
 function InspectProtection() {
@@ -23,7 +25,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en" className="h-full antialiased">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <meta name="theme-color" content="#e8d9c0" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="Desert Portfolio" />
         <Meta />
         <Links />
       </head>

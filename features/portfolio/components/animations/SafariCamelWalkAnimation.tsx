@@ -17,6 +17,8 @@ type SafariCamelWalkAnimationProps = {
   scene: THREE.Object3D;
   nodes: Record<string, THREE.Object3D>;
   sceneFrame: SceneFrame | null;
+  turtleOnSafariCamelRef: RefObject<boolean>;
+  turtleOnYachtRef: RefObject<boolean>;
 };
 
 type LegRig = {
@@ -152,6 +154,7 @@ function captureLegRig(leg: THREE.Object3D, body: THREE.Object3D | null): LegRig
   };
 }
 
+
 function getCarrierWorldX(carrier: THREE.Object3D) {
   const world = new THREE.Vector3();
   carrier.updateMatrixWorld(true);
@@ -167,6 +170,7 @@ function resolveSafariTrack(
   return resolveSafariCamelTrack(scene, nodes, sceneFrame, {
     startInset: endCamelScrollSettings.startInset,
     endInset: endCamelScrollSettings.endInset,
+    startOffsetX: endCamelScrollSettings.startOffsetX,
   });
 }
 
@@ -368,10 +372,13 @@ export default function SafariCamelWalkAnimation({
   scene,
   nodes,
   sceneFrame,
+  turtleOnSafariCamelRef,
+  turtleOnYachtRef,
 }: SafariCamelWalkAnimationProps) {
   const rigRef = useRef<WalkRig | null>(null);
   const walkPhaseRef = useRef(0);
   const lastCarrierWorldXRef = useRef<number | null>(null);
+  const wasWalkingRef = useRef(false);
   const retryTimerRef = useRef(0);
   const mountAttemptsRef = useRef(0);
   const warnedRef = useRef(false);
@@ -381,6 +388,7 @@ export default function SafariCamelWalkAnimation({
     rigRef.current = null;
     walkPhaseRef.current = 0;
     lastCarrierWorldXRef.current = null;
+    wasWalkingRef.current = false;
     mountAttemptsRef.current = 0;
     warnedRef.current = false;
   }, [scene, nodes, sceneFrame, settingsRevision]);
@@ -439,6 +447,17 @@ export default function SafariCamelWalkAnimation({
     if (!carrier) return;
 
     const carrierWorldX = getCarrierWorldX(carrier);
+    const mayAnimateLegs =
+      turtleOnSafariCamelRef.current && !turtleOnYachtRef.current;
+
+    if (!mayAnimateLegs) {
+      lastCarrierWorldXRef.current = carrierWorldX;
+      walkPhaseRef.current = 0;
+      wasWalkingRef.current = false;
+      applySwing(rig, 0, false);
+      return;
+    }
+
     const lastCarrierWorldX = lastCarrierWorldXRef.current ?? carrierWorldX;
     const carrierWorldDelta = carrierWorldX - lastCarrierWorldX;
     lastCarrierWorldXRef.current = carrierWorldX;
@@ -454,8 +473,11 @@ export default function SafariCamelWalkAnimation({
         endCamelScrollSettings.walkCyclesPerScene *
         Math.PI *
         2;
+    } else if (wasWalkingRef.current) {
+      walkPhaseRef.current = 0;
     }
 
+    wasWalkingRef.current = isWalking;
     applySwing(rig, walkPhaseRef.current, isWalking);
   });
 

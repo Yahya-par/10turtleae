@@ -35,6 +35,7 @@ import DronePassAudio from "../audio/DronePassAudio";
 import OldDubaiTextAudio from "../audio/OldDubaiTextAudio";
 import FrameTextAudio from "../audio/FrameTextAudio";
 import SafariCampTextAudio from "../audio/SafariCampTextAudio";
+import PlaneTextAudio from "../audio/PlaneTextAudio";
 
 const MODEL_PATH = "/Models/Modelv1.glb";
 
@@ -153,6 +154,8 @@ export default function DesertModel({
         scene={scene}
         nodes={nodes}
         sceneFrame={sceneFrame}
+        turtleOnSafariCamelRef={turtleOnSafariCamelRef}
+        turtleOnYachtRef={turtleOnYachtRef}
       />
       <AudioRuntime />
       <MetroTrainAnimation scene={scene} nodes={nodes} />
@@ -246,6 +249,7 @@ export default function DesertModel({
       <OldDubaiTextAudio scene={scene} nodes={nodes} />
       <FrameTextAudio scene={scene} nodes={nodes} />
       <SafariCampTextAudio scene={scene} nodes={nodes} />
+      <PlaneTextAudio scene={scene} nodes={nodes} />
     </>
   );
 }

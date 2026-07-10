@@ -867,6 +867,7 @@ function isTurtleInSafariCamelPhase(
     parentIsSafariCamel ||
     turtleOnSafariCamelRef.current ||
     rig.transferMode === "toSafariCamel" ||
+    rig.transferMode === "toSafariCamelFromYacht" ||
     rig.transferMode === "toAtlantisYachtFromSafariCamel"
   );
 }
@@ -1751,7 +1752,9 @@ export default function CamelScrollMovement({
       carPassState.yachtDockedAtEnd = true;
       carPassState.safariCamelToYachtTransfer = true;
 
-      const atSafariEnd = safariCamelTravelProgressRef.current >= 0.94;
+      const atSafariEnd =
+        safariCamelTravelProgressRef.current >=
+        endCamelScrollSettings.safariCamelToYachtTransferStartProgress;
       const mayTransferSafariCamelToYacht =
         !scrollingBack &&
         rig.forwardScrollHold >= forwardTransferScrollHold;
@@ -1879,6 +1882,19 @@ export default function CamelScrollMovement({
           rig.safariCamel;
 
         if (shouldReturnToSafariCamel) {
+          if (!rig.safariCamel) {
+            rig.safariCamel =
+              resolveObject(
+                scene,
+                nodes,
+                endCamelScrollSettings.body,
+                endCamelScrollSettings.bodyBlender,
+              ) ?? findObjectByNamePattern(scene, /camel\.?002/i);
+          }
+          const mosqueYacht = resolveSafariTransferYacht(scene, nodes);
+          if (mosqueYacht) {
+            rig.yacht = mosqueYacht;
+          }
           beginTransferToSafariCamelFromYacht(rig, scene);
           turtleOnYachtRef.current = false;
           rig.lastScrollProgress = progress;
@@ -1917,6 +1933,15 @@ export default function CamelScrollMovement({
         turtleReturnedFromYachtRef.current = false;
       }
 
+      if (
+        turtleReturnedFromYachtRef.current &&
+        atYachtEnd &&
+        !scrollingBack &&
+        rig.forwardScrollHold >= forwardTransferScrollHold
+      ) {
+        turtleReturnedFromYachtRef.current = false;
+      }
+
       if (!rig.safariCamel) {
         rig.safariCamel =
           resolveObject(
@@ -1930,7 +1955,6 @@ export default function CamelScrollMovement({
       if (
         atYachtEnd &&
         mayTransferYachtToSafariCamel &&
-        !turtleReturnedFromYachtRef.current &&
         rig.safariCamel
       ) {
         beginTransferToSafariCamel(rig, scene);

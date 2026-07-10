@@ -342,14 +342,44 @@ export function clampScene1WorldX(
   return THREE.MathUtils.clamp(x, minX, maxX);
 }
 
+export type SafariCamelBodyExtents = {
+  eastExtent: number;
+  westExtent: number;
+};
+
+/** Carrier-pivot → body edge distances; stable while the body rides on the carrier. */
+export function measureSafariCamelBodyExtents(
+  carrier: THREE.Object3D,
+  body: THREE.Object3D,
+): SafariCamelBodyExtents {
+  carrier.updateMatrixWorld(true);
+  body.updateMatrixWorld(true);
+  const extentBounds = getObjectBounds(body);
+  const carrierX = carrier.getWorldPosition(new THREE.Vector3()).x;
+  return {
+    eastExtent: extentBounds.max.x - carrierX,
+    westExtent: carrierX - extentBounds.min.x,
+  };
+}
+
 /** Safari / Lahbab panel — camel track from east handoff → west exit. */
 export function resolveSafariCamelTrack(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D> | undefined,
   sceneFrame: SceneFrame | null,
-  options: { startInset: number; endInset: number },
+  options: { startInset: number; endInset: number; startOffsetX?: number },
+  carrier?: THREE.Object3D,
+  /** Body mesh only — avoids leg-swing bbox jitter on the scroll carrier. */
+  extentSource?: THREE.Object3D,
+  /** Cached extents — keeps start/end X stable as the carrier moves. */
+  fixedExtents?: SafariCamelBodyExtents,
 ): Scene1CamelTrack | null {
-  const floor =
+  const { land, landBlender } = assetNames.safari;
+  const safariLand =
+    findSceneObject(scene, nodes, land, landBlender) ??
+    findObjectByNamePattern(scene, /safariland/i);
+
+  const panelFloor =
     findSceneObject(
       scene,
       nodes,
@@ -357,12 +387,29 @@ export function resolveSafariCamelTrack(
       "Desert_Scene_Floor.008",
     ) ?? findObjectByNamePattern(scene, /Desert_Scene_Floor\.?008/i);
 
+  const floor = safariLand ?? panelFloor;
   if (!floor) return null;
 
   const box = getObjectBounds(floor);
   const scrollRange = getScrollRange(sceneFrame);
-  const startX = box.max.x - options.startInset;
-  const endX = box.min.x + options.endInset;
+  const startOffsetX = options.startOffsetX ?? 0;
+  let startX = box.max.x - options.startInset + startOffsetX;
+  let endX = box.min.x + options.endInset;
+
+  if (fixedExtents) {
+    startX = box.max.x - options.startInset - fixedExtents.eastExtent + startOffsetX;
+    endX = box.min.x + options.endInset + fixedExtents.westExtent;
+  } else if (carrier) {
+    carrier.updateMatrixWorld(true);
+    const boundsSource = extentSource ?? carrier;
+    boundsSource.updateMatrixWorld(true);
+    const extentBounds = getObjectBounds(boundsSource);
+    const carrierX = carrier.getWorldPosition(new THREE.Vector3()).x;
+    const eastExtent = extentBounds.max.x - carrierX;
+    const westExtent = carrierX - extentBounds.min.x;
+    startX = box.max.x - options.startInset - eastExtent + startOffsetX;
+    endX = box.min.x + options.endInset + westExtent;
+  }
   const progressAtStart = getScrollProgressAtX(startX, scrollRange);
   const progressAtEnd = getScrollProgressAtX(endX, scrollRange);
 

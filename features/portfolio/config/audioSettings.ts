@@ -56,7 +56,13 @@ export const audioSettings = {
   },
   desertText: {
     /** SafariCamp001 — plays once when the safari camp enters view */
-    cue: audioSrc("/Audios/desertext.mp3"),
+    cue: audioSrc("/Audios/plane text.mp3"),
+    loop: false,
+    volume: 1.0,
+  },
+  planeText: {
+    /** planewithtext001 — plays once when the plane text enters view */
+    cue: audioSrc("/Audios/plane text.mp3"),
     loop: false,
     volume: 1.0,
   },
