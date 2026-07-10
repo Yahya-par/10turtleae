@@ -114,6 +114,11 @@ function setupSafariCarrier(
     if (leg) attachObjectToCarrier(carrier, leg);
   }
 
+  carrier.renderOrder = 12;
+  carrier.traverse((child) => {
+    child.renderOrder = 12;
+  });
+
   return carrier;
 }
 

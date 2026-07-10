@@ -37,4 +37,15 @@ export const campfireSmokeSettings = {
   driftSpeed: 0.01,
   emitYOffset: 0.15,
   emitSpread: 0.03,
+  /**
+   * Nudge the emitter on the trail side of the safari camel path.
+   * +X = east (behind the camel when it travels west). Keep Z at 0 so smoke
+   * is not buried behind the ground mesh.
+   */
+  emitterWorldOffset: { x: -0.3, y: -0.3, z: 0 } as const,
+  /** Visible above terrain; safari camel carrier uses a higher order (see scroll movement). */
+  renderOrder: 8,
+  depthTest: false,
+  /** Bias rising plume spawns east of the fire (trail side). */
+  plumeSpawnOffsetX: 0.35,
 } as const;

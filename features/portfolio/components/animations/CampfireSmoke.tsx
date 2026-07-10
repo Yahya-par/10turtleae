@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { campfireSmokeSettings } from "@features/portfolio/config/campfireSmokeSettings";
+import { useCampfireSmokeSettingsHmr } from "@features/portfolio/hooks/useCampfireSmokeSettingsHmr";
 import {
   getObjectBounds,
   normalizeObjectName,
@@ -213,7 +214,7 @@ function createPointsMaterial(maxOpacity: number) {
     fragmentShader,
     transparent: true,
     depthWrite: false,
-    depthTest: true,
+    depthTest: campfireSmokeSettings.depthTest,
     blending: THREE.NormalBlending,
   });
 }
@@ -251,7 +252,7 @@ function spawnParticle(particle: Particle, target: THREE.Vector3) {
 
 // createSmokeSystem - create a new smoke system
 function createSmokeSystem(): SmokeSystem {
-  const { maxOpacity } = campfireSmokeSettings;
+  const { maxOpacity, renderOrder } = campfireSmokeSettings;
   const targets = getTextTargets();
   const particleCount = targets.length;
   const particles: Particle[] = Array.from({ length: particleCount }, () => ({
@@ -291,7 +292,7 @@ function createSmokeSystem(): SmokeSystem {
   const points = new THREE.Points(geometry, material);
   points.name = "CampfireSmokeText";
   points.frustumCulled = false;
-  points.renderOrder = 10;
+  points.renderOrder = renderOrder;
 
   return {
     points,
@@ -313,12 +314,14 @@ function spawnPlumeParticle(particle: PlumeParticle) {
     plumeMinSize,
     plumeRiseSpeed,
     plumeSpread,
+    plumeSpawnOffsetX,
   } = campfireSmokeSettings;
 
   particle.age = 0;
   particle.maxAge = randomBetween(plumeLifetime[0], plumeLifetime[1]);
   particle.size = randomBetween(plumeMinSize, plumeMaxSize);
-  particle.x = randomBetween(-plumeSpread, plumeSpread);
+  particle.x =
+    plumeSpawnOffsetX + randomBetween(-plumeSpread, plumeSpread);
   particle.y = randomBetween(0, 0.08);
   particle.z = randomBetween(-plumeSpread, plumeSpread);
   particle.vx = randomBetween(-plumeDriftSpeed, plumeDriftSpeed);
@@ -327,7 +330,8 @@ function spawnPlumeParticle(particle: PlumeParticle) {
 }
 
 function createPlumeSmokeSystem(): PlumeSmokeSystem {
-  const { plumeMaxOpacity, plumeParticleCount } = campfireSmokeSettings;
+  const { plumeMaxOpacity, plumeParticleCount, renderOrder } =
+    campfireSmokeSettings;
   const particles: PlumeParticle[] = Array.from(
     { length: plumeParticleCount },
     () => ({
@@ -365,7 +369,7 @@ function createPlumeSmokeSystem(): PlumeSmokeSystem {
   const points = new THREE.Points(geometry, material);
   points.name = "CampfireSmokePlume";
   points.frustumCulled = false;
-  points.renderOrder = 9;
+  points.renderOrder = renderOrder;
 
   return { points, particles, positions, ages, maxAges, sizes };
 }
@@ -460,17 +464,23 @@ function findCampfire(scene: THREE.Object3D) {
 // getEmitterWorldPosition - get the world position of the emitter
 function getEmitterWorldPosition(campfire: THREE.Object3D) {
   const bounds = getObjectBounds(campfire);
+  const { emitterWorldOffset } = campfireSmokeSettings;
   return new THREE.Vector3(
-    (bounds.min.x + bounds.max.x) * 0.5,
-    bounds.max.y + campfireSmokeSettings.emitYOffset,
-    (bounds.min.z + bounds.max.z) * 0.5,
+    (bounds.min.x + bounds.max.x) * 0.5 + emitterWorldOffset.x,
+    bounds.max.y + campfireSmokeSettings.emitYOffset + emitterWorldOffset.y,
+    (bounds.min.z + bounds.max.z) * 0.5 + emitterWorldOffset.z,
   );
 }
 
 // getFallbackWorldPosition - get the fallback world position
 function getFallbackWorldPosition() {
   const [x, y, z] = campfireSmokeSettings.fallbackWorldPosition;
-  return new THREE.Vector3(x, y, z);
+  const { emitterWorldOffset } = campfireSmokeSettings;
+  return new THREE.Vector3(
+    x + emitterWorldOffset.x,
+    y + emitterWorldOffset.y,
+    z + emitterWorldOffset.z,
+  );
 }
 
 // isSceneObject - check if the value is a scene object
@@ -522,28 +532,60 @@ function mountSmokeSystem(
   return { plume, text };
 }
 
+function disposeSmokeSystem(mounted: MountedSmokeSystems) {
+  mounted.text.points.removeFromParent();
+  mounted.text.points.geometry.dispose();
+  (mounted.text.points.material as THREE.Material).dispose();
+  mounted.plume.points.removeFromParent();
+  mounted.plume.points.geometry.dispose();
+  (mounted.plume.points.material as THREE.Material).dispose();
+}
+
+function syncSmokeEmitter(
+  mounted: MountedSmokeSystems,
+  campfire: THREE.Object3D | null,
+) {
+  const emitter = resolveEmitter(campfire);
+  const { renderOrder } = campfireSmokeSettings;
+
+  mounted.text.points.position.copy(emitter);
+  mounted.plume.points.position.copy(emitter);
+  mounted.text.points.renderOrder = renderOrder;
+  mounted.plume.points.renderOrder = renderOrder;
+}
+
 // CampfireSmoke - the campfire smoke component
 export default function CampfireSmoke({ scene }: CampfireSmokeProps) {
   const systemRef = useRef<MountedSmokeSystems | null>(null);
+  const campfireRef = useRef<THREE.Object3D | null>(null);
   const retryTimerRef = useRef(0);
   const mountAttemptsRef = useRef(0);
+  const settingsRevision = useCampfireSmokeSettingsHmr();
+
+  useEffect(() => {
+    const mounted = systemRef.current;
+    if (mounted) {
+      disposeSmokeSystem(mounted);
+    }
+    systemRef.current = null;
+    campfireRef.current = null;
+    retryTimerRef.current = 0;
+    mountAttemptsRef.current = 0;
+  }, [settingsRevision]);
 
   useEffect(() => {
     return () => {
       const mounted = systemRef.current;
       if (!mounted) return;
-
-      mounted.text.points.removeFromParent();
-      mounted.text.points.geometry.dispose();
-      (mounted.text.points.material as THREE.Material).dispose();
-      mounted.plume.points.removeFromParent();
-      mounted.plume.points.geometry.dispose();
-      (mounted.plume.points.material as THREE.Material).dispose();
+      disposeSmokeSystem(mounted);
       systemRef.current = null;
+      campfireRef.current = null;
     };
   }, []);
 
   useFrame((_, delta) => {
+    void settingsRevision;
+
     if (!systemRef.current) {
       retryTimerRef.current += delta;
       if (retryTimerRef.current < 0.1) return;
@@ -559,9 +601,14 @@ export default function CampfireSmoke({ scene }: CampfireSmokeProps) {
 
       if (!shouldMount) return;
 
+      campfireRef.current = validCampfire;
       systemRef.current = mountSmokeSystem(scene, validCampfire);
       return;
     }
+
+    const campfire = findCampfire(scene);
+    campfireRef.current = isSceneObject(campfire) ? campfire : campfireRef.current;
+    syncSmokeEmitter(systemRef.current, campfireRef.current);
 
     const mounted = systemRef.current;
     mounted.text.elapsedTime += delta;
