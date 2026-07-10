@@ -12,6 +12,14 @@ export const carPassState = {
   carDockedHandoffX: null as number | null,
   /** Scroll progress when the turtle boards the car from jetski (route-end anchor). */
   carBoardScrollProgress: null as number | null,
+  /** True while the turtle is arcing from jetski to yacht — keeps jetski at its handoff dock. */
+  jetskiToYachtTransfer: false,
+  /** World X where the jetski stays after the turtle leaves for yacht. */
+  jetskiDockedHandoffX: null as number | null,
+  /** True while the turtle is arcing from yacht back to jetski. */
+  jetskiFromYachtTransfer: false,
+  /** Scroll progress when the turtle boards jetski from yacht (route-end anchor). */
+  jetskiBoardScrollProgress: null as number | null,
   /** True while the turtle is arcing from yacht to safari camel — keeps yacht at dock. */
   yachtToSafariCamelTransfer: false,
   /** True after the turtle leaves the yacht for the Lahbab camel — yacht stays docked. */

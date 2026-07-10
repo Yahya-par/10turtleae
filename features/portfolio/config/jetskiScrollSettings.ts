@@ -22,6 +22,8 @@ export const jetskiScrollSettings = {
   endInset: 1.6,
   /** Extra nudge on the stop X (negative = stop slightly earlier). */
   trackEndOffsetX: 0,
+  /** When handing off to yacht, snap dock X to full track end at or above this progress. */
+  handoffSnapEndProgress: 0.94,
   /** Extra nudge on the whole jetski carrier (x/y/z). */
   carrierOffset: { x: 0, y: 0, z: 0 },
 

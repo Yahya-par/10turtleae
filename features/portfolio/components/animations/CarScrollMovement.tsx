@@ -571,6 +571,10 @@ export default function CarScrollMovement({
       carPassState.jetskiToCarTransfer = false;
       carPassState.carDockedHandoffX = null;
       carPassState.carBoardScrollProgress = null;
+      carPassState.jetskiToYachtTransfer = false;
+      carPassState.jetskiDockedHandoffX = null;
+      carPassState.jetskiFromYachtTransfer = false;
+      carPassState.jetskiBoardScrollProgress = null;
       carParkedRef.current = false;
       carPassState.scrollCarParked = true;
     };

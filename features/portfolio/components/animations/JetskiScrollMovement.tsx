@@ -15,6 +15,7 @@ import {
 } from "@features/portfolio/utils/sceneObjectUtils";
 import {
   getScrollRange,
+  getScrollProgressBounds,
   type SceneFrame,
 } from "@features/portfolio/components/camera/CameraPath";
 
@@ -55,6 +56,52 @@ type JetskiScrollMovementProps = {
 };
 
 const tempOffset = new THREE.Vector3();
+
+function getJetskiDockedHandoffX(
+  rig: JetskiRig,
+  jetskiTravelProgressRef: RefObject<number>,
+) {
+  if (carPassState.jetskiDockedHandoffX !== null) {
+    if (
+      jetskiTravelProgressRef.current >=
+      jetskiScrollSettings.handoffSnapEndProgress
+    ) {
+      return rig.trackEndX;
+    }
+
+    return carPassState.jetskiDockedHandoffX;
+  }
+
+  return THREE.MathUtils.lerp(
+    rig.restX,
+    rig.trackEndX,
+    jetskiTravelProgressRef.current,
+  );
+}
+
+function syncJetskiProgressFromDockX(
+  rig: JetskiRig,
+  dockX: number,
+  jetskiTravelProgressRef: RefObject<number>,
+) {
+  const span = rig.trackEndX - rig.restX;
+  if (Math.abs(span) <= 0.001) return;
+
+  const progress = THREE.MathUtils.clamp((dockX - rig.restX) / span, 0, 1);
+  rig.jetskiProgress = progress;
+  jetskiTravelProgressRef.current = progress;
+}
+
+function parkJetskiAtHandoff(
+  rig: JetskiRig,
+  jetskiTravelProgressRef: RefObject<number>,
+) {
+  if (jetskiScrollSettings.lockToModelPosition) return;
+
+  const dockX = getJetskiDockedHandoffX(rig, jetskiTravelProgressRef);
+  setCarrierWorldPosition(rig.carrier, dockX, rig.baseY, rig.baseZ);
+  syncJetskiProgressFromDockX(rig, dockX, jetskiTravelProgressRef);
+}
 
 function resolveObject(
   scene: THREE.Object3D,
@@ -199,6 +246,47 @@ function restoreFrozenTransform(
   frozen.object.updateMatrixWorld(true);
 }
 
+export function resolveJetskiTrackEndX(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  jetskiDriver?: THREE.Object3D | null,
+) {
+  const {
+    driver,
+    driverBlender,
+    sceneFloor,
+    sceneFloorBlender,
+  } = jetskiScrollSettings;
+
+  const driverMesh =
+    jetskiDriver ??
+    resolveObject(scene, nodes, driver, driverBlender);
+  const floor =
+    findAlRabScenePanel(scene, nodes) ??
+    resolveObject(scene, nodes, sceneFloor, sceneFloorBlender);
+
+  if (!driverMesh || !floor) {
+    return null;
+  }
+
+  driverMesh.updateMatrixWorld(true);
+  const carrier = driverMesh.parent;
+  const worldY = new THREE.Vector3();
+  if (carrier) {
+    carrier.getWorldPosition(worldY);
+  } else {
+    driverMesh.getWorldPosition(worldY);
+  }
+
+  return resolveJetskiWaterTrack(
+    scene,
+    nodes,
+    floor,
+    worldY.y,
+    worldY.z,
+  ).trackEndX;
+}
+
 export function resolveJetskiScrollWindow(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
@@ -241,6 +329,47 @@ function getJetskiTravelProgress(
 
   return THREE.MathUtils.clamp(
     (jetskiScrollStart - scrollProgress) / span,
+    0,
+    1,
+  );
+}
+
+function getJetskiTravelProgressFromBoard(
+  scrollProgress: number,
+  boardScrollProgress: number,
+  jetskiScrollStart: number,
+  jetskiScrollEnd: number,
+  sceneFrame: SceneFrame | null,
+) {
+  const effectiveScrollStart = Math.min(
+    jetskiScrollStart,
+    getScrollProgressBounds(sceneFrame).max,
+  );
+  const returnSpanEast = effectiveScrollStart - boardScrollProgress;
+
+  if (scrollProgress > boardScrollProgress) {
+    if (returnSpanEast <= 0.001) {
+      return 1;
+    }
+
+    return THREE.MathUtils.clamp(
+      1 - (scrollProgress - boardScrollProgress) / returnSpanEast,
+      0,
+      1,
+    );
+  }
+
+  if (returnSpanEast > 0.001) {
+    return 1;
+  }
+
+  const returnSpanWest = boardScrollProgress - jetskiScrollEnd;
+  if (returnSpanWest <= 0.001) {
+    return 1;
+  }
+
+  return THREE.MathUtils.clamp(
+    (scrollProgress - jetskiScrollEnd) / returnSpanWest,
     0,
     1,
   );
@@ -389,6 +518,10 @@ export default function JetskiScrollMovement({
     return () => {
       rigRef.current = null;
       jetskiTravelProgressRef.current = 0;
+      carPassState.jetskiToYachtTransfer = false;
+      carPassState.jetskiDockedHandoffX = null;
+      carPassState.jetskiFromYachtTransfer = false;
+      carPassState.jetskiBoardScrollProgress = null;
     };
   }, [scene, nodes, sceneFrame, jetskiTravelProgressRef]);
 
@@ -451,12 +584,18 @@ export default function JetskiScrollMovement({
       return;
     }
 
+    if (carPassState.jetskiFromYachtTransfer) {
+      parkJetskiAtHandoff(rig, jetskiTravelProgressRef);
+      return;
+    }
+
+    if (carPassState.jetskiToYachtTransfer) {
+      parkJetskiAtHandoff(rig, jetskiTravelProgressRef);
+      return;
+    }
+
     if (turtleOnYachtRef.current) {
-      rig.jetskiProgress = 1;
-      jetskiTravelProgressRef.current = 1;
-      if (!jetskiScrollSettings.lockToModelPosition) {
-        setCarrierWorldPosition(rig.carrier, rig.trackEndX, rig.baseY, rig.baseZ);
-      }
+      parkJetskiAtHandoff(rig, jetskiTravelProgressRef);
       return;
     }
 
@@ -492,16 +631,27 @@ export default function JetskiScrollMovement({
       return;
     }
 
-    rig.jetskiProgress = getJetskiTravelProgress(
-      progress,
-      rig.jetskiScrollStart,
-      rig.jetskiScrollEnd,
-    );
+    rig.jetskiProgress =
+      carPassState.jetskiBoardScrollProgress !== null
+        ? getJetskiTravelProgressFromBoard(
+            progress,
+            carPassState.jetskiBoardScrollProgress,
+            rig.jetskiScrollStart,
+            rig.jetskiScrollEnd,
+            sceneFrame,
+          )
+        : getJetskiTravelProgress(
+            progress,
+            rig.jetskiScrollStart,
+            rig.jetskiScrollEnd,
+          );
+
+    const routeEndX = rig.trackEndX;
 
     if (!jetskiScrollSettings.lockToModelPosition) {
       const nextX = THREE.MathUtils.lerp(
         rig.restX,
-        rig.trackEndX,
+        routeEndX,
         rig.jetskiProgress,
       );
       setCarrierWorldPosition(rig.carrier, nextX, rig.baseY, rig.baseZ);

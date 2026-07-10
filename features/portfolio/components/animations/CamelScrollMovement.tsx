@@ -10,7 +10,7 @@ import {
   mosqueYachtScrollSettings,
 } from "@features/portfolio/config/yachtScrollSettings";
 import { getCarSeatWorld, resolveCarScrollWindow } from "@features/portfolio/components/animations/CarScrollMovement";
-import { getJetskiDriverSeatWorld, resolveJetskiScrollWindow } from "@features/portfolio/components/animations/JetskiScrollMovement";
+import { getJetskiDriverSeatWorld, resolveJetskiScrollWindow, resolveJetskiTrackEndX } from "@features/portfolio/components/animations/JetskiScrollMovement";
 import { getYachtSeatWorld } from "@features/portfolio/components/animations/YachtScrollMovement";
 import { getSafariCamelSeatWorld } from "@features/portfolio/components/animations/SafariCamelScrollMovement";
 import { useEndCamelScrollSettingsHmr } from "@features/portfolio/hooks/useEndCamelScrollSettingsHmr";
@@ -541,6 +541,17 @@ function captureCarDockedHandoffX(rig: CamelRig) {
   carPassState.carDockedHandoffX = carrier.getWorldPosition(tempVec3).x;
 }
 
+function captureJetskiDockedHandoffX(rig: CamelRig) {
+  const carrier = rig.jetskiDriver?.parent;
+  if (!carrier) {
+    carPassState.jetskiDockedHandoffX = null;
+    return;
+  }
+
+  carrier.updateMatrixWorld(true);
+  carPassState.jetskiDockedHandoffX = carrier.getWorldPosition(tempVec3).x;
+}
+
 function beginTransferToJetski(rig: CamelRig, scene: THREE.Object3D) {
   if (!rig.turtle || !rig.car || !rig.jetskiDriver) return;
 
@@ -558,9 +569,25 @@ function beginTransferToJetski(rig: CamelRig, scene: THREE.Object3D) {
   carPassState.carToJetskiTransfer = true;
 }
 
-function beginTransferToYacht(rig: CamelRig, scene: THREE.Object3D) {
+function beginTransferToYacht(
+  rig: CamelRig,
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  jetskiTravelProgressRef: RefObject<number>,
+) {
   if (!rig.turtle || !rig.jetskiDriver || !rig.yacht) return;
 
+  captureJetskiDockedHandoffX(rig);
+  if (
+    jetskiTravelProgressRef.current >=
+    jetskiScrollSettings.handoffSnapEndProgress
+  ) {
+    const trackEndX = resolveJetskiTrackEndX(scene, nodes, rig.jetskiDriver);
+    if (trackEndX !== null) {
+      carPassState.jetskiDockedHandoffX = trackEndX;
+    }
+  }
+  carPassState.jetskiBoardScrollProgress = null;
   getJetskiDriverSeatWorld(rig.jetskiDriver, rig.turtleFootLift, rig.transferStartWorld);
   getYachtSeatWorld(rig.yacht, atlantisYachtScrollSettings, rig.transferEndWorld);
   detachToTransferCarrier(rig.turtle, rig.transferCarrier, scene);
@@ -570,11 +597,15 @@ function beginTransferToYacht(rig: CamelRig, scene: THREE.Object3D) {
   rig.transferProgress = 0;
   rig.onJetski = false;
   rig.onYacht = false;
+  carPassState.jetskiToYachtTransfer = true;
 }
 
 function beginTransferToJetskiFromYacht(rig: CamelRig, scene: THREE.Object3D) {
   if (!rig.turtle || !rig.jetskiDriver || !rig.yacht) return;
 
+  carPassState.jetskiToYachtTransfer = false;
+  carPassState.jetskiFromYachtTransfer = true;
+  carPassState.jetskiBoardScrollProgress = null;
   getYachtSeatWorld(rig.yacht, atlantisYachtScrollSettings, rig.transferStartWorld);
   getJetskiDriverSeatWorld(rig.jetskiDriver, rig.turtleFootLift, rig.transferEndWorld);
   detachToTransferCarrier(rig.turtle, rig.transferCarrier, scene);
@@ -589,6 +620,9 @@ function beginTransferToJetskiFromYacht(rig: CamelRig, scene: THREE.Object3D) {
 function beginTransferToCarFromJetski(rig: CamelRig, scene: THREE.Object3D) {
   if (!rig.turtle || !rig.car || !rig.jetskiDriver) return;
 
+  carPassState.jetskiBoardScrollProgress = null;
+  carPassState.jetskiDockedHandoffX = null;
+  carPassState.jetskiFromYachtTransfer = false;
   getJetskiDriverSeatWorld(rig.jetskiDriver, rig.turtleFootLift, rig.transferStartWorld);
   getCarSeatWorld(rig.car, rig.turtleFootLift, rig.transferEndWorld);
   detachToTransferCarrier(rig.turtle, rig.transferCarrier, scene);
@@ -1451,6 +1485,7 @@ export default function CamelScrollMovement({
         rig.transferMode = "idle";
         turtleOnYachtRef.current = true;
         turtleOnJetskiRef.current = false;
+        carPassState.jetskiToYachtTransfer = false;
         rig.reverseScrollHold = 0;
         rig.forwardScrollHold = 0;
       } else {
@@ -1478,6 +1513,9 @@ export default function CamelScrollMovement({
         turtleOnYachtRef.current = false;
         turtleReturnedFromYachtRef.current = true;
         yachtTravelProgressRef.current = 0;
+        jetskiTravelProgressRef.current = 1;
+        carPassState.jetskiBoardScrollProgress = progress;
+        carPassState.jetskiFromYachtTransfer = false;
         rig.reverseScrollHold = 0;
         rig.forwardScrollHold = 0;
       } else {
@@ -1716,7 +1754,7 @@ export default function CamelScrollMovement({
         !turtleReturnedFromYachtRef.current;
 
       if (atJetskiEnd && mayTransferJetskiToYacht && rig.yacht) {
-        beginTransferToYacht(rig, scene);
+        beginTransferToYacht(rig, scene, nodes, jetskiTravelProgressRef);
         turtleOnJetskiRef.current = false;
         rig.lastScrollProgress = progress;
         return;
