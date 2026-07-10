@@ -29,8 +29,13 @@ export const endCamelScrollSettings = {
     "forwardleg.008",
   ] as const,
 
-  startInset: 1.2,
-  endInset: 1.2,
+  startInset: 0,
+  /** Extra nudge east (+) at floor start — tune if bbox sits inside the visible mesh. */
+  startOffsetX: 0,
+  /** Inset from safariland001 west edge — keep at 0 so camel reaches floor end. */
+  endInset: 0,
+  /** Safari camel must reach floor end before handing off turtle to yacht002. */
+  safariCamelToYachtTransferStartProgress: 0.995,
 
   turtleSeatOffsetX: 0.45,
   turtleSeatOffsetY: -0.33,

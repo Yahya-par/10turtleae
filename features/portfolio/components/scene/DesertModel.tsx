@@ -152,6 +152,8 @@ export default function DesertModel({
         scene={scene}
         nodes={nodes}
         sceneFrame={sceneFrame}
+        turtleOnSafariCamelRef={turtleOnSafariCamelRef}
+        turtleOnYachtRef={turtleOnYachtRef}
       />
       <AudioRuntime />
       <MetroTrainAnimation scene={scene} nodes={nodes} />

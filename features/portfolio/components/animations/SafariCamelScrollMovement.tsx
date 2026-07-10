@@ -16,14 +16,16 @@ import {
   attachObjectToCarrier,
   findSceneObject,
   getObjectBounds,
-  getScene1TravelProgress,
+  measureSafariCamelBodyExtents,
   resolveSafariCamelTrack,
+  type SafariCamelBodyExtents,
   setObjectWorldPosition,
 } from "@features/portfolio/utils/sceneObjectUtils";
 
 type SafariCamelRig = {
   carrier: THREE.Group;
   body: THREE.Object3D;
+  bodyExtents: SafariCamelBodyExtents;
   restX: number;
   trackEndX: number;
   baseY: number;
@@ -175,23 +177,43 @@ function buildRig(
   scene.updateMatrixWorld(true);
 
   const camelBody = resolveObject(scene, nodes, body, bodyBlender);
-  const track = resolveSafariCamelTrack(scene, nodes, sceneFrame, {
-    startInset: endCamelScrollSettings.startInset,
-    endInset: endCamelScrollSettings.endInset,
-  });
-
-  if (!camelBody?.parent || !track) {
+  if (!camelBody?.parent) {
     if (process.env.NODE_ENV === "development") {
       console.warn("[SafariCamelScrollMovement] Setup failed:", {
         body,
         bodyFound: camelBody?.name ?? null,
-        track: track !== null,
+        track: false,
       });
     }
     return null;
   }
 
   const carrier = setupSafariCarrier(scene, nodes, camelBody);
+  const bodyExtents = measureSafariCamelBodyExtents(carrier, camelBody);
+  const track = resolveSafariCamelTrack(
+    scene,
+    nodes,
+    sceneFrame,
+    {
+      startInset: endCamelScrollSettings.startInset,
+      endInset: endCamelScrollSettings.endInset,
+      startOffsetX: endCamelScrollSettings.startOffsetX,
+    },
+    undefined,
+    undefined,
+    bodyExtents,
+  );
+
+  if (!track) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[SafariCamelScrollMovement] Setup failed:", {
+        body,
+        bodyFound: camelBody.name,
+        track: false,
+      });
+    }
+    return null;
+  }
 
   carrier.updateMatrixWorld(true);
   const restWorld = new THREE.Vector3();
@@ -214,9 +236,12 @@ function buildRig(
     });
   }
 
+  setCarrierWorldPosition(carrier, startX, restWorld.y, restWorld.z);
+
   return {
     carrier,
     body: camelBody,
+    bodyExtents,
     restX,
     trackEndX: endX,
     baseY: restWorld.y,
@@ -229,12 +254,14 @@ function buildRig(
   };
 }
 
-function getTrackWorldX(
-  progress: number,
-  track: Pick<SafariCamelRig, "startX" | "endX" | "progressAtStart" | "progressAtEnd">,
+function travelTFromCarrierX(
+  carrierX: number,
+  startX: number,
+  endX: number,
 ) {
-  const travelT = getScene1TravelProgress(progress, track);
-  return THREE.MathUtils.lerp(track.startX, track.endX, travelT);
+  const span = endX - startX;
+  if (Math.abs(span) < 1e-6) return 0;
+  return THREE.MathUtils.clamp((carrierX - startX) / span, 0, 1);
 }
 
 export default function SafariCamelScrollMovement({
@@ -250,6 +277,8 @@ export default function SafariCamelScrollMovement({
 }: SafariCamelScrollMovementProps) {
   const rigRef = useRef<SafariCamelRig | null>(null);
   const sessionActiveRef = useRef(false);
+  const prevTurtleOnSafariCamelRef = useRef(false);
+  const lastRideProgressRef = useRef<number | null>(null);
   const settingsRevision = useEndCamelScrollSettingsHmr();
 
   useLayoutEffect(() => {
@@ -281,15 +310,26 @@ export default function SafariCamelScrollMovement({
       rigRef.current = rig;
     }
 
-    const track = resolveSafariCamelTrack(scene, nodes, sceneFrame, {
-      startInset: endCamelScrollSettings.startInset,
-      endInset: endCamelScrollSettings.endInset,
-    });
+    const track = resolveSafariCamelTrack(
+      scene,
+      nodes,
+      sceneFrame,
+      {
+        startInset: endCamelScrollSettings.startInset,
+        endInset: endCamelScrollSettings.endInset,
+        startOffsetX: endCamelScrollSettings.startOffsetX,
+      },
+      undefined,
+      undefined,
+      rig.bodyExtents,
+    );
     if (track) {
       const scrollRange = getScrollRange(sceneFrame);
+      rig.startX = track.startX;
+      rig.restX = track.startX;
       rig.trackEndX = track.endX;
       rig.endX = track.endX;
-      rig.progressAtStart = getScrollProgressAtX(rig.startX, scrollRange);
+      rig.progressAtStart = getScrollProgressAtX(track.startX, scrollRange);
       rig.progressAtEnd = getScrollProgressAtX(track.endX, scrollRange);
     }
 
@@ -301,6 +341,8 @@ export default function SafariCamelScrollMovement({
 
     if (turtleOnSafariCamelRef.current) {
       sessionActiveRef.current = true;
+    } else {
+      lastRideProgressRef.current = null;
     }
 
     const parkAtRest = () => {
@@ -342,10 +384,27 @@ export default function SafariCamelScrollMovement({
       return;
     }
 
-    const travelT = getScene1TravelProgress(progress, rig);
+    const justBoardedSafariCamel =
+      turtleOnSafariCamelRef.current && !prevTurtleOnSafariCamelRef.current;
+    prevTurtleOnSafariCamelRef.current = turtleOnSafariCamelRef.current;
+
+    const span = rig.progressAtStart - rig.progressAtEnd;
+    let travelT = THREE.MathUtils.clamp(safariCamelTravelProgressRef.current, 0, 1);
+
+    if (justBoardedSafariCamel || lastRideProgressRef.current === null) {
+      rig.carrier.updateMatrixWorld(true);
+      const carrierX = rig.carrier.getWorldPosition(tempOffset).x;
+      travelT = travelTFromCarrierX(carrierX, rig.startX, rig.trackEndX);
+      lastRideProgressRef.current = progress;
+    } else if (Math.abs(span) > 1e-6) {
+      const progressDelta = progress - lastRideProgressRef.current;
+      travelT = THREE.MathUtils.clamp(travelT - progressDelta / span, 0, 1);
+      lastRideProgressRef.current = progress;
+    }
+
     rig.travelProgress = travelT;
     safariCamelTravelProgressRef.current = travelT;
-    const worldX = getTrackWorldX(progress, rig);
+    const worldX = THREE.MathUtils.lerp(rig.startX, rig.trackEndX, travelT);
     setCarrierWorldPosition(rig.carrier, worldX, rig.baseY, rig.baseZ);
   });
 

@@ -589,6 +589,7 @@ export default function YachtScrollMovement({
 
     if (
       isSafariHandoffYacht &&
+      (!turtleOnYachtRef || !turtleOnYachtRef.current) &&
       (carPassState.safariCamelToYachtTransfer ||
         now < safariHandoffLatchUntilRef.current)
     ) {
