@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 import { jetskiScrollSettings } from "@features/portfolio/config/jetskiScrollSettings";
+import { carPassState } from "@features/portfolio/config/carPassState";
 import {
   attachAnimationCarrier,
   findAlRabScenePanel,
@@ -429,6 +430,25 @@ export default function JetskiScrollMovement({
 
     if (turtleOnJetskiRef.current) {
       jetskiSessionActiveRef.current = true;
+    }
+
+    if (carPassState.carToJetskiTransfer || carPassState.jetskiToCarTransfer) {
+      jetskiSessionActiveRef.current = true;
+      rig.jetskiProgress = getJetskiTravelProgress(
+        progress,
+        rig.jetskiScrollStart,
+        rig.jetskiScrollEnd,
+      );
+      if (!jetskiScrollSettings.lockToModelPosition) {
+        const nextX = THREE.MathUtils.lerp(
+          rig.restX,
+          rig.trackEndX,
+          rig.jetskiProgress,
+        );
+        setCarrierWorldPosition(rig.carrier, nextX, rig.baseY, rig.baseZ);
+      }
+      jetskiTravelProgressRef.current = rig.jetskiProgress;
+      return;
     }
 
     if (turtleOnYachtRef.current) {

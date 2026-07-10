@@ -70,6 +70,22 @@ const tempCarrierOffset = new THREE.Vector3();
 const tempEuler = new THREE.Euler();
 const tempHubCenter = new THREE.Vector3();
 
+function getCarDockedHandoffX(rig: CarRig) {
+  return carPassState.carDockedHandoffX ?? rig.trackEndX;
+}
+
+function parkCarAtHandoff(
+  rig: CarRig,
+  carTravelProgressRef: RefObject<number>,
+) {
+  const dockX = getCarDockedHandoffX(rig);
+  rig.carProgress = 1;
+  rig.dockedAtEnd = true;
+  carTravelProgressRef.current = 1;
+  rig.carrier.position.set(dockX, rig.baseY, rig.baseZ);
+  rig.lastX = dockX;
+}
+
 function resolveObject(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
@@ -264,6 +280,47 @@ function getCarTravelProgress(
   return THREE.MathUtils.clamp(
     ((effectiveScrollStart - scrollProgress) / span) *
       carScrollSettings.travelExponent,
+    0,
+    1,
+  );
+}
+
+function getCarTravelProgressFromBoard(
+  scrollProgress: number,
+  boardScrollProgress: number,
+  carScrollStart: number,
+  carScrollEnd: number,
+  sceneFrame: SceneFrame | null,
+) {
+  const effectiveScrollStart = Math.min(
+    carScrollStart,
+    getScrollProgressBounds(sceneFrame).max,
+  );
+  const returnSpanEast = effectiveScrollStart - boardScrollProgress;
+
+  if (scrollProgress > boardScrollProgress) {
+    if (returnSpanEast <= 0.001) {
+      return 1;
+    }
+
+    return THREE.MathUtils.clamp(
+      1 - (scrollProgress - boardScrollProgress) / returnSpanEast,
+      0,
+      1,
+    );
+  }
+
+  if (returnSpanEast > 0.001) {
+    return 1;
+  }
+
+  const returnSpanWest = boardScrollProgress - carScrollEnd;
+  if (returnSpanWest <= 0.001) {
+    return 1;
+  }
+
+  return THREE.MathUtils.clamp(
+    (scrollProgress - carScrollEnd) / returnSpanWest,
     0,
     1,
   );
@@ -510,6 +567,10 @@ export default function CarScrollMovement({
       carTravelProgressRef.current = 0;
       carPassState.boatToCarTransfer = false;
       carPassState.carToBoatTransfer = false;
+      carPassState.carToJetskiTransfer = false;
+      carPassState.jetskiToCarTransfer = false;
+      carPassState.carDockedHandoffX = null;
+      carPassState.carBoardScrollProgress = null;
       carParkedRef.current = false;
       carPassState.scrollCarParked = true;
     };
@@ -581,17 +642,15 @@ export default function CarScrollMovement({
     }
 
     const parkAtJetskiHandoff =
-      !turtleOnCarRef.current &&
-      !turtleOnBoatRef.current &&
-      (turtleOnJetskiRef.current || turtleOnYachtRef.current);
+      carPassState.carToJetskiTransfer ||
+      carPassState.jetskiToCarTransfer ||
+      (!turtleOnCarRef.current &&
+        !turtleOnBoatRef.current &&
+        (turtleOnJetskiRef.current || turtleOnYachtRef.current));
 
     if (parkAtJetskiHandoff) {
       carSessionActiveRef.current = false;
-      rig.carProgress = 1;
-      rig.dockedAtEnd = true;
-      carTravelProgressRef.current = 1;
-      rig.carrier.position.set(rig.trackEndX, rig.baseY, rig.baseZ);
-      rig.lastX = rig.trackEndX;
+      parkCarAtHandoff(rig, carTravelProgressRef);
       carParkedRef.current = true;
       carPassState.scrollCarParked = true;
       return;
@@ -632,12 +691,22 @@ export default function CarScrollMovement({
     carPassState.scrollCarParked = false;
     idleElapsedRef.current = 0;
 
-    rig.carProgress = getCarTravelProgress(
-      progress,
-      rig.carScrollStart,
-      rig.carScrollEnd,
-      sceneFrame,
-    );
+    rig.carProgress =
+      turtleOnCarRef.current &&
+      carPassState.carBoardScrollProgress !== null
+        ? getCarTravelProgressFromBoard(
+            progress,
+            carPassState.carBoardScrollProgress,
+            rig.carScrollStart,
+            rig.carScrollEnd,
+            sceneFrame,
+          )
+        : getCarTravelProgress(
+            progress,
+            rig.carScrollStart,
+            rig.carScrollEnd,
+            sceneFrame,
+          );
 
     if (rig.carProgress >= 0.90) {
       rig.dockedAtEnd = true;
@@ -645,9 +714,14 @@ export default function CarScrollMovement({
       rig.dockedAtEnd = false;
     }
 
+    const routeEndX =
+      carPassState.carBoardScrollProgress !== null
+        ? getCarDockedHandoffX(rig)
+        : rig.trackEndX;
+
     const nextX = THREE.MathUtils.lerp(
       rig.restX,
-      rig.trackEndX,
+      routeEndX,
       rig.carProgress,
     );
 
