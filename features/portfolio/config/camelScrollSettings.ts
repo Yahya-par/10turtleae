@@ -26,6 +26,8 @@ export const camelScrollSettings = {
   transferStartDistanceX: 5.8,
   /** Finish transfer when camel gets this close (X) to boat. */
   transferEndDistanceX: 3.2,
+  /** Scene-1 track fraction before forward turtle transfer (1 = full walk to boat). */
+  scene1HandoffTravelT: 0.995,
   transferArcHeight: 0.9,
   /** Seconds for turtle arc from camel to boat. */
   transferDuration: 1.9,

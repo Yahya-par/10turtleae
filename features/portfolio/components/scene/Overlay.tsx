@@ -8,10 +8,17 @@ type OverlayProps = {
   progress: RefObject<number>;
   scrollBounds: RefObject<ScrollProgressBounds>;
   mode: CameraMode;
+  isHandheld?: boolean;
 };
 
 // Overlay - the overlay component is responsible for the overlay UI of the scene
-export default function Overlay({ isReady, progress, scrollBounds, mode }: OverlayProps) {
+export default function Overlay({
+  isReady,
+  progress,
+  scrollBounds,
+  mode,
+  isHandheld = false,
+}: OverlayProps) {
   const [visible, setVisible] = useState(true);
   const [percent, setPercent] = useState(0);
 
@@ -46,7 +53,11 @@ export default function Overlay({ isReady, progress, scrollBounds, mode }: Overl
 
       {mode === "scroll" && (
         <div className={`portfolio-hint ${visible && isReady ? "is-visible" : ""}`}>
-          <p>scroll / drag up &amp; down to navigate</p>
+          <p>
+            {isHandheld
+              ? "swipe left & right to navigate"
+              : "scroll / drag up & down to navigate"}
+          </p>
         </div>
       )}
 

@@ -43,6 +43,16 @@ body {
   cursor: grabbing;
 }
 
+.portfolio-shell--scroll.portfolio-shell--handheld {
+  touch-action: none;
+  height: 100dvh;
+  min-height: 100dvh;
+}
+
+.portfolio-shell--scroll.portfolio-shell--handheld canvas {
+  touch-action: none;
+}
+
 .portfolio-shell {
   position: fixed;
   inset: 0;
@@ -1830,11 +1840,12 @@ body {
 .fullscreen-notice {
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  z-index: 10000;
   display: grid;
   place-items: center;
   padding: 1.5rem;
-  pointer-events: none;
+  background: rgba(12, 10, 8, 0.42);
+  pointer-events: auto;
 }
 
 .fullscreen-notice__card {
@@ -1849,6 +1860,7 @@ body {
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.42);
   color: #f7eee2;
   text-align: center;
+  pointer-events: auto;
   animation: redirect-modal-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
@@ -1875,7 +1887,17 @@ body {
 
 .fullscreen-notice__button {
   margin-top: 0.55rem;
-  pointer-events: auto;
+}
+
+.fullscreen-notice__dismiss {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: rgba(247, 238, 226, 0.72);
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 @keyframes redirect-modal-fade-in {

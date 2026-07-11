@@ -3,8 +3,45 @@ import { useEffect, useState } from "react";
 export type DeviceType = "mobile" | "tablet" | "desktop";
 
 /** Screen-width breakpoints (px). Rotation is visual only, so innerWidth stays stable. */
-const MOBILE_MAX_WIDTH = 767;
-const TABLET_MAX_WIDTH = 1024;
+export const MOBILE_MAX_WIDTH = 767;
+export const TABLET_MAX_WIDTH = 1024;
+
+/** Mobile or tablet (iPad) — not desktop. */
+export function isHandheldDevice(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const width = window.innerWidth;
+  if (width <= TABLET_MAX_WIDTH) return true;
+
+  const maxTouchPoints = navigator.maxTouchPoints ?? 0;
+  const isIPadOS =
+    navigator.platform === "MacIntel" && maxTouchPoints > 1;
+  const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+
+  // iPad Pro landscape and large touch tablets can exceed 1024px width.
+  if (isIPadOS) return true;
+  if (isCoarsePointer && maxTouchPoints > 0 && width <= 1366) return true;
+
+  return false;
+}
+
+/** Reactive handheld check for layout / fullscreen gates. */
+export function useIsHandheld(): boolean {
+  const [isHandheld, setIsHandheld] = useState(isHandheldDevice);
+
+  useEffect(() => {
+    const update = () => setIsHandheld(isHandheldDevice());
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
+  return isHandheld;
+}
 
 function readDeviceType(): DeviceType {
   if (typeof window === "undefined") return "desktop";

@@ -85,6 +85,7 @@ export default function DesertModel({
   const { scene } = useGLTF(MODEL_PATH);
   const nodes = useMemo(() => buildNodeMap(scene), [scene]);
   const turtleOnBoatRef = useRef(false);
+  const turtleOnScene1CamelRef = useRef(false);
   const boatTravelProgressRef = useRef(0);
   const turtleOnCarRef = useRef(false);
   const carTravelProgressRef = useRef(0);
@@ -128,6 +129,7 @@ export default function DesertModel({
         isScrollLocked={isScrollLocked}
         lerpFactor={lerpFactor}
         turtleOnBoatRef={turtleOnBoatRef}
+        turtleOnScene1CamelRef={turtleOnScene1CamelRef}
         boatTravelProgressRef={boatTravelProgressRef}
         turtleOnCarRef={turtleOnCarRef}
         carTravelProgressRef={carTravelProgressRef}
@@ -149,6 +151,7 @@ export default function DesertModel({
         scrollProgress={scrollProgress}
         targetScrollProgress={targetScrollProgress}
         lerpFactor={lerpFactor}
+        turtleOnScene1CamelRef={turtleOnScene1CamelRef}
       />
       <SafariCamelWalkAnimation
         scene={scene}
