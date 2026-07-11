@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
 import { isJourneyDevMode } from "@features/portfolio/config/journeySettings";
@@ -97,7 +97,47 @@ export default function Experience() {
   const repeatRedirectTimerRef = useRef<number | null>(null);
   const fullscreenNoticeTimerRef = useRef<number | null>(null);
   const wasPortraitRef = useRef(isPortrait);
-  const handheldFullscreenRequestedRef = useRef(false);
+  const initialLandscapeOfferRef = useRef(false);
+
+  useLayoutEffect(() => {
+    initialLandscapeOfferRef.current = false;
+    wasPortraitRef.current = isPortrait;
+  }, []);
+
+  const offerHandheldFullscreen = useCallback(() => {
+    if (!isHandheld || !loaderDone || isPortrait) return;
+
+    const shouldShowIosGuide = isIOSBrowser() && !isStandaloneDisplayMode();
+    setShowIosFullscreenGuide(shouldShowIosGuide);
+    setShowFullscreenNotice(true);
+    setNeedsFullscreenTapRetry(!shouldShowIosGuide);
+
+    if (fullscreenNoticeTimerRef.current) {
+      window.clearTimeout(fullscreenNoticeTimerRef.current);
+      fullscreenNoticeTimerRef.current = null;
+    }
+
+    void requestLandscapeFullscreen()
+      .then((enteredFullscreen) => {
+        if (shouldShowIosGuide) {
+          fullscreenNoticeTimerRef.current = window.setTimeout(() => {
+            setShowFullscreenNotice(false);
+          }, IOS_FULLSCREEN_GUIDE_MS);
+          return;
+        }
+        if (enteredFullscreen) {
+          setNeedsFullscreenTapRetry(false);
+          fullscreenNoticeTimerRef.current = window.setTimeout(() => {
+            setShowFullscreenNotice(false);
+          }, FULLSCREEN_NOTICE_MS);
+          return;
+        }
+        setNeedsFullscreenTapRetry(true);
+      })
+      .catch(() => {
+        setNeedsFullscreenTapRetry(!shouldShowIosGuide);
+      });
+  }, [isHandheld, isPortrait, loaderDone]);
   const handleCanvasPointerDown = useCallback(() => {
     void audioManager.unlock();
     if (!isHandheld || isPortrait) return;
@@ -189,8 +229,12 @@ export default function Experience() {
 
   useEffect(() => {
     const syncWithFullscreenState = () => {
-      if (!isFullscreenActive()) return;
-      setNeedsFullscreenTapRetry(false);
+      if (!isHandheld || !loaderDone || isPortrait) return;
+      if (isFullscreenActive()) {
+        setNeedsFullscreenTapRetry(false);
+        return;
+      }
+      offerHandheldFullscreen();
     };
 
     document.addEventListener("fullscreenchange", syncWithFullscreenState);
@@ -201,26 +245,38 @@ export default function Experience() {
       document.removeEventListener("webkitfullscreenchange", syncWithFullscreenState as EventListener);
       document.removeEventListener("MSFullscreenChange", syncWithFullscreenState as EventListener);
     };
-  }, []);
+  }, [isHandheld, isPortrait, loaderDone, offerHandheldFullscreen]);
 
   useEffect(() => {
-    const handlePageShow = () => {
-      // Back-forward cache can restore the previous React state; force-hide stale modals.
+    const handlePageShow = (event: PageTransitionEvent) => {
       setShowRedirectModal(false);
-      setShowFullscreenNotice(false);
+      initialLandscapeOfferRef.current = false;
+      wasPortraitRef.current = window.matchMedia("(orientation: portrait)").matches;
+
+      if (event.persisted) {
+        setShowFullscreenNotice(false);
+        if (
+          isHandheld &&
+          loaderDone &&
+          !window.matchMedia("(orientation: portrait)").matches
+        ) {
+          offerHandheldFullscreen();
+        }
+      } else {
+        setShowFullscreenNotice(false);
+      }
     };
 
     window.addEventListener("pageshow", handlePageShow);
     return () => {
       window.removeEventListener("pageshow", handlePageShow);
     };
-  }, []);
+  }, [isHandheld, loaderDone, offerHandheldFullscreen]);
 
   useEffect(() => {
     if (!isHandheld || !loaderDone) return;
 
     if (isPortrait) {
-      handheldFullscreenRequestedRef.current = false;
       wasPortraitRef.current = true;
       return;
     }
@@ -228,40 +284,16 @@ export default function Experience() {
     const rotatedToLandscape = wasPortraitRef.current;
     wasPortraitRef.current = false;
 
-    if (handheldFullscreenRequestedRef.current && !rotatedToLandscape) return;
-    handheldFullscreenRequestedRef.current = true;
-
-    const shouldShowIosGuide = isIOSBrowser() && !isStandaloneDisplayMode();
-    setShowIosFullscreenGuide(shouldShowIosGuide);
-    setShowFullscreenNotice(true);
-    setNeedsFullscreenTapRetry(!shouldShowIosGuide);
-
-    if (fullscreenNoticeTimerRef.current) {
-      window.clearTimeout(fullscreenNoticeTimerRef.current);
-      fullscreenNoticeTimerRef.current = null;
+    if (rotatedToLandscape) {
+      offerHandheldFullscreen();
+      return;
     }
 
-    void requestLandscapeFullscreen()
-      .then((enteredFullscreen) => {
-        if (shouldShowIosGuide) {
-          fullscreenNoticeTimerRef.current = window.setTimeout(() => {
-            setShowFullscreenNotice(false);
-          }, IOS_FULLSCREEN_GUIDE_MS);
-          return;
-        }
-        if (enteredFullscreen) {
-          setNeedsFullscreenTapRetry(false);
-          fullscreenNoticeTimerRef.current = window.setTimeout(() => {
-            setShowFullscreenNotice(false);
-          }, FULLSCREEN_NOTICE_MS);
-          return;
-        }
-        setNeedsFullscreenTapRetry(true);
-      })
-      .catch(() => {
-        setNeedsFullscreenTapRetry(!shouldShowIosGuide);
-      });
-  }, [isHandheld, isPortrait, loaderDone]);
+    if (!initialLandscapeOfferRef.current) {
+      initialLandscapeOfferRef.current = true;
+      offerHandheldFullscreen();
+    }
+  }, [isHandheld, isPortrait, loaderDone, offerHandheldFullscreen]);
   const handleTargetOpen = useCallback((target: SceneLinkConfig) => {
     if (target.id !== FINAL_CTA_ID) return true;
 
