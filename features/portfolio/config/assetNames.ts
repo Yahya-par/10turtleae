@@ -60,6 +60,11 @@ export const assetNames = {
     object: "campfire001",
     blenderName: "campfire.001",
   },
+  dunes: {
+    /** Blender: inlanddunes.001 — inland dunes mesh in safari / Lahbab area */
+    inland: "inlanddunes001",
+    inlandBlender: "inlanddunes.001",
+  },
   safari: {
     /** Blender: SafariCamp.001 */
     camp: "SafariCamp001",

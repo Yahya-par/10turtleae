@@ -11,6 +11,13 @@ export type SceneMeshLayerFix = {
   polygonOffsetUnits?: number;
 };
 
+/** Runtime nudge for inlanddunes001 — edit x / y / z and save to preview. */
+export const inlandDunesPositionOffset = {
+  x: 0,
+  y: 0,
+  z: 1,
+} as const;
+
 export const sceneLayerSettings = {
   /**
    * Static scene boards that overlap the scroll-car path need a slight
@@ -25,6 +32,12 @@ export const sceneLayerSettings = {
       renderOrder: 8,
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
+    },
+    {
+      id: "inlandDunes",
+      runtimeName: assetNames.dunes.inland,
+      blenderName: assetNames.dunes.inlandBlender,
+      positionOffset: inlandDunesPositionOffset,
     },
   ] satisfies SceneMeshLayerFix[],
 } as const;
