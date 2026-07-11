@@ -1898,3 +1898,403 @@ body {
   }
 }
 
+/* ── Mac Media loader (loader7) ─────────────────────────────────────────── */
+
+.mac-loader {
+  --loader-sand: #e8d9c0;
+  --loader-sand-deep: #d4b896;
+  --loader-sky: #f4ead8;
+  --loader-ink: #3d3229;
+  --loader-accent: #c97b4f;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  color: var(--loader-ink);
+  background: linear-gradient(
+    180deg,
+    var(--loader-sky) 0%,
+    var(--loader-sand) 52%,
+    var(--loader-sand-deep) 100%
+  );
+  clip-path: inset(0 0 0 0);
+}
+
+.mac-loader::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 45% at 72% 8%, rgba(255, 196, 120, 0.34), transparent 68%),
+    radial-gradient(ellipse 90% 55% at 30% 0%, rgba(255, 230, 190, 0.3), transparent 72%);
+}
+
+.mac-loader--crosshair {
+  cursor: none;
+}
+
+.mac-loader__progress-bar {
+  position: relative;
+  z-index: 4;
+  width: 100%;
+  margin-bottom: clamp(1.25rem, 3vh, 2rem);
+}
+
+.mac-loader__progress-track {
+  position: relative;
+  width: 100%;
+  height: clamp(2.6rem, 5.5vh, 3.4rem);
+  border-radius: 0.7rem;
+  overflow: visible;
+  background: linear-gradient(
+    180deg,
+    #6f6358 0%,
+    #524940 48%,
+    #463e37 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 3px 10px rgba(61, 50, 41, 0.16);
+}
+
+.mac-loader__road-line {
+  position: absolute;
+  left: 0.85rem;
+  right: 0.85rem;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(244, 234, 216, 0.82) 0 16px,
+    transparent 16px 32px
+  );
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mac-loader__progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  border-radius: 0.7rem 0 0 0.7rem;
+  background: linear-gradient(
+    180deg,
+    #8d7763 0%,
+    #725f4f 52%,
+    #655647 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  will-change: width;
+  z-index: 0;
+}
+
+.mac-loader__road-rider {
+  position: absolute;
+  left: 0%;
+  bottom: 0.15rem;
+  width: clamp(4.6rem, 10vw, 6.2rem);
+  transform: translateX(-50%);
+  will-change: left;
+  z-index: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(61, 50, 41, 0.28));
+}
+
+.mac-loader__car {
+  position: relative;
+  width: 100%;
+  animation: mac-loader-car-bob 0.42s ease-in-out infinite alternate;
+}
+
+@keyframes mac-loader-car-bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-2px);
+  }
+}
+
+.mac-loader__car-body {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mac-loader__car-turtle {
+  position: absolute;
+  left: 34%;
+  top: -34%;
+  width: 50%;
+  height: auto;
+  transform: scaleX(-1);
+  z-index: 2;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+.mac-loader__car-wheel {
+  position: absolute;
+  bottom: 10%;
+  width: 17%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #6a5848 0%, #2f2620 72%);
+  border: 2px solid rgba(61, 50, 41, 0.55);
+  animation: mac-loader-wheel-spin 0.75s linear infinite;
+}
+
+.mac-loader__car-wheel--rear {
+  left: 13%;
+}
+
+.mac-loader__car-wheel--front {
+  right: 13%;
+}
+
+@keyframes mac-loader-wheel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mac-loader__car-wheel {
+    animation: none;
+  }
+
+  .mac-loader__car {
+    animation: none;
+  }
+}
+
+.mac-loader__crosshair {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.mac-loader__crosshair-line {
+  position: absolute;
+  background: rgba(61, 50, 41, 0.38);
+  will-change: transform;
+}
+
+.mac-loader__crosshair-line--h {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  transform: translate3d(0, 50vh, 0);
+}
+
+.mac-loader__crosshair-line--v {
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  transform: translate3d(50vw, 0, 0);
+}
+
+.mac-loader__inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: clamp(2rem, 5vh, 3.25rem) clamp(1.25rem, 3vw, 2.5rem)
+    clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.mac-loader__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mac-loader__brand {
+  font-size: clamp(1.15rem, 2.8vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(61, 50, 41, 0.72);
+}
+
+.mac-loader__count-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mac-loader__count {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--loader-ink);
+}
+
+.mac-loader__count-suffix {
+  font-size: clamp(0.95rem, 2vw, 1.2rem);
+  font-weight: 400;
+  color: var(--loader-accent);
+}
+
+.mac-loader__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+  min-height: 0;
+  padding-top: clamp(1rem, 3vh, 2.5rem);
+}
+
+.mac-loader__services {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2.5vh, 1.5rem);
+  min-width: 0;
+}
+
+.mac-loader__label {
+  margin: 0;
+  font-size: clamp(0.72rem, 1.2vw, 0.82rem);
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(61, 50, 41, 0.5);
+}
+
+.mac-loader__service-viewport {
+  --mac-service-row: clamp(5rem, 10vh, 6rem);
+  position: relative;
+  height: calc(var(--mac-service-row) * 3);
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.45) 14%,
+    #000 32%,
+    #000 68%,
+    rgba(0, 0, 0, 0.45) 86%,
+    transparent 100%
+  );
+}
+
+.mac-loader__service-track {
+  margin: 0;
+  padding: var(--mac-service-row) 0 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.45rem, 1.2vh, 0.85rem);
+  will-change: transform;
+}
+
+.mac-loader__service {
+  min-height: calc(var(--mac-service-row) - clamp(0.45rem, 1.2vh, 0.85rem));
+  display: flex;
+  align-items: center;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-size: clamp(0.82rem, 1.75vw, 1.25rem);
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.05;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(61, 50, 41, 0.22);
+  transition:
+    font-size 0.45s ease,
+    font-weight 0.35s ease,
+    letter-spacing 0.35s ease,
+    opacity 0.35s ease,
+    color 0.35s ease,
+    transform 0.35s ease;
+}
+
+.mac-loader__service--active {
+  font-family: var(--font-geist-mono), Consolas, monospace;
+  font-size: clamp(1.85rem, 4.8vw, 3.35rem);
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 0.03em;
+  opacity: 1;
+  color: var(--loader-ink);
+  transform: translateX(0.45rem);
+}
+
+.mac-loader__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+  height: 100%;
+  justify-content: center;
+}
+
+.mac-loader__preview-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: min(62vh, 34rem);
+  margin-inline: auto;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.mac-loader__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0;
+  transform: scale(0.96);
+  will-change: opacity, transform;
+  user-select: none;
+  pointer-events: none;
+}
+
+.mac-loader__image[data-index="0"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (max-width: 900px) {
+  .mac-loader__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    gap: 1.5rem;
+  }
+
+  .mac-loader__service {
+    font-size: clamp(0.78rem, 3.6vw, 1.05rem);
+  }
+
+  .mac-loader__service--active {
+    font-size: clamp(1.45rem, 7vw, 2.15rem);
+  }
+
+  .mac-loader__preview-frame {
+    max-height: 42vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mac-loader__service {
+    transition: none;
+  }
+}
+

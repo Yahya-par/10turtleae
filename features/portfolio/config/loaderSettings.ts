@@ -4,8 +4,9 @@ export type LoaderType =
   | 'loader3'
   | 'loader4'
   | 'loader5'
-  | 'loader6';
+  | 'loader6'
+  | 'loader7';
 
 export const loaderSettings = {
-  activeLoader: 'loader4' as LoaderType,
+  activeLoader: 'loader7' as LoaderType,
 } as const; 

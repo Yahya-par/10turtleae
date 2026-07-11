@@ -79,8 +79,12 @@ export default function Experience() {
     cameraSettings.mode === "scroll",
   );
   const [isReady, setIsReady] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
   const [loaderDone, setLoaderDone] = useState(false);
   const handleLoaderComplete = useCallback(() => setLoaderDone(true), []);
+  const handleLoadProgress = useCallback((progress: number) => {
+    setLoadProgress(progress);
+  }, []);
   const { isMuted, toggleMute } = usePortfolioAudio(loaderDone);
   const [orbitPose, setOrbitPose] = useState({
     position: { ...cameraSettings.orbit.position },
@@ -311,6 +315,7 @@ export default function Experience() {
         <Scene
           {...navigation}
           onReady={() => setIsReady(true)}
+          onLoadProgress={handleLoadProgress}
           onOrbitPoseChange={setOrbitPose}
           onTargetOpen={handleTargetOpen}
         />
@@ -318,6 +323,7 @@ export default function Experience() {
       {!loaderDone && (
         <LoaderSelector
           isAssetsReady={isReady}
+          loadProgress={loadProgress}
           onComplete={handleLoaderComplete}
         />
       )}

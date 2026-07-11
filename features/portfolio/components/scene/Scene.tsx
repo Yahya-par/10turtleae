@@ -11,6 +11,7 @@ import type { useScrollNavigation } from "@features/portfolio/hooks/useScrollNav
 
 type SceneProps = ReturnType<typeof useScrollNavigation> & {
   onReady: () => void;
+  onLoadProgress?: (progress: number) => void;
   onOrbitPoseChange: (pose: {
     position: { x: number; y: number; z: number };
     lookAt: { x: number; y: number; z: number };
@@ -20,8 +21,18 @@ type SceneProps = ReturnType<typeof useScrollNavigation> & {
 };
 
 // LoadingTracker - the loading tracker component is responsible for the loading tracker UI of the scene
-function LoadingTracker({ onReady }: { onReady: () => void }) {
-  const { active } = useProgress();
+function LoadingTracker({
+  onReady,
+  onLoadProgress,
+}: {
+  onReady: () => void;
+  onLoadProgress?: (progress: number) => void;
+}) {
+  const { active, progress } = useProgress();
+
+  useEffect(() => {
+    onLoadProgress?.(progress);
+  }, [onLoadProgress, progress]);
 
   useEffect(() => {
     if (!active) onReady();
@@ -37,6 +48,7 @@ export default function Scene({
   isScrollLocked,
   lerpFactor,
   onReady,
+  onLoadProgress,
   onOrbitPoseChange,
   onTargetOpen,
 }: SceneProps) {
@@ -85,7 +97,7 @@ export default function Scene({
       )}
 
       <Suspense fallback={null}>
-        <LoadingTracker onReady={onReady} />
+        <LoadingTracker onReady={onReady} onLoadProgress={onLoadProgress} />
         <DesertModel
           onFrameReady={handleFrameReady}
           sceneFrame={sceneFrame}

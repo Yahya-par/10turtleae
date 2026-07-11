@@ -5,9 +5,11 @@ import FreakyLoader from "./FreakyLoader";
 import SpyltLoader from "./SpyltLoader";
 import AuroraLoader from "./AuroraLoader";
 import DonLoader from "./DonLoader";
+import MacMediaLoader from "./MacMediaLoader";
 
 type LoaderSelectorProps = {
   isAssetsReady: boolean;
+  loadProgress: number;
   onComplete: () => void;
 };
 
@@ -17,9 +19,16 @@ type LoaderSelectorProps = {
  */
 export default function LoaderSelector({
   isAssetsReady,
+  loadProgress,
   onComplete,
 }: LoaderSelectorProps) {
   const { activeLoader } = loaderSettings;
+
+  if (activeLoader === "loader7") {
+    return (
+      <MacMediaLoader isAssetsReady={isAssetsReady} onComplete={onComplete} />
+    );
+  }
 
   if (activeLoader === "loader6") {
     return <DonLoader isAssetsReady={isAssetsReady} onComplete={onComplete} />;
