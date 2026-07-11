@@ -289,11 +289,10 @@ export function resolveScene1CamelTrack(
     const meetGap = options.camelBoatMeetGap ?? 1.0;
     // Camel walks east → west; stop east of the boat (still in scene 1 desert).
     const meetX = boatBounds.max.x + meetGap;
-    if (!sceneEndPanel) {
-      // Unified floor spans the whole diorama — cap at the boat handoff, not floor min X.
-      westLimit = Math.max(westLimit, meetX);
-    }
-    endX = THREE.MathUtils.clamp(meetX, westLimit, startX - 0.05);
+    // Panel westLimit uses max.x + inset and can sit east of the boat — never shorten
+    // the walk when the authored panel boundary is farther from the dock than meetX.
+    const trackMinX = Math.min(westLimit, meetX);
+    endX = THREE.MathUtils.clamp(meetX, trackMinX, startX - 0.05);
   }
 
   const progressAtStart = getScrollProgressAtX(startX, scrollRange);
@@ -322,6 +321,20 @@ export function getScene1TravelProgress(
     0,
     1,
   );
+}
+
+/** Inverse of getScene1WorldX — map carrier world X back to scroll progress. */
+export function getScene1ScrollProgressFromWorldX(
+  worldX: number,
+  track: Pick<Scene1CamelTrack, "startX" | "endX" | "progressAtStart" | "progressAtEnd">,
+) {
+  const trackSpan = track.endX - track.startX;
+  const travelT =
+    Math.abs(trackSpan) <= 1e-6
+      ? 1
+      : THREE.MathUtils.clamp((worldX - track.startX) / trackSpan, 0, 1);
+  const progressSpan = track.progressAtStart - track.progressAtEnd;
+  return track.progressAtStart - travelT * progressSpan;
 }
 
 export function getScene1WorldX(

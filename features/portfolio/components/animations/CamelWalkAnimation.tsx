@@ -17,6 +17,7 @@ type CamelWalkAnimationProps = {
   scrollProgress: RefObject<number>;
   targetScrollProgress: RefObject<number>;
   lerpFactor: number;
+  turtleOnScene1CamelRef: RefObject<boolean>;
 };
 
 type LegRig = {
@@ -467,10 +468,12 @@ export default function CamelWalkAnimation({
   scrollProgress,
   targetScrollProgress,
   lerpFactor,
+  turtleOnScene1CamelRef,
 }: CamelWalkAnimationProps) {
   const rigRef = useRef<WalkRig | null>(null);
   const walkPhaseRef = useRef(0);
   const lastCarrierWorldXRef = useRef<number | null>(null);
+  const wasWalkingRef = useRef(false);
   const retryTimerRef = useRef(0);
   const mountAttemptsRef = useRef(0);
   const warnedRef = useRef(false);
@@ -479,6 +482,7 @@ export default function CamelWalkAnimation({
     rigRef.current = null;
     walkPhaseRef.current = 0;
     lastCarrierWorldXRef.current = null;
+    wasWalkingRef.current = false;
     mountAttemptsRef.current = 0;
     warnedRef.current = false;
   }, [scene, nodes, sceneFrame]);
@@ -536,6 +540,16 @@ export default function CamelWalkAnimation({
     if (!carrier) return;
 
     const carrierWorldX = getCarrierWorldX(carrier);
+    const mayAnimateLegs = turtleOnScene1CamelRef.current;
+
+    if (!mayAnimateLegs) {
+      lastCarrierWorldXRef.current = carrierWorldX;
+      walkPhaseRef.current = 0;
+      wasWalkingRef.current = false;
+      applySwing(rig, 0, false);
+      return;
+    }
+
     const lastCarrierWorldX = lastCarrierWorldXRef.current ?? carrierWorldX;
     const carrierWorldDelta = carrierWorldX - lastCarrierWorldX;
     lastCarrierWorldXRef.current = carrierWorldX;
@@ -551,8 +565,11 @@ export default function CamelWalkAnimation({
         camelWalkSettings.walkCyclesPerScene *
         Math.PI *
         2;
+    } else if (wasWalkingRef.current) {
+      walkPhaseRef.current = 0;
     }
 
+    wasWalkingRef.current = isWalking;
     applySwing(rig, walkPhaseRef.current, isWalking);
   });
 
