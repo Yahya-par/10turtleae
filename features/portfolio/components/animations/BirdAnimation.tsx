@@ -7,6 +7,7 @@ import { birdAnimationSettings } from "../../config/birdAnimationSettings";
 import { getScene1BirdFlightBounds } from "../../utils/sceneObjectUtils";
 
 type BirdConfig = (typeof birdAnimationSettings.birds)[number];
+type BannerCarrierConfig = (typeof birdAnimationSettings)["bannerCarriers"];
 
 type FlightBounds = {
   minX: number;
@@ -31,6 +32,23 @@ type BirdRig = {
   flapSpeed: number;
 };
 
+type BannerCarrierRig = {
+  root: THREE.Group;
+  leftOrient: THREE.Group;
+  rightOrient: THREE.Group;
+  leftWingPivot: THREE.Group;
+  rightWingPivot: THREE.Group;
+  banner: THREE.Mesh;
+  lapDuration: number;
+  phaseOffset: number;
+  heightOffset: number;
+  z: number;
+  bobAmplitude: number;
+  bobSpeed: number;
+  zDrift: number;
+  flapSpeed: number;
+};
+
 type BirdAnimationProps = {
   scene: THREE.Object3D;
   nodes: Record<string, THREE.Object3D>;
@@ -39,12 +57,19 @@ type BirdAnimationProps = {
 function getFlightBounds(
   scene: THREE.Object3D,
   nodes: Record<string, THREE.Object3D>,
+  patrolInset: number = birdAnimationSettings.pathInset,
 ) {
   return getScene1BirdFlightBounds(
     scene,
     nodes,
     birdAnimationSettings.openingFloor,
     birdAnimationSettings.pathInset,
+    0.4,
+    {
+      objectName: birdAnimationSettings.patrolZoneObject,
+      blenderName: birdAnimationSettings.patrolZoneBlender,
+      inset: patrolInset,
+    },
   );
 }
 
@@ -91,29 +116,157 @@ function createHalfWingGeometry(mirror: boolean) {
   return new THREE.ShapeGeometry(shape, 8);
 }
 
-function createBirdRig(index: number, config: BirdConfig): BirdRig {
-  const root = new THREE.Group();
-  root.name = `Bird_${index + 1}`;
-  root.scale.setScalar(config.scale);
-
-  const orient = new THREE.Group();
-  const leftWingPivot = new THREE.Group();
-  const rightWingPivot = new THREE.Group();
-
-  const material = new THREE.MeshBasicMaterial({
+function createBirdMaterial() {
+  return new THREE.MeshBasicMaterial({
     color: birdAnimationSettings.birdColor,
     transparent: true,
     opacity: 0.98,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
+}
 
+function addWingPair(orient: THREE.Group, material: THREE.Material) {
+  const leftWingPivot = new THREE.Group();
+  const rightWingPivot = new THREE.Group();
   const leftWing = new THREE.Mesh(createHalfWingGeometry(false), material);
   const rightWing = new THREE.Mesh(createHalfWingGeometry(true), material);
 
   leftWingPivot.add(leftWing);
   rightWingPivot.add(rightWing);
   orient.add(leftWingPivot, rightWingPivot);
+
+  return { leftWingPivot, rightWingPivot };
+}
+
+function createBannerTexture(config: BannerCarrierConfig) {
+  const canvas = document.createElement("canvas");
+  const width = 1024;
+  const height = 256;
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("[BirdAnimation] Failed to create banner canvas context");
+  }
+
+  const gradient = context.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, config.bannerColor);
+  gradient.addColorStop(0.55, config.bannerColor);
+  gradient.addColorStop(1, config.bannerColorDark);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+
+  context.strokeStyle = config.trimColor;
+  context.lineWidth = 5;
+  context.beginPath();
+  context.moveTo(0, 10);
+  context.lineTo(width, 10);
+  context.moveTo(0, height - 10);
+  context.lineTo(width, height - 10);
+  context.stroke();
+
+  context.globalAlpha = 0.05;
+  for (let i = 0; i < 900; i += 1) {
+    context.fillStyle = i % 2 === 0 ? "#000000" : "#ffffff";
+    context.fillRect(
+      Math.random() * width,
+      Math.random() * height,
+      1 + Math.random(),
+      1,
+    );
+  }
+  context.globalAlpha = 1;
+
+  context.fillStyle = config.textColor;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+
+  let fontSize = Math.floor(height * 0.4);
+  const fontFamily = config.textFontFamily;
+  do {
+    context.font = `600 ${fontSize}px ${fontFamily}`;
+    fontSize -= 2;
+  } while (fontSize > 28 && context.measureText(config.text).width > width * 0.88);
+
+  context.font = `600 ${fontSize}px ${fontFamily}`;
+  context.shadowColor = "rgba(42, 16, 22, 0.45)";
+  context.shadowBlur = 6;
+  context.shadowOffsetY = 2;
+  context.fillText(config.text, width * 0.5, height * 0.53);
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+  context.shadowOffsetY = 0;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  return texture;
+}
+
+function createBannerCarrierRig(config: BannerCarrierConfig): BannerCarrierRig {
+  const root = new THREE.Group();
+  root.name = "BannerCarrierUnit";
+
+  const birdMaterial = createBirdMaterial();
+  const halfSpacing = config.birdSpacing * 0.5;
+
+  const leftOrient = new THREE.Group();
+  leftOrient.position.set(-halfSpacing, 0, 0);
+  leftOrient.scale.setScalar(config.birdScale);
+  const leftWings = addWingPair(leftOrient, birdMaterial);
+
+  const rightOrient = new THREE.Group();
+  rightOrient.position.set(halfSpacing, 0, 0);
+  rightOrient.scale.setScalar(config.birdScale);
+  const rightWings = addWingPair(rightOrient, birdMaterial);
+
+  const bannerTexture = createBannerTexture(config);
+  const banner = new THREE.Mesh(
+    new THREE.PlaneGeometry(config.bannerWidth, config.bannerHeight),
+    new THREE.MeshBasicMaterial({
+      map: bannerTexture,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  banner.position.y = -config.bannerDrop;
+  banner.renderOrder = 21;
+
+  root.add(leftOrient, rightOrient, banner);
+
+  return {
+    root,
+    leftOrient,
+    rightOrient,
+    leftWingPivot: leftWings.leftWingPivot,
+    rightWingPivot: rightWings.rightWingPivot,
+    banner,
+    lapDuration: config.lapDuration,
+    phaseOffset: config.phaseOffset,
+    heightOffset: config.heightOffset,
+    z: config.z,
+    bobAmplitude: config.bobAmplitude,
+    bobSpeed: config.bobSpeed,
+    zDrift: config.zDrift,
+    flapSpeed: config.flapSpeed,
+  };
+}
+
+function createBirdRig(index: number, config: BirdConfig): BirdRig {
+  const root = new THREE.Group();
+  root.name = `Bird_${index + 1}`;
+  root.scale.setScalar(config.scale);
+
+  const orient = new THREE.Group();
+  const { leftWingPivot, rightWingPivot } = addWingPair(
+    orient,
+    createBirdMaterial(),
+  );
   root.add(orient);
 
   return {
@@ -140,8 +293,30 @@ function faceCamera(orient: THREE.Group, camera: THREE.Camera) {
   orient.rotation.set(0, Math.atan2(dx, dz), 0);
 }
 
+type FlightActor = {
+  root: THREE.Group;
+  lapDuration: number;
+  phaseOffset: number;
+  heightOffset: number;
+  z: number;
+  bobAmplitude: number;
+  bobSpeed: number;
+  zDrift: number;
+};
+
+function disposeBannerCarrier(rig: BannerCarrierRig | null) {
+  if (!rig) return;
+
+  const bannerMaterial = rig.banner.material;
+  if (bannerMaterial instanceof THREE.MeshBasicMaterial) {
+    bannerMaterial.map?.dispose();
+    bannerMaterial.dispose();
+  }
+  rig.banner.geometry.dispose();
+}
+
 function updateBirdFlight(
-  bird: BirdRig,
+  bird: FlightActor,
   bounds: FlightBounds,
   elapsed: number,
 ) {
@@ -182,6 +357,13 @@ function mountBirdFlock(
   const bounds = getFlightBounds(scene, nodes);
   if (!bounds) return null;
 
+  const bannerBounds =
+    getFlightBounds(
+      scene,
+      nodes,
+      birdAnimationSettings.bannerCarriers.patrolInset,
+    ) ?? bounds;
+
   const flock = new THREE.Group();
   flock.name = "Scene1BirdFlock";
   flock.renderOrder = 20;
@@ -193,19 +375,27 @@ function mountBirdFlock(
     return rig;
   });
 
+  const bannerCarrier = createBannerCarrierRig(
+    birdAnimationSettings.bannerCarriers,
+  );
+  flock.add(bannerCarrier.root);
+
   if (process.env.NODE_ENV === "development") {
     console.info("[BirdAnimation] Ready:", {
       count: birds.length,
+      bannerCarriers: 1,
       bounds,
     });
   }
 
-  return { flock, birds, bounds };
+  return { flock, birds, bannerCarrier, bounds, bannerBounds };
 }
 
 export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
   const birdsRef = useRef<BirdRig[]>([]);
+  const bannerCarrierRef = useRef<BannerCarrierRig | null>(null);
   const boundsRef = useRef<FlightBounds | null>(null);
+  const bannerBoundsRef = useRef<FlightBounds | null>(null);
   const flockRef = useRef<THREE.Group | null>(null);
   const elapsedRef = useRef(0);
   const retryTimerRef = useRef(0);
@@ -216,7 +406,9 @@ export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
     scene.getObjectByName("Scene1BirdFlock")?.removeFromParent();
 
     birdsRef.current = [];
+    bannerCarrierRef.current = null;
     boundsRef.current = null;
+    bannerBoundsRef.current = null;
     flockRef.current = null;
     retryTimerRef.current = 0;
     mountAttemptsRef.current = 0;
@@ -227,18 +419,23 @@ export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
 
     flockRef.current = mounted.flock;
     birdsRef.current = mounted.birds;
+    bannerCarrierRef.current = mounted.bannerCarrier;
     boundsRef.current = mounted.bounds;
+    bannerBoundsRef.current = mounted.bannerBounds;
 
     return () => {
+      disposeBannerCarrier(mounted.bannerCarrier);
       mounted.flock.removeFromParent();
       flockRef.current = null;
       birdsRef.current = [];
+      bannerCarrierRef.current = null;
       boundsRef.current = null;
+      bannerBoundsRef.current = null;
     };
   }, [scene, nodes]);
 
   useFrame((state, delta) => {
-    if (!birdsRef.current.length) {
+    if (!flockRef.current) {
       retryTimerRef.current += delta;
       if (retryTimerRef.current < 0.15) return;
 
@@ -264,12 +461,16 @@ export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
 
       flockRef.current = mounted.flock;
       birdsRef.current = mounted.birds;
+      bannerCarrierRef.current = mounted.bannerCarrier;
       boundsRef.current = mounted.bounds;
+      bannerBoundsRef.current = mounted.bannerBounds;
       return;
     }
 
     const bounds = boundsRef.current;
+    const bannerBounds = bannerBoundsRef.current;
     const birds = birdsRef.current;
+    const bannerCarrier = bannerCarrierRef.current;
     if (!bounds || !birds.length) return;
 
     elapsedRef.current += delta;
@@ -295,6 +496,22 @@ export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
       );
       bird.leftWingPivot.rotation.z = flapAngle;
       bird.rightWingPivot.rotation.z = -flapAngle;
+    }
+
+    if (bannerCarrier && bannerBounds) {
+      updateBirdFlight(bannerCarrier, bannerBounds, elapsed);
+      faceCamera(bannerCarrier.root, state.camera);
+
+      const flapAngle = getFlapAngle(
+        elapsed,
+        bannerCarrier.flapSpeed,
+        bannerCarrier.phaseOffset,
+        wingUpAngle,
+        wingDownAngle,
+        downstrokePortion,
+      );
+      bannerCarrier.leftWingPivot.rotation.z = flapAngle;
+      bannerCarrier.rightWingPivot.rotation.z = -flapAngle;
     }
   });
 

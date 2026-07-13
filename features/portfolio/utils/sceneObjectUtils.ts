@@ -472,7 +472,7 @@ export type Scene1BirdFlightBounds = {
 
 /**
  * World-space patrol box for scene 1 birds (scroll-independent).
- * East = opening floor, west capped at scene 2 start.
+ * When patrolZone is set, X is clamped to that mesh only (e.g. Perfect_Buildings).
  */
 export function getScene1BirdFlightBounds(
   scene: THREE.Object3D,
@@ -480,6 +480,11 @@ export function getScene1BirdFlightBounds(
   openingFloorName: string,
   pathInset: number,
   zInset = 0.4,
+  patrolZone?: {
+    objectName: string;
+    blenderName?: string;
+    inset?: number;
+  },
 ): Scene1BirdFlightBounds | null {
   const floor =
     findSceneObject(
@@ -493,8 +498,23 @@ export function getScene1BirdFlightBounds(
   if (!floor) return null;
 
   const floorWorld = getObjectBounds(floor);
-  const minX = floorWorld.min.x + pathInset;
-  const maxX = floorWorld.max.x - pathInset;
+  let minX = floorWorld.min.x + pathInset;
+  let maxX = floorWorld.max.x - pathInset;
+
+  if (patrolZone) {
+    const zoneObject = findSceneObject(
+      scene,
+      nodes,
+      patrolZone.objectName,
+      patrolZone.blenderName,
+    );
+    if (!zoneObject) return null;
+
+    const zone = getObjectBounds(zoneObject);
+    const inset = patrolZone.inset ?? pathInset;
+    minX = zone.min.x + inset;
+    maxX = zone.max.x - inset;
+  }
 
   if (minX >= maxX) return null;
 

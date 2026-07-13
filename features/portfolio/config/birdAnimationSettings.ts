@@ -7,6 +7,10 @@ export const birdAnimationSettings = {
   /** Inset from scene 1 entrance / exit (world X). */
   pathInset: 1.8,
 
+  /** Birds only patrol over this scene — not the opening dunes (east) or later scenes (west). */
+  patrolZoneObject: assetNames.perfectBuildings.object,
+  patrolZoneBlender: assetNames.perfectBuildings.blenderName,
+
   /** Simple black gull silhouette. */
   birdColor: "#6F4E37",
 
@@ -72,4 +76,29 @@ export const birdAnimationSettings = {
       flapSpeed: 4.9,
     },
   ],
+
+  /** Two birds flying in formation with a shared banner between them. */
+  bannerCarriers: {
+    text: "Brands people line up for.",
+    bannerColor: "#7B2D3B",
+    bannerColorDark: "#5A2230",
+    textColor: "#F7F0E8",
+    trimColor: "#C9A66B",
+    textFontFamily: 'Georgia, "Times New Roman", serif',
+    bannerWidth: 3.4,
+    bannerHeight: 0.62,
+    birdSpacing: 3.9,
+    bannerDrop: 0.42,
+    birdScale: 0.9,
+    /** Tighter inset — banner formation stays over Perfect_Buildings only. */
+    patrolInset: 1.2,
+    lapDuration: 52,
+    phaseOffset: 14,
+    heightOffset: 5.8,
+    z: 0.2,
+    bobAmplitude: 0.08,
+    bobSpeed: 1.15,
+    zDrift: 0.14,
+    flapSpeed: 4.5,
+  },
 } as const;
