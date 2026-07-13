@@ -47,7 +47,10 @@ export const dubaiFrameBannerSettings = {
   frameCenterXPadding: 2.8,
 
   unrollDuration: 3.4,
-  renderOrder: 32,
+  /** Banner draw order — keep below foregroundActorRenderOrder. */
+  renderOrder: 4,
+  /** Car + turtle draw above the banner while it is visible. */
+  foregroundActorRenderOrder: 40,
   carrierName: "DubaiFrameBannerRoll001",
   contentImageUrl: null as string | null,
 

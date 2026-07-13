@@ -48,6 +48,7 @@ type BannerRig = {
 
 const settings = dubaiFrameBannerSettings;
 const tempActorPos = new THREE.Vector3();
+const foregroundRenderRestore = new WeakMap<THREE.Object3D, number>();
 
 function easeOutCubic(t: number) {
   return 1 - (1 - t) ** 3;
@@ -195,9 +196,30 @@ function createBannerMaterial(texture: THREE.Texture, tint?: THREE.Color) {
     color: tint ?? new THREE.Color(0xffffff),
     side: THREE.DoubleSide,
     toneMapped: false,
-    depthTest: false,
+    depthTest: true,
     depthWrite: false,
     transparent: true,
+  });
+}
+
+function setSubtreeRenderOrder(root: THREE.Object3D | null | undefined, order: number) {
+  if (!root) return;
+  root.traverse((child) => {
+    if (!foregroundRenderRestore.has(child)) {
+      foregroundRenderRestore.set(child, child.renderOrder);
+    }
+    child.renderOrder = order;
+  });
+}
+
+function restoreSubtreeRenderOrder(root: THREE.Object3D | null | undefined) {
+  if (!root) return;
+  root.traverse((child) => {
+    const previous = foregroundRenderRestore.get(child);
+    if (previous !== undefined) {
+      child.renderOrder = previous;
+      foregroundRenderRestore.delete(child);
+    }
   });
 }
 
@@ -350,6 +372,7 @@ export default function DubaiFrameBannerRoll({
 }: DubaiFrameBannerRollProps) {
   const { camera } = useThree();
   const rigRef = useRef<BannerRig | null>(null);
+  const carCarrierRef = useRef<THREE.Object3D | null>(null);
   const arrivedRef = useRef(false);
   const animatingRef = useRef(false);
   const elapsedRef = useRef(0);
@@ -379,6 +402,7 @@ export default function DubaiFrameBannerRoll({
     const texture = createDubaiFrameBannerPlaceholderTexture();
     const rig = buildBannerRig(scene, opening, texture);
     rigRef.current = rig;
+    carCarrierRef.current = resolveCarCarrier(scene, nodes);
 
     if (
       shouldRollBanner(
@@ -417,6 +441,8 @@ export default function DubaiFrameBannerRoll({
       rig.flatMaterial.dispose();
       rig.rollMaterial.dispose();
       rig.texture.dispose();
+      restoreSubtreeRenderOrder(carCarrierRef.current);
+      carCarrierRef.current = null;
       rigRef.current = null;
     };
   }, [
@@ -474,6 +500,14 @@ export default function DubaiFrameBannerRoll({
     }
 
     updateBannerGeometry(rig, unrollRef.current);
+
+    const bannerVisible = rig.root.visible && unrollRef.current > 0.001;
+    const carCarrier = carCarrierRef.current ?? resolveCarCarrier(scene, nodes);
+    if (bannerVisible) {
+      setSubtreeRenderOrder(carCarrier, settings.foregroundActorRenderOrder);
+    } else {
+      restoreSubtreeRenderOrder(carCarrier);
+    }
   });
 
   return null;
