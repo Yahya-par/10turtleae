@@ -17,8 +17,11 @@ type SkyBounds = {
   maxY: number;
 };
 
+type BannerStyle = (typeof lanternAnimationSettings)["banner"];
+
 type LanternRig = {
   root: THREE.Group;
+  configIndex: number;
   paper: THREE.Mesh;
   topCap: THREE.Mesh;
   paperMaterial: THREE.ShaderMaterial;
@@ -27,6 +30,8 @@ type LanternRig = {
   flameOuter: THREE.Mesh;
   flameCore: THREE.Mesh;
   halo: THREE.Mesh;
+  banner: THREE.Sprite;
+  stringMesh: THREE.Mesh;
   baseX: number;
   baseY: number;
   baseZ: number;
@@ -320,6 +325,118 @@ function createLanternBottomRimGeometry() {
   return geometry;
 }
 
+function measureVerticalLabelHeight(
+  context: CanvasRenderingContext2D,
+  label: string,
+  fontSize: number,
+) {
+  const letterSpacing = fontSize * 1.08;
+  const chars = label.replace(/\s+/g, "").split("");
+  return chars.length * letterSpacing;
+}
+
+function createVerticalBannerTexture(label: string, style: BannerStyle) {
+  const canvas = document.createElement("canvas");
+  const width = 384;
+  const height = 1024;
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("[LanternAnimation] Failed to create banner canvas context");
+  }
+
+  const gradient = context.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, style.background);
+  gradient.addColorStop(0.55, style.background);
+  gradient.addColorStop(1, style.backgroundDark);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+
+  const trimInset = 16;
+  context.strokeStyle = style.trimColor;
+  context.lineWidth = 8;
+  context.strokeRect(trimInset, trimInset, width - trimInset * 2, height - trimInset * 2);
+
+  context.fillStyle = style.textColor;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+
+  const compactLabel = label.replace(/\s+/g, "");
+  let fontSize = Math.floor(width * 0.58);
+  do {
+    context.font = `700 ${fontSize}px ${style.textFontFamily}`;
+    fontSize -= 1;
+  } while (
+    fontSize > 22 &&
+    measureVerticalLabelHeight(context, compactLabel, fontSize) >
+      height * 0.84
+  );
+
+  context.font = `700 ${fontSize}px ${style.textFontFamily}`;
+
+  const letterSpacing = fontSize * 1.06;
+  const chars = compactLabel.split("");
+  const totalHeight = chars.length * letterSpacing;
+  let y = height * 0.5 - totalHeight * 0.5 + letterSpacing * 0.5;
+
+  for (const char of chars) {
+    context.fillText(char, width * 0.5, y);
+    y += letterSpacing;
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createLanternBannerRig(
+  config: LanternConfig,
+  lanternWorldHeight: number,
+) {
+  const style = lanternAnimationSettings.banner;
+  const hang = new THREE.Group();
+  hang.position.y = -lanternWorldHeight * 0.5 - style.gapBelowLantern;
+  hang.frustumCulled = false;
+
+  const stringMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(style.stringRadius, style.stringRadius, style.stringLength, 8),
+    new THREE.MeshBasicMaterial({
+      color: style.stringColor,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+  );
+  stringMesh.position.y = -style.stringLength * 0.5;
+  stringMesh.frustumCulled = false;
+  stringMesh.renderOrder = style.renderOrder;
+
+  const bannerTexture = createVerticalBannerTexture(config.service, style);
+  const banner = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: bannerTexture,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+  );
+  banner.center.set(0.5, 1);
+  banner.position.y = -style.stringLength;
+  banner.scale.set(style.width, style.height, 1);
+  banner.frustumCulled = false;
+  banner.renderOrder = style.renderOrder;
+
+  hang.add(stringMesh, banner);
+
+  return { hang, banner, stringMesh };
+}
+
 function createPaperMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: paperVertexShader,
@@ -334,7 +451,7 @@ function createPaperMaterial() {
   });
 }
 
-function createLanternRig(config: LanternConfig): LanternRig {
+function createLanternRig(config: LanternConfig, configIndex: number): LanternRig {
   const {
     bodyHeight,
     flameColor,
@@ -348,8 +465,11 @@ function createLanternRig(config: LanternConfig): LanternRig {
 
   const root = new THREE.Group();
   const uniform = config.scale * sizeScale;
-  root.scale.set(uniform * widthScale, uniform * heightScale, uniform * widthScale);
-  root.frustumCulled = false;
+  const lanternWorldHeight = bodyHeight * uniform * heightScale;
+
+  const lanternScaled = new THREE.Group();
+  lanternScaled.scale.set(uniform * widthScale, uniform * heightScale, uniform * widthScale);
+  lanternScaled.frustumCulled = false;
 
   const paperMaterial = createPaperMaterial();
   const paper = new THREE.Mesh(createLanternBodyGeometry(bodyHeight), paperMaterial);
@@ -430,10 +550,16 @@ function createLanternRig(config: LanternConfig): LanternRig {
   halo.frustumCulled = false;
   halo.renderOrder = 11;
 
-  root.add(paper, topCap, bottomRim, flame, halo);
+  lanternScaled.add(paper, topCap, bottomRim, flame, halo);
+
+  const { hang, banner, stringMesh } = createLanternBannerRig(config, lanternWorldHeight);
+
+  root.frustumCulled = false;
+  root.add(lanternScaled, hang);
 
   return {
     root,
+    configIndex,
     paper,
     topCap,
     paperMaterial,
@@ -442,6 +568,8 @@ function createLanternRig(config: LanternConfig): LanternRig {
     flameOuter,
     flameCore,
     halo,
+    banner,
+    stringMesh,
     baseX: 0,
     baseY: 0,
     baseZ: 0,
@@ -460,28 +588,43 @@ function getFlicker(elapsed: number, phase: number) {
   );
 }
 
-function placeLantern(rig: LanternRig, bounds: SkyBounds, config: LanternConfig) {
-  const x = THREE.MathUtils.lerp(bounds.minX, bounds.maxX, config.u);
-  const z = THREE.MathUtils.lerp(bounds.minZ, bounds.maxZ, config.v);
-  const y = THREE.MathUtils.lerp(bounds.minY, bounds.maxY, config.h);
-
-  rig.baseX = x;
-  rig.baseY = y;
-  rig.baseZ = z;
-  rig.root.position.set(x, y, z);
+function syncLanternBasePosition(
+  rig: LanternRig,
+  bounds: SkyBounds,
+  config: LanternConfig,
+) {
+  rig.baseX = THREE.MathUtils.lerp(bounds.minX, bounds.maxX, config.u);
+  rig.baseZ = THREE.MathUtils.lerp(bounds.minZ, bounds.maxZ, config.v);
+  rig.baseY = THREE.MathUtils.lerp(bounds.minY, bounds.maxY, config.h);
+  rig.sway = config.sway;
+  rig.bob = config.bob;
+  rig.phase = config.phase;
 }
 
-function updateLantern(rig: LanternRig, elapsed: number) {
+function placeLantern(rig: LanternRig, bounds: SkyBounds, config: LanternConfig) {
+  syncLanternBasePosition(rig, bounds, config);
+  rig.root.position.set(rig.baseX, rig.baseY, rig.baseZ);
+}
+
+function updateLantern(
+  rig: LanternRig,
+  elapsed: number,
+  bounds: SkyBounds | null,
+) {
+  if (bounds) {
+    const config = lanternAnimationSettings.lanterns[rig.configIndex];
+    if (config) syncLanternBasePosition(rig, bounds, config);
+  }
+
   const flicker = getFlicker(elapsed, rig.phase);
   const swayX = Math.sin(elapsed * 0.55 + rig.phase) * rig.sway;
   const swayZ = Math.cos(elapsed * 0.42 + rig.phase * 1.2) * rig.sway * 0.7;
   const bob = Math.sin(elapsed * 0.85 + rig.phase * 0.8) * rig.bob;
+  const x = rig.baseX + swayX;
+  const y = rig.baseY + bob;
+  const z = rig.baseZ + swayZ;
 
-  rig.root.position.set(
-    rig.baseX + swayX,
-    rig.baseY + bob,
-    rig.baseZ + swayZ,
-  );
+  rig.root.position.set(x, y, z);
 
   rig.paperMaterial.uniforms.uFlicker.value = flicker;
 
@@ -507,18 +650,37 @@ function disposeLantern(rig: LanternRig) {
   (rig.flameCore.material as THREE.Material).dispose();
   rig.halo.geometry.dispose();
   (rig.halo.material as THREE.Material).dispose();
+  rig.stringMesh.geometry.dispose();
+  (rig.stringMesh.material as THREE.Material).dispose();
+  const bannerMaterial = rig.banner.material as THREE.SpriteMaterial;
+  bannerMaterial.map?.dispose();
+  bannerMaterial.dispose();
 }
 
 export default function LanternAnimation({ scene, nodes }: LanternAnimationProps) {
   const lanternsRef = useRef<LanternRig[]>([]);
   const flockRef = useRef<THREE.Group | null>(null);
+  const boundsRef = useRef<SkyBounds | null>(null);
   const elapsedRef = useRef(0);
+
+  const settingsVersion = JSON.stringify({
+    lanterns: lanternAnimationSettings.lanterns,
+    banner: lanternAnimationSettings.banner,
+    skyMinOffset: lanternAnimationSettings.skyMinOffset,
+    skyMaxOffset: lanternAnimationSettings.skyMaxOffset,
+    pathInset: lanternAnimationSettings.pathInset,
+    sizeScale: lanternAnimationSettings.sizeScale,
+    bodyHeight: lanternAnimationSettings.bodyHeight,
+    heightScale: lanternAnimationSettings.heightScale,
+    widthScale: lanternAnimationSettings.widthScale,
+  });
 
   useLayoutEffect(() => {
     const existing = scene.getObjectByName("SafariLanternFlock");
     existing?.removeFromParent();
 
     const bounds = getSkyBounds(scene, nodes);
+    boundsRef.current = bounds;
     if (!bounds) {
       lanternsRef.current = [];
       if (process.env.NODE_ENV === "development") {
@@ -535,8 +697,8 @@ export default function LanternAnimation({ scene, nodes }: LanternAnimationProps
     scene.add(flock);
     flockRef.current = flock;
 
-    const lanterns = lanternAnimationSettings.lanterns.map((config) => {
-      const rig = createLanternRig(config);
+    const lanterns = lanternAnimationSettings.lanterns.map((config, index) => {
+      const rig = createLanternRig(config, index);
       placeLantern(rig, bounds, config);
       flock.add(rig.root);
       return rig;
@@ -559,7 +721,7 @@ export default function LanternAnimation({ scene, nodes }: LanternAnimationProps
       }
       lanternsRef.current = [];
     };
-  }, [scene, nodes]);
+  }, [scene, nodes, settingsVersion]);
 
   useFrame((_, delta) => {
     const lanterns = lanternsRef.current;
@@ -567,9 +729,10 @@ export default function LanternAnimation({ scene, nodes }: LanternAnimationProps
 
     elapsedRef.current += delta;
     const elapsed = elapsedRef.current;
+    const bounds = boundsRef.current;
 
     for (const lantern of lanterns) {
-      updateLantern(lantern, elapsed);
+      updateLantern(lantern, elapsed, bounds);
     }
   });
 
