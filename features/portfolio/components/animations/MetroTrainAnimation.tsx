@@ -2,6 +2,10 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { metroTrainSettings } from "@features/portfolio/config/metroTrainSettings";
+import {
+  createThemedBannerMesh,
+  disposeThemedBannerMesh,
+} from "@features/portfolio/utils/themedBannerTexture";
 
 type MetroBounds = {
   start: THREE.Vector3;
@@ -80,6 +84,145 @@ function attachTrainCarrier(train: THREE.Object3D) {
   train.scale.set(1, 1, 1);
 
   return carrier;
+}
+
+function isMetroBodyMesh(mesh: THREE.Mesh) {
+  const materials = Array.isArray(mesh.material)
+    ? mesh.material
+    : [mesh.material];
+  return materials.some((material) => material && /metro/i.test(material.name));
+}
+
+const GEOM_CORNER = [
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+];
+
+function fillGeometryCorners(box: THREE.Box3, target: THREE.Vector3[]) {
+  const { min, max } = box;
+  target[0].set(min.x, min.y, min.z);
+  target[1].set(max.x, min.y, min.z);
+  target[2].set(min.x, max.y, min.z);
+  target[3].set(max.x, max.y, min.z);
+  target[4].set(min.x, min.y, max.z);
+  target[5].set(max.x, min.y, max.z);
+  target[6].set(min.x, max.y, max.z);
+  target[7].set(max.x, max.y, max.z);
+}
+
+/** Roof anchor from Metro body meshes only — avoids station/bridge bounds on Metro001. */
+function getTrainMeshLocalBounds(train: THREE.Object3D) {
+  train.updateMatrixWorld(true);
+  const inverse = train.matrixWorld.clone().invert();
+  const localBox = new THREE.Box3();
+  const corner = new THREE.Vector3();
+  let matchedMesh = false;
+
+  train.traverse((child) => {
+    if (!(child instanceof THREE.Mesh) || !child.geometry) return;
+    if (!isMetroBodyMesh(child)) return;
+
+    matchedMesh = true;
+    const geometry = child.geometry;
+    if (!geometry.boundingBox) geometry.computeBoundingBox();
+    if (!geometry.boundingBox) return;
+
+    fillGeometryCorners(geometry.boundingBox, GEOM_CORNER);
+    for (const point of GEOM_CORNER) {
+      corner.copy(point).applyMatrix4(child.matrixWorld).applyMatrix4(inverse);
+      localBox.expandByPoint(corner);
+    }
+  });
+
+  if (!matchedMesh) {
+    train.traverse((child) => {
+      if (!(child instanceof THREE.Mesh) || !child.geometry) return;
+
+      const geometry = child.geometry;
+      if (!geometry.boundingBox) geometry.computeBoundingBox();
+      if (!geometry.boundingBox) return;
+
+      fillGeometryCorners(geometry.boundingBox, GEOM_CORNER);
+      for (const point of GEOM_CORNER) {
+        corner.copy(point).applyMatrix4(child.matrixWorld).applyMatrix4(inverse);
+        localBox.expandByPoint(corner);
+      }
+    });
+  }
+
+  return localBox;
+}
+
+const BANNER_FLIP_Y = new THREE.Quaternion().setFromAxisAngle(
+  new THREE.Vector3(0, 1, 0),
+  Math.PI,
+);
+
+function faceBannerOnCarrier(
+  bannerRoot: THREE.Object3D,
+  carrier: THREE.Object3D,
+  camera: THREE.Camera,
+  lookMatrix: THREE.Matrix4,
+  worldQuat: THREE.Quaternion,
+  carrierQuat: THREE.Quaternion,
+) {
+  carrier.updateMatrixWorld(true);
+  bannerRoot.updateMatrixWorld(true);
+
+  const worldPos = new THREE.Vector3();
+  bannerRoot.getWorldPosition(worldPos);
+  lookMatrix.lookAt(worldPos, camera.position, camera.up);
+  worldQuat.setFromRotationMatrix(lookMatrix).multiply(BANNER_FLIP_Y);
+  carrier.getWorldQuaternion(carrierQuat);
+  bannerRoot.quaternion.copy(worldQuat).premultiply(carrierQuat.invert());
+}
+
+function syncMetroBanner(
+  carrier: THREE.Group,
+  train: THREE.Object3D,
+  bannerRoot: THREE.Group,
+  camera: THREE.Camera,
+  lookMatrix: THREE.Matrix4,
+  worldQuat: THREE.Quaternion,
+  carrierQuat: THREE.Quaternion,
+) {
+  const { banner } = metroTrainSettings;
+  const localBox = getTrainMeshLocalBounds(train);
+
+  bannerRoot.position.set(
+    (localBox.min.x + localBox.max.x) * 0.5 + banner.offsetX,
+    localBox.max.y + banner.offsetY + banner.height * 0.5,
+    (localBox.min.z + localBox.max.z) * 0.5 + banner.offsetZ,
+  );
+  faceBannerOnCarrier(
+    bannerRoot,
+    carrier,
+    camera,
+    lookMatrix,
+    worldQuat,
+    carrierQuat,
+  );
+}
+
+function createMetroBannerRoot(carrier: THREE.Group) {
+  const { banner } = metroTrainSettings;
+  const root = new THREE.Group();
+  root.name = "MetroBannerRoot";
+
+  const mesh = createThemedBannerMesh(banner, banner.width, banner.height, {
+    depthTest: true,
+    renderOrder: 0,
+  });
+  root.add(mesh);
+  carrier.add(root);
+
+  return { root, mesh };
 }
 
 function getTrainHalfLength(train: THREE.Object3D) {
@@ -170,7 +313,13 @@ export default function MetroTrainAnimation({
   nodes,
 }: MetroTrainAnimationProps) {
   const carrierRef = useRef<THREE.Group | null>(null);
+  const trainRef = useRef<THREE.Object3D | null>(null);
   const boundsRef = useRef<MetroBounds | null>(null);
+  const bannerRootRef = useRef<THREE.Group | null>(null);
+  const bannerMeshRef = useRef<THREE.Mesh | null>(null);
+  const bannerLookMatrixRef = useRef(new THREE.Matrix4());
+  const bannerWorldQuatRef = useRef(new THREE.Quaternion());
+  const bannerCarrierQuatRef = useRef(new THREE.Quaternion());
   const elapsedRef = useRef(0);
   const tempPositionRef = useRef(new THREE.Vector3());
 
@@ -240,25 +389,45 @@ export default function MetroTrainAnimation({
         };
 
     carrierRef.current = carrier;
+    trainRef.current = train;
     boundsRef.current = { start, end };
     carrier.position.copy(start);
+
+    const banner = createMetroBannerRoot(carrier);
+    bannerRootRef.current = banner.root;
+    bannerMeshRef.current = banner.mesh;
 
     if (process.env.NODE_ENV === "development") {
       console.info("[MetroTrainAnimation] Ready:", {
         train: train.name,
         start: start.toArray(),
         end: end.toArray(),
+        banner: metroTrainSettings.banner.text,
         mode: fallbackToBridge ? "bridge-fallback" : "station-to-station",
         leftStationX: leftBox ? [leftBox.min.x, leftBox.max.x] : null,
         rightStationX: rightBox ? [rightBox.min.x, rightBox.max.x] : null,
         bridgeX: bridgeBox ? [bridgeBox.min.x, bridgeBox.max.x] : null,
       });
     }
+
+    return () => {
+      if (bannerMeshRef.current) {
+        disposeThemedBannerMesh(bannerMeshRef.current);
+      }
+      bannerRootRef.current?.removeFromParent();
+      bannerRootRef.current = null;
+      bannerMeshRef.current = null;
+      trainRef.current = null;
+      carrierRef.current = null;
+      boundsRef.current = null;
+    };
   }, [scene, nodes]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const carrier = carrierRef.current;
+    const train = trainRef.current;
     const bounds = boundsRef.current;
+    const bannerRoot = bannerRootRef.current;
     if (!carrier || !bounds) return;
 
     elapsedRef.current += delta;
@@ -271,6 +440,18 @@ export default function MetroTrainAnimation({
 
     tempPositionRef.current.copy(bounds.start).lerp(bounds.end, t);
     carrier.position.copy(tempPositionRef.current);
+
+    if (bannerRoot && train) {
+      syncMetroBanner(
+        carrier,
+        train,
+        bannerRoot,
+        state.camera,
+        bannerLookMatrixRef.current,
+        bannerWorldQuatRef.current,
+        bannerCarrierQuatRef.current,
+      );
+    }
   });
 
   return null;

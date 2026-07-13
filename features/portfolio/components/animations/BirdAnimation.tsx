@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { birdAnimationSettings } from "../../config/birdAnimationSettings";
 import { getScene1BirdFlightBounds } from "../../utils/sceneObjectUtils";
+import { createThemedBannerTexture } from "../../utils/themedBannerTexture";
 
 type BirdConfig = (typeof birdAnimationSettings.birds)[number];
 type BannerCarrierConfig = (typeof birdAnimationSettings)["bannerCarriers"];
@@ -140,71 +141,7 @@ function addWingPair(orient: THREE.Group, material: THREE.Material) {
 }
 
 function createBannerTexture(config: BannerCarrierConfig) {
-  const canvas = document.createElement("canvas");
-  const width = 1024;
-  const height = 256;
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("[BirdAnimation] Failed to create banner canvas context");
-  }
-
-  const gradient = context.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, config.bannerColor);
-  gradient.addColorStop(0.55, config.bannerColor);
-  gradient.addColorStop(1, config.bannerColorDark);
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, width, height);
-
-  context.strokeStyle = config.trimColor;
-  context.lineWidth = 5;
-  context.beginPath();
-  context.moveTo(0, 10);
-  context.lineTo(width, 10);
-  context.moveTo(0, height - 10);
-  context.lineTo(width, height - 10);
-  context.stroke();
-
-  context.globalAlpha = 0.05;
-  for (let i = 0; i < 900; i += 1) {
-    context.fillStyle = i % 2 === 0 ? "#000000" : "#ffffff";
-    context.fillRect(
-      Math.random() * width,
-      Math.random() * height,
-      1 + Math.random(),
-      1,
-    );
-  }
-  context.globalAlpha = 1;
-
-  context.fillStyle = config.textColor;
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-
-  let fontSize = Math.floor(height * 0.4);
-  const fontFamily = config.textFontFamily;
-  do {
-    context.font = `600 ${fontSize}px ${fontFamily}`;
-    fontSize -= 2;
-  } while (fontSize > 28 && context.measureText(config.text).width > width * 0.88);
-
-  context.font = `600 ${fontSize}px ${fontFamily}`;
-  context.shadowColor = "rgba(42, 16, 22, 0.45)";
-  context.shadowBlur = 6;
-  context.shadowOffsetY = 2;
-  context.fillText(config.text, width * 0.5, height * 0.53);
-  context.shadowColor = "transparent";
-  context.shadowBlur = 0;
-  context.shadowOffsetY = 0;
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
-  return texture;
+  return createThemedBannerTexture(config);
 }
 
 function createBannerCarrierRig(config: BannerCarrierConfig): BannerCarrierRig {
