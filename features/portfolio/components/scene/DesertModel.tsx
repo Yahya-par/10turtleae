@@ -25,6 +25,7 @@ import YachtScrollMovement from "../animations/YachtScrollMovement";
 import PlaneScrollMovement from "../animations/PlaneScrollMovement";
 import LanternAnimation from "../animations/LanternAnimation";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
+import DubaiFrameBannerRoll from "../animations/DubaiFrameBannerRoll";
 import DesertSafariVideoPositionTracker from "../animations/DesertSafariVideoPositionTracker";
 import AudioRuntime from "../audio/AudioRuntime";
 import CarPassAudio from "../audio/CarPassAudio";
@@ -234,6 +235,16 @@ export default function DesertModel({
       <SafariCampWind scene={scene} nodes={nodes} />
       <LanternAnimation scene={scene} nodes={nodes} />
       <BurjKhalifaVideoOverlay scene={scene} nodes={nodes} />
+      <DubaiFrameBannerRoll
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnCarRef={turtleOnCarRef}
+        carTravelProgressRef={carTravelProgressRef}
+      />
       <DesertSafariVideoPositionTracker
         scene={scene}
         nodes={nodes}
