@@ -25,7 +25,10 @@ import YachtScrollMovement from "../animations/YachtScrollMovement";
 import PlaneScrollMovement from "../animations/PlaneScrollMovement";
 import LanternAnimation from "../animations/LanternAnimation";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
+import FutureMuseumBannerRoll from "../animations/FutureMuseumBannerRoll";
 import DubaiFrameBannerRoll from "../animations/DubaiFrameBannerRoll";
+import WaterBalloonAnimation from "../animations/WaterBalloonAnimation";
+import NewAtlantisBannerRoll from "../animations/NewAtlantisBannerRoll";
 import DesertSafariVideoPositionTracker from "../animations/DesertSafariVideoPositionTracker";
 import AudioRuntime from "../audio/AudioRuntime";
 import CarPassAudio from "../audio/CarPassAudio";
@@ -244,6 +247,36 @@ export default function DesertModel({
         lerpFactor={lerpFactor}
         turtleOnCarRef={turtleOnCarRef}
         carTravelProgressRef={carTravelProgressRef}
+      />
+      <FutureMuseumBannerRoll
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnCarRef={turtleOnCarRef}
+        carTravelProgressRef={carTravelProgressRef}
+      />
+      <WaterBalloonAnimation
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+      />
+      <NewAtlantisBannerRoll
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+        turtleOnCarRef={turtleOnCarRef}
+        carTravelProgressRef={carTravelProgressRef}
+        turtleOnYachtRef={turtleOnYachtRef}
+        yachtTravelProgressRef={yachtTravelProgressRef}
       />
       <DesertSafariVideoPositionTracker
         scene={scene}
