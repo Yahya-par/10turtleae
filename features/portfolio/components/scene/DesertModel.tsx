@@ -8,6 +8,7 @@ import MetroTrainAnimation from "../animations/MetroTrainAnimation";
 import CarAnimation from "../animations/CarAnimation";
 import CloudAnimation from "../animations/CloudAnimation";
 import AinAnimation from "../animations/AinAnimation";
+import DolphinTextAnimation from "../animations/DolphinTextAnimation";
 import CampfireSmoke from "../animations/CampfireSmoke";
 import SafariCampWind from "../animations/SafariCampWind";
 import DroneAnimation from "../animations/DroneAnimation";
@@ -41,7 +42,7 @@ import FrameTextAudio from "../audio/FrameTextAudio";
 import SafariCampTextAudio from "../audio/SafariCampTextAudio";
 import PlaneTextAudio from "../audio/PlaneTextAudio";
 
-const MODEL_PATH = "/Models/Modelv1.glb";
+const MODEL_PATH = "/Models/testmodel.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
@@ -288,6 +289,7 @@ export default function DesertModel({
       <DroneAnimation scene={scene} nodes={nodes} />
       <BirdAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
+      <DolphinTextAnimation scene={scene} nodes={nodes} />
       <CarPassAudio scene={scene} nodes={nodes} />
       <MetroPassAudio scene={scene} nodes={nodes} />
       <PlanePassAudio scene={scene} nodes={nodes} />
