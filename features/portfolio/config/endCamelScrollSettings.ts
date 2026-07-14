@@ -40,6 +40,12 @@ export const endCamelScrollSettings = {
   turtleSeatOffsetX: 0.4,
   turtleSeatOffsetY: -0.35,
   turtleSeatOffsetZ: 0,
+  /**
+   * World-space drop for camel002 body. Negative = down.
+   * Applied in world space because the camel carrier inherits a negative
+   * Blender scale — local Y would move the wrong direction.
+   */
+  bodyOffsetY: -0.12,
   /** Safari camel carrier + mesh draw order. */
   carrierRenderOrder: 12,
   /** Draw turtle above the safari camel — must be greater than carrierRenderOrder. */

@@ -120,6 +120,15 @@ function setupSafariCarrier(
     if (leg) attachObjectToCarrier(carrier, leg);
   }
 
+  // Drop camel002 in WORLD space so the torso meets the legs (negative
+  // Blender scale on the carrier makes local Y move the wrong way).
+  camelBody.position.set(0, 0, 0);
+  camelBody.updateMatrixWorld(true);
+  const bodyWorld = new THREE.Vector3();
+  camelBody.getWorldPosition(bodyWorld);
+  bodyWorld.y += endCamelScrollSettings.bodyOffsetY;
+  setObjectWorldPosition(camelBody, bodyWorld);
+
   carrier.renderOrder = carrierRenderOrder;
   carrier.traverse((child) => {
     if (isTurtleSceneObject(child)) return;

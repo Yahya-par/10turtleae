@@ -15,6 +15,13 @@ export const camelScrollSettings = {
   legs: assetNames.camel.legs,
   legsBlender: assetNames.camel.legsBlender,
 
+  /**
+   * World-space drop for camel001 (and rider). Negative = down.
+   * Applied in world space because the camel carrier inherits a negative
+   * Blender scale — local Y would move the wrong direction.
+   */
+  bodyOffsetY: -0.08,
+
   /** Inset from scene 1 entrance (high X). */
   startInset: 1.2,
   /** Inset from scene 1 exit / scene 2 start (low X). */

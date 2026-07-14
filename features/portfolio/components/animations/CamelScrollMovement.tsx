@@ -1048,6 +1048,35 @@ function buildRig(
     }
   }
 
+  // Drop body (+ rider) in WORLD space so camel001 sits on the legs.
+  // camel.001 has negative Blender scale, which the carrier inherits — a
+  // local Y nudge would move the body the wrong way (up instead of down).
+  camel.position.set(0, 0, 0);
+  camel.updateMatrixWorld(true);
+  const bodyWorld = new THREE.Vector3();
+  camel.getWorldPosition(bodyWorld);
+  bodyWorld.y += camelScrollSettings.bodyOffsetY;
+  setObjectWorldPosition(camel, bodyWorld);
+
+  if (turtle) {
+    if (!carrier.userData.__turtleSeatLocal) {
+      carrier.userData.__turtleSeatLocal = turtle.position.clone();
+      carrier.userData.__turtleSeatQuat = turtle.quaternion.clone();
+      carrier.userData.__turtleSeatScale = turtle.scale.clone();
+    } else {
+      turtle.position.copy(carrier.userData.__turtleSeatLocal as THREE.Vector3);
+      turtle.quaternion.copy(
+        carrier.userData.__turtleSeatQuat as THREE.Quaternion,
+      );
+      turtle.scale.copy(carrier.userData.__turtleSeatScale as THREE.Vector3);
+    }
+    turtle.updateMatrixWorld(true);
+    const turtleWorld = new THREE.Vector3();
+    turtle.getWorldPosition(turtleWorld);
+    turtleWorld.y += camelScrollSettings.bodyOffsetY;
+    setObjectWorldPosition(turtle, turtleWorld);
+  }
+
   const car = findScrollCarBody(scene, nodes);
 
   const jetskiDriver =
