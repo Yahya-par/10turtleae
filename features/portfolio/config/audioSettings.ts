@@ -66,4 +66,10 @@ export const audioSettings = {
     loop: false,
     volume: 1.0,
   },
+  dolphinJump: {
+    /** dolphintext001 — plays when the dolphin breach animation starts */
+    cue: audioSrc("/Audios/dolphinjump.mp3"),
+    loop: false,
+    volume: 0.55,
+  },
 } as const;

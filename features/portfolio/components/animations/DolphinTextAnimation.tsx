@@ -2,10 +2,12 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { dolphinTextAnimationSettings } from "@features/portfolio/config/dolphinTextAnimationSettings";
+import { audioManager } from "@features/portfolio/utils/audioManager";
 import {
   findObjectByNamePattern,
   findSceneObject,
 } from "@features/portfolio/utils/sceneObjectUtils";
+import { isCarVisibleOnScreen } from "@features/portfolio/utils/visibilityUtils";
 
 type DolphinTextAnimationProps = {
   scene: THREE.Object3D;
@@ -47,6 +49,7 @@ export default function DolphinTextAnimation({
   const textRef = useRef<THREE.Object3D | null>(null);
   const baseRef = useRef<BasePose | null>(null);
   const elapsedRef = useRef(0);
+  const prevCycleTimeRef = useRef<number>(dolphinTextAnimationSettings.jumpDuration);
 
   useLayoutEffect(() => {
     scene.updateMatrixWorld(true);
@@ -79,6 +82,7 @@ export default function DolphinTextAnimation({
       scale: text.scale.clone(),
     };
     elapsedRef.current = 0;
+    prevCycleTimeRef.current = dolphinTextAnimationSettings.jumpDuration;
 
     text.position.set(
       baseRef.current.position.x,
@@ -107,7 +111,7 @@ export default function DolphinTextAnimation({
     };
   }, [scene, nodes]);
 
-  useFrame((_, delta) => {
+  useFrame(({ camera }, delta) => {
     const text = textRef.current;
     const base = baseRef.current;
     if (!text || !base) return;
@@ -118,12 +122,24 @@ export default function DolphinTextAnimation({
     // Always re-apply authored scale — prevents stretch / needle artifacts.
     text.scale.copy(base.scale);
 
+    const prevCycleTime = prevCycleTimeRef.current;
     elapsedRef.current += delta;
     const cycle = jumpDuration + jumpRest;
-    const t = elapsedRef.current % cycle;
+    const cycleTime = elapsedRef.current % cycle;
+
+    const wasResting = prevCycleTime >= jumpDuration;
+    const isJumping = cycleTime < jumpDuration;
+    if (
+      wasResting &&
+      isJumping &&
+      isCarVisibleOnScreen(text, camera)
+    ) {
+      audioManager.playDolphinJumpCue();
+    }
+    prevCycleTimeRef.current = cycleTime;
 
     // ——— Rest underwater ———
-    if (t > jumpDuration) {
+    if (cycleTime > jumpDuration) {
       text.position.set(
         base.position.x,
         base.position.y - submergeDepth,
@@ -133,7 +149,7 @@ export default function DolphinTextAnimation({
       return;
     }
 
-    const progress = THREE.MathUtils.clamp(t / jumpDuration, 0, 1);
+    const progress = THREE.MathUtils.clamp(cycleTime / jumpDuration, 0, 1);
     sampleBreachPosition(progress, base.position, _pos);
     text.position.copy(_pos);
 
