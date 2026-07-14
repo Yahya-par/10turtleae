@@ -1452,9 +1452,16 @@ export default function CamelScrollMovement({
         rig.transferMode = "idle";
         turtleOnBoatRef.current = true;
         turtleOnCarRef.current = false;
+        // Only latch the immediate previous vehicle. Later-leg return flags must
+        // not survive onto the boat or they permanently block boat→car.
         turtleReturnedFromCarRef.current = true;
+        turtleReturnedFromJetskiRef.current = false;
+        turtleReturnedFromYachtRef.current = false;
         carTravelProgressRef.current = 0;
+        jetskiTravelProgressRef.current = 0;
+        yachtTravelProgressRef.current = 0;
         carPassState.carToBoatTransfer = false;
+        rig.suppressForwardTransfer = false;
         rig.reverseScrollHold = 0;
         rig.forwardScrollHold = 0;
       } else {
@@ -1821,18 +1828,20 @@ export default function CamelScrollMovement({
         atJetskiStart &&
         rig.reverseScrollHold >= jetskiScrollSettings.reverseTransferScrollHold;
 
-      if (shouldReturnToCar) {
-        beginTransferToCarFromJetski(rig, scene);
-        turtleOnJetskiRef.current = false;
-        rig.lastScrollProgress = progress;
-        return;
-      }
-
+      // Must run before reverse-to-car return; skipping this left the yacht latch
+      // stuck and permanently blocked boat→car after reverse-from-end.
       if (
         turtleReturnedFromYachtRef.current &&
         (rig.forwardScrollHold >= forwardTransferScrollHold || atJetskiStart)
       ) {
         turtleReturnedFromYachtRef.current = false;
+      }
+
+      if (shouldReturnToCar) {
+        beginTransferToCarFromJetski(rig, scene);
+        turtleOnJetskiRef.current = false;
+        rig.lastScrollProgress = progress;
+        return;
       }
 
       const mayTransferJetskiToYacht =
@@ -2083,6 +2092,12 @@ export default function CamelScrollMovement({
       (rig.forwardScrollHold >= forwardTransferScrollHold || boatAtHandoff)
     ) {
       turtleReturnedFromCarRef.current = false;
+    }
+
+    // Boat is upstream of jetski/yacht — those return latches must not linger here.
+    if (rig.onBoat || turtleOnBoatRef.current) {
+      turtleReturnedFromJetskiRef.current = false;
+      turtleReturnedFromYachtRef.current = false;
     }
 
     const mayTransferBoatToCar =

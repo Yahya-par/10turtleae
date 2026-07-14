@@ -9,6 +9,8 @@ export type SceneLinkConfig = {
 };
 
 export const sceneLinkSettings = {
+  /** Master switch for all clickable scene-object CTAs. */
+  enabled: false,
   dragThreshold: 6,
   links: [
     {

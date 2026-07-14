@@ -48,11 +48,12 @@ class AudioManager {
   private readonly frameTextTrackIndex = 8;
   private readonly desertTextTrackIndex = 9;
   private readonly planeTextTrackIndex = 10;
+  private readonly dolphinJumpTrackIndex = 11;
 
   init() {
     if (this.initialized) return;
 
-    const { background, cars, metro, plane, campfire, drone, oldDubaiText, frameText, desertText, planeText } =
+    const { background, cars, metro, plane, campfire, drone, oldDubaiText, frameText, desertText, planeText, dolphinJump } =
       audioSettings;
     this.tracks = [
       createTrack(background.drum, background.volume.drum, background.loop),
@@ -71,6 +72,7 @@ class AudioManager {
       createTrack(frameText.cue, frameText.volume, frameText.loop, false),
       createTrack(desertText.cue, desertText.volume, desertText.loop, false),
       createTrack(planeText.cue, planeText.volume, planeText.loop, false),
+      createTrack(dolphinJump.cue, dolphinJump.volume, dolphinJump.loop, false),
     ];
 
     const oldDubaiTrack = this.tracks[this.oldDubaiTextTrackIndex];
@@ -98,6 +100,13 @@ class AudioManager {
     if (planeTextTrack) {
       planeTextTrack.element.addEventListener("ended", () => {
         planeTextTrack.shouldPlay = false;
+      });
+    }
+
+    const dolphinJumpTrack = this.tracks[this.dolphinJumpTrackIndex];
+    if (dolphinJumpTrack) {
+      dolphinJumpTrack.element.addEventListener("ended", () => {
+        dolphinJumpTrack.shouldPlay = false;
       });
     }
 
@@ -389,6 +398,16 @@ class AudioManager {
 
     track.shouldPlay = true;
     track.element.loop = audioSettings.planeText.loop;
+    track.element.currentTime = 0;
+    this.syncPlayback();
+  }
+
+  playDolphinJumpCue() {
+    const track = this.tracks[this.dolphinJumpTrackIndex];
+    if (!track) return;
+
+    track.shouldPlay = true;
+    track.element.loop = audioSettings.dolphinJump.loop;
     track.element.currentTime = 0;
     this.syncPlayback();
   }

@@ -164,6 +164,9 @@ export const assetNames = {
     /** Atlantis panel (Desert_Scene_Floor.007, ~X -110) */
     atlantis: "Desert_Scene_Floor007",
     atlantisBlender: "Desert_Scene_Floor.007",
+    /** Atlantis hotel mesh (Blender: newatlantis.001) */
+    newAtlantis: "newatlantis001",
+    newAtlantisBlender: "newatlantis.001",
     /** One scene left of Atlantis (~X -127) — safari scene floor */
     floor8: "Desert_Scene_Floor008",
     safariFloor: "Desert_Scene_Floor008",
@@ -194,6 +197,9 @@ export const assetNames = {
     /** Blender: frametext.001 */
     frame: "frametext001",
     frameBlender: "frametext.001",
+    /** Blender: dolphintext.001 — spinning dolphin sign */
+    dolphin: "dolphintext001",
+    dolphinBlender: "dolphintext.001",
   },
   cameraWaypoints: /^Empty\.\d+$/,
   sceneMeshes:

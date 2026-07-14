@@ -82,8 +82,14 @@ export default function SceneObjectLinks({
   const isHoveringRef = useRef(false);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const pointer = useMemo(() => new THREE.Vector2(), []);
+  const linksEnabled = sceneLinkSettings.enabled;
 
   useLayoutEffect(() => {
+    if (!linksEnabled) {
+      targetsRef.current = [];
+      return;
+    }
+
     scene.updateMatrixWorld(true);
 
     const targets: LinkTarget[] = [];
@@ -114,9 +120,11 @@ export default function SceneObjectLinks({
         })),
       );
     }
-  }, [scene, nodes]);
+  }, [scene, nodes, linksEnabled]);
 
   useEffect(() => {
+    if (!linksEnabled) return;
+
     const canvas = gl.domElement;
     const { dragThreshold } = sceneLinkSettings;
 
@@ -190,7 +198,7 @@ export default function SceneObjectLinks({
       canvas.removeEventListener("pointerleave", onPointerLeave);
       canvas.style.cursor = "";
     };
-  }, [camera, gl, onTargetOpen, pointer, raycaster]);
+  }, [camera, gl, linksEnabled, onTargetOpen, pointer, raycaster]);
 
   return null;
 }
