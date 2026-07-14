@@ -20,7 +20,7 @@ export const camelScrollSettings = {
    * Applied in world space because the camel carrier inherits a negative
    * Blender scale — local Y would move the wrong direction.
    */
-  bodyOffsetY: -0.08,
+  bodyOffsetY: -0.09,
 
   /** Inset from scene 1 entrance (high X). */
   startInset: 1.2,
