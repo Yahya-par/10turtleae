@@ -24,6 +24,7 @@ import JetskiScrollMovement from "../animations/JetskiScrollMovement";
 import YachtScrollMovement from "../animations/YachtScrollMovement";
 import PlaneScrollMovement from "../animations/PlaneScrollMovement";
 import LanternAnimation from "../animations/LanternAnimation";
+import FirecrackerVideoOverlay from "../animations/FirecrackerVideoOverlay";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
 import DubaiFrameBannerRoll from "../animations/DubaiFrameBannerRoll";
 import DesertSafariVideoPositionTracker from "../animations/DesertSafariVideoPositionTracker";
@@ -234,6 +235,14 @@ export default function DesertModel({
       <CampfireSmoke scene={scene} nodes={nodes} />
       <SafariCampWind scene={scene} nodes={nodes} />
       <LanternAnimation scene={scene} nodes={nodes} />
+      <FirecrackerVideoOverlay
+        scene={scene}
+        nodes={nodes}
+        sceneFrame={sceneFrame}
+        scrollProgress={scrollProgress}
+        targetScrollProgress={targetScrollProgress}
+        lerpFactor={lerpFactor}
+      />
       <BurjKhalifaVideoOverlay scene={scene} nodes={nodes} />
       <DubaiFrameBannerRoll
         scene={scene}
