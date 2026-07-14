@@ -8,7 +8,7 @@ export const carPassState = {
   carToJetskiTransfer: false,
   /** True while the turtle is arcing from jetski back to car — keeps the car at its route end. */
   jetskiToCarTransfer: false,
-  /** World X where the car stays after the turtle leaves for jetski/yacht. */
+  /** World X where the car stays after the turtle leaves for jetski/yacht or returns to the boat. */
   carDockedHandoffX: null as number | null,
   /** Scroll progress when the turtle boards the car from jetski (route-end anchor). */
   carBoardScrollProgress: null as number | null,

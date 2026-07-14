@@ -63,6 +63,7 @@ type CarScrollMovementProps = {
   turtleOnJetskiRef: RefObject<boolean>;
   turtleOnYachtRef: RefObject<boolean>;
   carTravelProgressRef: RefObject<number>;
+  turtleReturnedFromCarRef: RefObject<boolean>;
 };
 
 const tempPosition = new THREE.Vector3();
@@ -72,6 +73,22 @@ const tempHubCenter = new THREE.Vector3();
 
 function getCarDockedHandoffX(rig: CarRig) {
   return carPassState.carDockedHandoffX ?? rig.trackEndX;
+}
+
+function getCarParkX(rig: CarRig) {
+  return carPassState.carDockedHandoffX ?? rig.restX;
+}
+
+function parkCarAtX(
+  rig: CarRig,
+  parkX: number,
+  carTravelProgressRef: RefObject<number>,
+) {
+  rig.carProgress = 0;
+  rig.dockedAtEnd = false;
+  carTravelProgressRef.current = 0;
+  rig.carrier.position.set(parkX, rig.baseY, rig.baseZ);
+  rig.lastX = parkX;
 }
 
 function parkCarAtHandoff(
@@ -548,6 +565,7 @@ export default function CarScrollMovement({
   turtleOnJetskiRef,
   turtleOnYachtRef,
   carTravelProgressRef,
+  turtleReturnedFromCarRef,
 }: CarScrollMovementProps) {
   const rigRef = useRef<CarRig | null>(null);
   const carSessionActiveRef = useRef(false);
@@ -609,6 +627,19 @@ export default function CarScrollMovement({
       lerpFactor,
     );
 
+    const shouldKeepCarParked =
+      (turtleOnBoatRef.current && !turtleOnCarRef.current) ||
+      turtleReturnedFromCarRef.current ||
+      carPassState.carToBoatTransfer;
+
+    if (shouldKeepCarParked) {
+      carSessionActiveRef.current = false;
+      parkCarAtX(rig, getCarParkX(rig), carTravelProgressRef);
+      carParkedRef.current = true;
+      carPassState.scrollCarParked = true;
+      return;
+    }
+
     if (
       turtleOnCarRef.current ||
       carTravelProgressRef.current > 0.01 ||
@@ -619,27 +650,9 @@ export default function CarScrollMovement({
       carSessionActiveRef.current = true;
     }
 
-    if (turtleOnBoatRef.current && !turtleOnCarRef.current) {
+    if (carPassState.boatToCarTransfer) {
       carSessionActiveRef.current = false;
-      rig.carProgress = 0;
-      rig.dockedAtEnd = false;
-      carTravelProgressRef.current = 0;
-      if (Math.abs(rig.carrier.position.x - rig.restX) > 0.05) {
-        rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
-        rig.lastX = rig.restX;
-      }
-      carParkedRef.current = true;
-      carPassState.scrollCarParked = true;
-      return;
-    }
-
-    if (carPassState.boatToCarTransfer || carPassState.carToBoatTransfer) {
-      carSessionActiveRef.current = false;
-      rig.carProgress = 0;
-      rig.dockedAtEnd = false;
-      carTravelProgressRef.current = 0;
-      rig.carrier.position.set(rig.restX, rig.baseY, rig.baseZ);
-      rig.lastX = rig.restX;
+      parkCarAtX(rig, rig.restX, carTravelProgressRef);
       carParkedRef.current = true;
       carPassState.scrollCarParked = true;
       return;

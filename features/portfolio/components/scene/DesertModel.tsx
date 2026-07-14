@@ -180,6 +180,7 @@ export default function DesertModel({
         turtleOnJetskiRef={turtleOnJetskiRef}
         turtleOnYachtRef={turtleOnYachtRef}
         carTravelProgressRef={carTravelProgressRef}
+        turtleReturnedFromCarRef={turtleReturnedFromCarRef}
       />
       <JetskiScrollMovement
         scene={scene}

@@ -532,8 +532,8 @@ function beginTransferToBoatFromCar(rig: CamelRig, scene: THREE.Object3D) {
   rig.transferProgress = 0;
   rig.onCar = false;
   rig.onBoat = false;
+  captureCarDockedHandoffX(rig);
   carPassState.carToBoatTransfer = true;
-  carPassState.carDockedHandoffX = null;
   carPassState.carBoardScrollProgress = null;
 }
 
@@ -753,6 +753,7 @@ function resolveAtlantisTransferYacht(
 
 function isTurtleInCarPhase(
   rig: CamelRig,
+  turtleOnBoatRef: RefObject<boolean>,
   turtleOnCarRef: RefObject<boolean>,
   carTravelProgressRef: RefObject<number>,
   turtleOnJetskiRef: RefObject<boolean>,
@@ -761,6 +762,18 @@ function isTurtleInCarPhase(
   yachtTravelProgressRef: RefObject<number>,
   turtleOnSafariCamelRef: RefObject<boolean>,
 ) {
+  const parentIsBoat = Boolean(
+    rig.turtle && rig.boat && rig.turtle.parent === rig.boat,
+  );
+  if (
+    rig.onBoat ||
+    rig.mount === "boat" ||
+    parentIsBoat ||
+    turtleOnBoatRef.current
+  ) {
+    return false;
+  }
+
   if (
     isTurtleInYachtPhase(rig, turtleOnYachtRef, yachtTravelProgressRef, turtleOnSafariCamelRef) ||
     isTurtleInJetskiPhase(
@@ -1986,6 +1999,7 @@ export default function CamelScrollMovement({
 
     const turtleInCarPhase = isTurtleInCarPhase(
       rig,
+      turtleOnBoatRef,
       turtleOnCarRef,
       carTravelProgressRef,
       turtleOnJetskiRef,
@@ -2118,6 +2132,7 @@ export default function CamelScrollMovement({
       ) &&
       !isTurtleInCarPhase(
         rig,
+        turtleOnBoatRef,
         turtleOnCarRef,
         carTravelProgressRef,
         turtleOnJetskiRef,
@@ -2149,6 +2164,7 @@ export default function CamelScrollMovement({
       !isTurtleInYachtPhase(rig, turtleOnYachtRef, yachtTravelProgressRef, turtleOnSafariCamelRef) &&
       !isTurtleInCarPhase(
         rig,
+        turtleOnBoatRef,
         turtleOnCarRef,
         carTravelProgressRef,
         turtleOnJetskiRef,
