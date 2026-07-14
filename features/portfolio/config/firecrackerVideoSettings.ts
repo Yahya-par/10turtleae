@@ -1,23 +1,8 @@
 import { assetNames } from "./assetNames";
 
 /**
- * Firecracker sky — edit this file, save, hot-reload.
- *
- * DEPTH (behind buildings, in front of night backdrop):
- *   depthTest: true  — buildings occlude fireworks
- *   z / skyDepthZ    — larger z = deeper into the scene (toward backdrop)
- *                     smaller / more negative z = closer to camera
- *
- * MANUAL POSITION (world units) — preferred for fine control:
- *   Set marinaManualPosition / blueWatersManualPosition to { x, y, z }.
- *   When set, anchor + nudge are ignored for that scene.
- *   Check console `[FirecrackerVideoOverlay] Ready` for current position.
- *
- *   x = left (−) / right (+) along the strip
- *   y = down (−) / up (+)
- *   z = toward camera (−) / toward backdrop (+)
- *
- * OR nudge the auto-anchor with marinaWorldNudge / blueWatersWorldNudge [x,y,z].
+ * Procedural firecracker sky — edit this file, save, and hot-reload to tune.
+ * Rockets rise → peony bursts → "10Turtle" forms from sparkler particles.
  */
 export const firecrackerVideoSettings = {
   alphaCutoff: 0.03,
@@ -42,50 +27,42 @@ export const firecrackerVideoSettings = {
     extraPatterns: [/^ain$/i, /aindubai/i] as const,
   },
 
+  /**
+   * Only Dubai Marina + Blue Waters (not safari / mosque).
+   * Never show above `maxScrollProgress` (blocks safari / earlier panels).
+   */
   maxScrollProgress: 0.145,
   marinaScrollWindow: { scrollStart: 0.13, scrollEnd: 0.05 },
   blueWatersScrollWindow: { scrollStart: 0.055, scrollEnd: 0.005 },
+  /** Shrink panel-derived windows slightly so they don't bleed into neighbors. */
   scrollWindowPadding: 0.012,
 
-  /**
-   * Fine nudge after auto-anchor (ignored when manualPosition is set).
-   * Try z +0.5…+2.0 to push toward the backdrop / behind buildings.
-   */
-  marinaWorldNudge: [0, 0, 50] as const,
-  blueWatersWorldNudge: [0, 0, 1.2] as const,
-
-  /**
-   * Exact world xyz — set these to lock placement.
-   * Example: { x: -160, y: 9.5, z: -4.5 }
-   * Leave null to use anchor + worldNudge.
-   */
+  marinaWorldNudge: [0, 0, 0] as const,
+  blueWatersWorldNudge: [0, 0, 0] as const,
   marinaManualPosition: null as { x: number; y: number; z: number } | null,
   blueWatersManualPosition: null as { x: number; y: number; z: number } | null,
 
-  /** Height above anchor surface when not using manualPosition. */
   skyOffsetY: 4.2,
-  /**
-   * Added to anchor Z. Positive = toward backdrop (behind buildings when camera faces +Z).
-   */
-  skyDepthZ: 1.1,
+  skyDepthZ: -0.35,
 
-  /** With depthTest, keep low so sorting still respects Z. */
-  renderOrder: 3,
-  /** true = hide behind building meshes, show in front of distant backdrop. */
-  depthTest: true,
+  renderOrder: 9,
+  depthTest: false,
 
   planeWidth: 14,
   planeHeight: 6.2,
   canvasSize: [960, 428] as const,
 
   text: "10Turtle",
+  /** Spacing between outline light dots (Ain Dubai style). */
   textSampleGap: 4,
   textFontFamily: 'Arial, "Helvetica Neue", sans-serif',
   textFontWeight: 800,
   textLetterSpacing: 12,
   textStrokeWidth: 2,
+  /** Vertical band on the sky plane (0–1). Lower = smaller text. */
   textBandTop: 0.28,
   textBandHeight: 0.22,
+  /** Extra scale for font size inside the band (1 = fill the band). */
   textFontScale: 0.72,
 
   cycleDuration: 12,
@@ -95,7 +72,9 @@ export const firecrackerVideoSettings = {
   textRevealDuration: 2.4,
   letterStagger: 0.14,
   glyphSparkCount: 560,
+  /** How long fully-formed text stays before fading out. */
   textHoldDuration: 2.0,
+  /** Fade-out length — text clears with the fireworks. */
   textFadeDuration: 1.6,
   holdDuration: 4.2,
 
