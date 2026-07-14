@@ -52,6 +52,8 @@ type Particle = {
   y: number;
   px: number;
   py: number;
+  ox: number;
+  oy: number;
   vx: number;
   vy: number;
   life: number;
@@ -71,6 +73,13 @@ type Rocket = {
   active: boolean;
 };
 
+type BurstCore = {
+  x: number;
+  y: number;
+  life: number;
+  maxLife: number;
+};
+
 type ScheduledGlyph = {
   glyph: FirecrackerTextGlyph;
   fireAt: number;
@@ -88,6 +97,7 @@ type FirecrackerDisplay = {
   rockets: Rocket[];
   glyphs: ScheduledGlyph[];
   particles: Particle[];
+  burstCores: BurstCore[];
   wasVisible: boolean;
 };
 
@@ -108,7 +118,7 @@ const sparkFragmentShader = /* glsl */ `
     vec4 color = texture2D(map, vUv);
     float lum = color.r + color.g + color.b;
     if (lum < alphaCutoff) discard;
-    float edge = smoothstep(alphaCutoff, alphaCutoff + 0.06, lum);
+    float edge = smoothstep(alphaCutoff, alphaCutoff + 0.1, lum);
     gl_FragColor = vec4(color.rgb, edge);
   }
 `;
@@ -119,9 +129,10 @@ function randomBetween(min: number, max: number) {
 
 function warmColor(warm: number, alpha: number) {
   const w = THREE.MathUtils.clamp(warm, 0, 1);
+  // Rich golden-orange peony (matches classic firework photo).
   const r = 255;
-  const g = Math.round(180 + w * 60);
-  const b = Math.round(40 + w * 50);
+  const g = Math.round(120 + w * 90);
+  const b = Math.round(20 + w * 40);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
@@ -196,6 +207,8 @@ function createParticlePool(): Particle[] {
     y: 0,
     px: 0,
     py: 0,
+    ox: 0,
+    oy: 0,
     vx: 0,
     vy: 0,
     life: 0,
@@ -235,6 +248,8 @@ function spawnTrailParticle(
   p.y = y;
   p.px = x - vx * 0.016;
   p.py = y - vy * 0.016;
+  p.ox = x;
+  p.oy = y;
   p.vx = randomBetween(-2, 2);
   p.vy = Math.max(vy * 0.12, 12) + randomBetween(0, 12);
   p.life = 0;
@@ -244,31 +259,50 @@ function spawnTrailParticle(
   p.mode = "trail";
 }
 
+/**
+ * Classic peony burst — dense radial golden streaks from a bright core.
+ */
 function spawnPeonyBurst(
   pool: Particle[],
+  cores: BurstCore[],
   x: number,
   y: number,
-  count: number,
-  speed: number,
-  lifeRange: [number, number],
 ) {
-  for (let i = 0; i < count; i += 1) {
+  const {
+    burstSparks,
+    burstSpeed,
+    burstLifeMin,
+    burstLifeMax,
+  } = firecrackerVideoSettings;
+
+  cores.push({
+    x,
+    y,
+    life: 0,
+    maxLife: 0.72,
+  });
+
+  for (let i = 0; i < burstSparks; i += 1) {
     const p = acquireParticle(pool);
     if (!p) break;
 
-    const angle = randomBetween(0, Math.PI * 2);
-    const impulse = speed * randomBetween(0.55, 1.15);
+    // Even sphere of streaks + tiny jitter (photo look).
+    const angle =
+      (i / burstSparks) * Math.PI * 2 + randomBetween(-0.03, 0.03);
+    const impulse = burstSpeed * randomBetween(0.78, 1.08);
     p.active = true;
     p.x = x;
     p.y = y;
     p.px = x;
     p.py = y;
+    p.ox = x;
+    p.oy = y;
     p.vx = Math.cos(angle) * impulse;
-    p.vy = Math.sin(angle) * impulse - randomBetween(20, 60);
+    p.vy = Math.sin(angle) * impulse;
     p.life = 0;
-    p.maxLife = randomBetween(lifeRange[0], lifeRange[1]);
-    p.size = randomBetween(0.7, 1.8);
-    p.warm = randomBetween(0.65, 1);
+    p.maxLife = randomBetween(burstLifeMin, burstLifeMax);
+    p.size = randomBetween(0.55, 1.05);
+    p.warm = randomBetween(0.82, 1);
     p.mode = "ember";
   }
 }
@@ -288,6 +322,8 @@ function spawnTextPin(
   p.y = y;
   p.px = x;
   p.py = y;
+  p.ox = x;
+  p.oy = y;
   p.vx = 0;
   p.vy = 0;
   p.life = 0;
@@ -385,7 +421,38 @@ function drawParticle(context: CanvasRenderingContext2D, particle: Particle) {
   const alpha =
     particle.mode === "trail"
       ? (1 - lifeT) * 0.9
-      : (1 - lifeT * lifeT) * 1;
+      : (1 - lifeT) * (1 - lifeT * 0.35);
+
+  if (particle.mode === "ember") {
+    // Thin golden-orange radial streak from burst center → tip (classic peony).
+    const tipAlpha = Math.max(0, alpha);
+    const fade = 1 - lifeT;
+    const gradient = context.createLinearGradient(
+      particle.ox,
+      particle.oy,
+      particle.x,
+      particle.y,
+    );
+    gradient.addColorStop(0, `rgba(255, 160, 70, ${0.08 * tipAlpha})`);
+    gradient.addColorStop(0.25, warmColor(particle.warm, 0.55 * tipAlpha * fade));
+    gradient.addColorStop(0.7, warmColor(particle.warm, tipAlpha));
+    gradient.addColorStop(1, `rgba(255, 236, 190, ${tipAlpha})`);
+
+    context.strokeStyle = gradient;
+    context.lineWidth = Math.max(0.55, particle.size * 0.7);
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(particle.ox, particle.oy);
+    context.lineTo(particle.x, particle.y);
+    context.stroke();
+
+    // Bright tip — like individual sparks in the photo.
+    context.fillStyle = `rgba(255, 250, 230, ${tipAlpha})`;
+    context.beginPath();
+    context.arc(particle.x, particle.y, Math.max(0.6, particle.size * 0.45), 0, Math.PI * 2);
+    context.fill();
+    return;
+  }
 
   const dx = particle.x - particle.px;
   const dy = particle.y - particle.py;
@@ -393,7 +460,7 @@ function drawParticle(context: CanvasRenderingContext2D, particle: Particle) {
 
   if (dist > 0.35) {
     context.strokeStyle = warmColor(particle.warm, alpha);
-    context.lineWidth = particle.size * (particle.mode === "trail" ? 1.4 : 1.6);
+    context.lineWidth = particle.size * 1.3;
     context.lineCap = "round";
     context.beginPath();
     context.moveTo(particle.px, particle.py);
@@ -403,13 +470,31 @@ function drawParticle(context: CanvasRenderingContext2D, particle: Particle) {
 
   context.fillStyle = warmColor(Math.min(particle.warm + 0.15, 1), alpha);
   context.beginPath();
-  context.arc(
-    particle.x,
-    particle.y,
-    particle.size * (particle.mode === "trail" ? 0.85 : 1.15),
+  context.arc(particle.x, particle.y, particle.size * 0.85, 0, Math.PI * 2);
+  context.fill();
+}
+
+function drawBurstCore(context: CanvasRenderingContext2D, core: BurstCore) {
+  const t = THREE.MathUtils.clamp(core.life / core.maxLife, 0, 1);
+  const alpha = (1 - t) * (1 - t * 0.35);
+  const radius = 10 + t * 28;
+  const glow = context.createRadialGradient(
+    core.x,
+    core.y,
     0,
-    Math.PI * 2,
+    core.x,
+    core.y,
+    radius,
   );
+  // Soft white / pale-pink core like the reference peony.
+  glow.addColorStop(0, `rgba(255, 252, 248, ${alpha})`);
+  glow.addColorStop(0.2, `rgba(255, 230, 210, ${0.95 * alpha})`);
+  glow.addColorStop(0.45, `rgba(255, 170, 110, ${0.55 * alpha})`);
+  glow.addColorStop(0.75, `rgba(255, 120, 40, ${0.2 * alpha})`);
+  glow.addColorStop(1, "rgba(255, 90, 20, 0)");
+  context.fillStyle = glow;
+  context.beginPath();
+  context.arc(core.x, core.y, radius, 0, Math.PI * 2);
   context.fill();
 }
 
@@ -440,7 +525,11 @@ function updateParticles(pool: Particle[], delta: number) {
 
     particle.px = particle.x;
     particle.py = particle.y;
-    particle.vy += burstGravity * delta;
+    // Delay gravity so the peony stays a round sphere first, then softens.
+    const lifeT = particle.life / particle.maxLife;
+    const gravityScale =
+      particle.mode === "ember" ? Math.max(0, (lifeT - 0.25) * 1.35) : 1;
+    particle.vy += burstGravity * gravityScale * delta;
     particle.vx *= burstDrag;
     particle.vy *= burstDrag;
     particle.x += particle.vx * delta;
@@ -464,6 +553,7 @@ function resetDisplay(display: FirecrackerDisplay, glyphs: FirecrackerTextGlyph[
   display.elapsed = 0;
   display.rockets = createRockets(canvasWidth, canvasHeight);
   display.glyphs = scheduleGlyphs(glyphs);
+  display.burstCores = [];
   for (const particle of display.particles) {
     particle.active = false;
   }
@@ -476,7 +566,6 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
     holdDuration,
     textRevealStart,
     launchDuration,
-    burstSparks,
   } = firecrackerVideoSettings;
   const [canvasWidth, canvasHeight] = canvasSize;
 
@@ -487,19 +576,11 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
   }
 
   const cycleTime = display.elapsed % totalCycle;
-  const inHold = cycleTime > cycleDuration;
   const phaseTime = cycleTime - textRevealStart;
   const textActive = phaseTime >= 0;
 
-  const fadeAlpha = textActive
-    ? inHold
-      ? 0.02 +
-        THREE.MathUtils.smoothstep(cycleDuration, totalCycle, cycleTime) * 0.06
-      : 0.04
-    : 0.07;
-
-  display.context.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
-  display.context.fillRect(0, 0, canvasWidth, canvasHeight);
+  // Full clear each frame — no black fade trails left behind on the sky.
+  clearCanvas(display.context, canvasWidth, canvasHeight);
 
   const burstLineY = canvasHeight * firecrackerVideoSettings.textBandTop;
 
@@ -527,11 +608,9 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
     if (rocket.y <= burstLineY) {
       spawnPeonyBurst(
         display.particles,
+        display.burstCores,
         rocket.x,
         rocket.y,
-        burstSparks,
-        130,
-        [0.9, 1.8],
       );
       rocket.active = false;
     }
@@ -544,7 +623,6 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
       spawnGlyphLight(display.particles, entry.glyph, phaseTime);
     }
   } else {
-    // Clear text before next rocket cycle starts.
     for (const particle of display.particles) {
       if (particle.mode === "text") particle.active = false;
     }
@@ -552,10 +630,22 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
 
   updateParticles(display.particles, delta);
 
+  for (let i = display.burstCores.length - 1; i >= 0; i -= 1) {
+    const core = display.burstCores[i];
+    core.life += delta;
+    if (core.life >= core.maxLife) {
+      display.burstCores.splice(i, 1);
+    }
+  }
+
   for (const particle of display.particles) {
     if (particle.active && particle.mode !== "text") {
       drawParticle(display.context, particle);
     }
+  }
+  // Bright core drawn on top of streaks (like the reference photo).
+  for (const core of display.burstCores) {
+    drawBurstCore(display.context, core);
   }
   for (const particle of display.particles) {
     if (particle.active && particle.mode === "text") {
@@ -630,6 +720,7 @@ function createDisplay(
     rockets: createRockets(canvasWidth, canvasHeight),
     glyphs: scheduleGlyphs(glyphs),
     particles: createParticlePool(),
+    burstCores: [],
     wasVisible: false,
   };
 }
@@ -857,6 +948,9 @@ export default function FirecrackerVideoOverlay({
       if (!visible) {
         if (display.wasVisible) {
           resetDisplay(display, getGlyphs());
+          const [w, h] = firecrackerVideoSettings.canvasSize;
+          clearCanvas(display.context, w, h);
+          display.texture.needsUpdate = true;
         }
         display.wasVisible = false;
         continue;

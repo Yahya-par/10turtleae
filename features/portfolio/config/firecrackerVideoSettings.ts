@@ -5,7 +5,7 @@ import { assetNames } from "./assetNames";
  * Rockets rise → peony bursts → "10Turtle" forms from sparkler particles.
  */
 export const firecrackerVideoSettings = {
-  alphaCutoff: 0.03,
+  alphaCutoff: 0.05,
 
   marinaAnchor: {
     object: assetNames.yacht.marinaWater,
@@ -59,28 +59,32 @@ export const firecrackerVideoSettings = {
   textFontWeight: 800,
   textLetterSpacing: 12,
   textStrokeWidth: 2,
-  /** Vertical band on the sky plane (0–1). Lower = smaller text. */
-  textBandTop: 0.28,
+  /** Vertical band on the sky plane (0–1 from top). Lower = higher in the sky. */
+  textBandTop: 0.12,
   textBandHeight: 0.22,
   /** Extra scale for font size inside the band (1 = fill the band). */
   textFontScale: 0.72,
 
   cycleDuration: 12,
   launchDuration: 3.2,
-  rocketCount: 12,
+  /** Fewer rockets → larger, cleaner peony peals like the reference. */
+  rocketCount: 7,
   textRevealStart: 3.9,
   textRevealDuration: 2.4,
   letterStagger: 0.14,
   glyphSparkCount: 560,
-  /** How long fully-formed text stays before fading out. */
   textHoldDuration: 2.0,
-  /** Fade-out length — text clears with the fireworks. */
   textFadeDuration: 1.6,
   holdDuration: 4.2,
 
-  maxParticles: 800,
-  burstSparks: 56,
-  burstGravity: 280,
-  burstDrag: 0.986,
+  maxParticles: 2600,
+  /** Dense radial peony streaks (classic sphere burst). */
+  burstSparks: 180,
+  burstSpeed: 165,
+  burstLifeMin: 1.05,
+  burstLifeMax: 1.65,
+  /** Keep low early so the sphere stays round like the reference. */
+  burstGravity: 200,
+  burstDrag: 0.996,
   textPinSize: 1.35,
 } as const;
