@@ -27,7 +27,7 @@ import PlaneScrollMovement from "../animations/PlaneScrollMovement";
 import LanternAnimation from "../animations/LanternAnimation";
 import FirecrackerVideoOverlay from "../animations/FirecrackerVideoOverlay";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
-import FutureMuseumBannerRoll from "../animations/FutureMuseumBannerRoll";
+// import FutureMuseumBannerRoll from "../animations/FutureMuseumBannerRoll";
 import DubaiFrameBannerRoll from "../animations/DubaiFrameBannerRoll";
 import WaterBalloonAnimation from "../animations/WaterBalloonAnimation";
 import NewAtlantisBannerRoll from "../animations/NewAtlantisBannerRoll";
@@ -259,6 +259,7 @@ export default function DesertModel({
         turtleOnCarRef={turtleOnCarRef}
         carTravelProgressRef={carTravelProgressRef}
       />
+      {/* Future Museum (futuremuseum001) banner — temporarily disabled
       <FutureMuseumBannerRoll
         scene={scene}
         nodes={nodes}
@@ -269,6 +270,7 @@ export default function DesertModel({
         turtleOnCarRef={turtleOnCarRef}
         carTravelProgressRef={carTravelProgressRef}
       />
+      */}
       <WaterBalloonAnimation
         scene={scene}
         nodes={nodes}
