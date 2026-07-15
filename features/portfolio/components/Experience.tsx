@@ -22,6 +22,7 @@ import Scene from "./scene/Scene";
 import Overlay from "./scene/Overlay";
 import CameraHud from "./camera/CameraHud";
 import DesertSafariVideoOverlay from "./animations/DesertSafariVideoOverlay";
+import PostJourneyBlankPage from "./scene/PostJourneyBlankPage";
 
 const isOrbitMode = cameraSettings.mode === "orbit";
 const isScrollMode = cameraSettings.mode === "scroll";
@@ -364,6 +365,11 @@ export default function Experience() {
           onTargetOpen={handleTargetOpen}
         />
       </Canvas>
+      <PostJourneyBlankPage
+        enabled={loaderDone && isScrollMode}
+        scrollProgress={navigation.scrollProgress}
+        scrollBounds={navigation.scrollBounds}
+      />
       {!loaderDone && (
         <LoaderSelector
           isAssetsReady={isReady}

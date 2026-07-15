@@ -94,6 +94,8 @@ export default function SceneObjectLinks({
 
     const targets: LinkTarget[] = [];
     for (const link of sceneLinkSettings.links) {
+      if (link.enabled === false) continue;
+
       const object = findLinkTarget(scene, nodes, link);
       if (!object) {
         if (process.env.NODE_ENV === "development") {

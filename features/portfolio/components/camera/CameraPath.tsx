@@ -181,14 +181,18 @@ export function getScrollProgressAtX(
 }
 
 export type ScrollProgressBounds = {
+  /** Inclusive scroll clamp min (may extend past model for post-journey blank). */
   min: number;
+  /** Inclusive scroll clamp max (opening / scene 1). */
   max: number;
+  /** Model journey end — camera pins here; blank page starts below this. */
+  modelMin: number;
 };
 
-/** Resolves scroll stop limits from cameraSettings + scene waypoint range. */
-export function getScrollProgressBounds(
+/** Model-only scroll stop limits (no post-journey blank extension). */
+export function getModelScrollProgressBounds(
   sceneFrame: SceneFrame | null,
-): ScrollProgressBounds {
+): Pick<ScrollProgressBounds, "min" | "max"> {
   const { bounds } = cameraSettings.scroll;
   const range = getScrollRange(sceneFrame);
 
@@ -211,14 +215,30 @@ export function getScrollProgressBounds(
   };
 }
 
-/** Remap bounded progress (min–max) to 0–1 for UI such as the progress bar. */
+/** Resolves scroll stop limits. Post-journey reveal is time-based (auto),
+ * so bounds are never extended past the model end. */
+export function getScrollProgressBounds(
+  sceneFrame: SceneFrame | null,
+): ScrollProgressBounds {
+  const model = getModelScrollProgressBounds(sceneFrame);
+
+  return {
+    min: model.min,
+    max: model.max,
+    modelMin: model.min,
+  };
+}
+
+/** Remap model journey progress to 0–1 for UI (frozen once post-journey starts). */
 export function getNormalizedScrollProgress(
   progress: number,
   bounds: ScrollProgressBounds,
 ) {
-  const span = bounds.max - bounds.min;
+  const modelMin = bounds.modelMin ?? bounds.min;
+  const span = bounds.max - modelMin;
   if (span <= 0) return 0;
-  return THREE.MathUtils.clamp((progress - bounds.min) / span, 0, 1);
+  const clamped = THREE.MathUtils.clamp(progress, modelMin, bounds.max);
+  return THREE.MathUtils.clamp((clamped - modelMin) / span, 0, 1);
 }
 
 /** World X that matches ScrollCamera lookAt for a given scroll progress. */

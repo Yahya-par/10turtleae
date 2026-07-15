@@ -14,7 +14,7 @@ type ScrollCameraProps = {
   sceneFrame: SceneFrame | null;
   scrollProgress: RefObject<number>;
   targetScrollProgress: RefObject<number>;
-  scrollBounds: RefObject<{ min: number; max: number }>;
+  scrollBounds: RefObject<{ min: number; max: number; modelMin?: number }>;
   lerpFactor: number;
 };
 
@@ -80,8 +80,17 @@ export default function ScrollCamera({
       bounds.max,
     );
 
+    // Pin camera at the final scene while post-journey blank scroll runs.
+    const modelMin = bounds.modelMin ?? bounds.min;
+    const cameraProgress = THREE.MathUtils.clamp(
+      scrollProgress.current,
+      modelMin,
+      bounds.max,
+    );
+
     const pathX =
-      THREE.MathUtils.lerp(range.min, range.max, nextProgress) + offsets.scrollXOffset;
+      THREE.MathUtils.lerp(range.min, range.max, cameraProgress) +
+      offsets.scrollXOffset;
     const lookAt = new THREE.Vector3(pathX, offsets.lookAtY, offsets.lookAtZ);
     const position = new THREE.Vector3(
       pathX + offsets.x,
