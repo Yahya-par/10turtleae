@@ -11,7 +11,8 @@ export const macMediaLoaderServices = [
 ] as const;
 
 export const macMediaLoaderImages = [
-  `${ASSET_BASE}/SATISFYING DUBAI FRAME.png`,
+  `${ASSET_BASE}/BURJ KHALIFA.png`,
+  `${ASSET_BASE}/DUBAI FRAME.png`,
   `${ASSET_BASE}/BEST MUSEUM IN THE WORLD.png`,
   `${ASSET_BASE}/BUILDINGS 2.0.png`,
   `${ASSET_BASE}/BUILDINGS 4.png`,

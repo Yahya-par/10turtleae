@@ -65,10 +65,12 @@ export const firecrackerVideoSettings = {
   /** Extra scale for font size inside the band (1 = fill the band). */
   textFontScale: 0.72,
 
-  cycleDuration: 12,
+  cycleDuration: 6,
   launchDuration: 3.2,
   /** Fewer rockets → larger, cleaner peony peals like the reference. */
   rocketCount: 7,
+  /** Rocket climb speed only (1 = current, 1.5 = 50% faster). Bursts unaffected. */
+  rocketSpeedScale: 3,
   textRevealStart: 3.9,
   textRevealDuration: 2.4,
   letterStagger: 0.14,
