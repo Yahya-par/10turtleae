@@ -43,16 +43,44 @@ type OpeningMetrics = {
   scrollTriggerMax: number;
 };
 
-type BannerRig = {
-  root: THREE.Group;
+type RollParts = {
   flatMesh: THREE.Mesh;
   rollMesh: THREE.Mesh;
   flatMaterial: THREE.MeshBasicMaterial;
   rollMaterial: THREE.MeshBasicMaterial;
+};
+
+type BookParts = {
+  leftGroup: THREE.Group;
+  rightGroup: THREE.Group;
+  leftMesh: THREE.Mesh;
+  rightMesh: THREE.Mesh;
+  leftMaterial: THREE.MeshBasicMaterial;
+  rightMaterial: THREE.MeshBasicMaterial;
+  closedAngle: number;
+};
+
+type BannerRig = {
+  root: THREE.Group;
   texture: THREE.Texture;
   textureAspect: number;
   opening: OpeningMetrics;
+  roll: RollParts | null;
+  book: BookParts | null;
 };
+
+function isBookReveal(settings: BannerRollSettings) {
+  return "revealStyle" in settings && settings.revealStyle === "book";
+}
+
+function bookClosedAngle(settings: BannerRollSettings) {
+  const degrees =
+    "bookClosedAngleDeg" in settings &&
+    typeof settings.bookClosedAngleDeg === "number"
+      ? settings.bookClosedAngleDeg
+      : 88;
+  return THREE.MathUtils.degToRad(degrees);
+}
 
 const tempActorPos = new THREE.Vector3();
 const foregroundRenderRestore = new WeakMap<THREE.Object3D, number>();
@@ -378,6 +406,15 @@ function createBannerMaterial(texture: THREE.Texture, tint?: THREE.Color) {
   });
 }
 
+/** Clone the banner texture so each page shows only its half of the artwork. */
+function createBookPageTexture(texture: THREE.Texture, side: "left" | "right") {
+  const page = texture.clone();
+  page.repeat.set(0.5, 1);
+  page.offset.set(side === "left" ? 0 : 0.5, 0);
+  page.needsUpdate = true;
+  return page;
+}
+
 function setSubtreeRenderOrder(root: THREE.Object3D | null | undefined, order: number) {
   if (!root) return;
   root.traverse((child) => {
@@ -400,15 +437,27 @@ function restoreSubtreeRenderOrder(root: THREE.Object3D | null | undefined) {
 }
 
 function updateBannerGeometry(rig: BannerRig, unroll: number) {
-  const { flatMesh, rollMesh, flatMaterial, opening } = rig;
-  const { bannerMaxHeight, rollRadius } = opening;
-
   if (unroll <= 0.001) {
     rig.root.visible = false;
     return;
   }
 
   rig.root.visible = true;
+
+  if (rig.book) {
+    // Book unveil: both halves swing open around the central vertical spine.
+    const { leftGroup, rightGroup, closedAngle } = rig.book;
+    const angle = closedAngle * (1 - unroll);
+    leftGroup.rotation.y = angle;
+    rightGroup.rotation.y = -angle;
+    return;
+  }
+
+  const roll = rig.roll;
+  if (!roll) return;
+
+  const { flatMesh, rollMesh, flatMaterial } = roll;
+  const { bannerMaxHeight, rollRadius } = rig.opening;
 
   const deployed = bannerMaxHeight * unroll;
 
@@ -445,10 +494,22 @@ function syncTextureAspect(
   rig.texture.dispose();
   rig.texture = createBannerRollPlaceholderTexture(placeholder, aspect);
   rig.textureAspect = aspect;
-  rig.flatMaterial.map = rig.texture;
-  rig.rollMaterial.map = rig.texture;
-  rig.flatMaterial.needsUpdate = true;
-  rig.rollMaterial.needsUpdate = true;
+
+  if (rig.roll) {
+    rig.roll.flatMaterial.map = rig.texture;
+    rig.roll.rollMaterial.map = rig.texture;
+    rig.roll.flatMaterial.needsUpdate = true;
+    rig.roll.rollMaterial.needsUpdate = true;
+  }
+
+  if (rig.book) {
+    rig.book.leftMaterial.map?.dispose();
+    rig.book.rightMaterial.map?.dispose();
+    rig.book.leftMaterial.map = createBookPageTexture(rig.texture, "left");
+    rig.book.rightMaterial.map = createBookPageTexture(rig.texture, "right");
+    rig.book.leftMaterial.needsUpdate = true;
+    rig.book.rightMaterial.needsUpdate = true;
+  }
 }
 
 function syncRigLayout(
@@ -461,23 +522,52 @@ function syncRigLayout(
   rig.root.position.copy(opening.topAnchor);
 
   const { bannerWidth, bannerMaxHeight, rollRadius } = opening;
-  const flat = rig.flatMesh.geometry as THREE.PlaneGeometry;
+
+  if (rig.book) {
+    const page = rig.book.leftMesh.geometry as THREE.PlaneGeometry;
+    const needsPage =
+      Math.abs(page.parameters.width - bannerWidth / 2) > 0.01 ||
+      Math.abs(page.parameters.height - bannerMaxHeight) > 0.01;
+
+    if (needsPage) {
+      const geometry = new THREE.PlaneGeometry(
+        bannerWidth / 2,
+        bannerMaxHeight,
+        1,
+        1,
+      );
+      rig.book.leftMesh.geometry.dispose();
+      rig.book.rightMesh.geometry.dispose();
+      rig.book.leftMesh.geometry = geometry;
+      rig.book.rightMesh.geometry = geometry;
+      rig.book.leftMesh.position.x = -bannerWidth / 4;
+      rig.book.rightMesh.position.x = bannerWidth / 4;
+      rig.book.leftGroup.position.y = -bannerMaxHeight / 2;
+      rig.book.rightGroup.position.y = -bannerMaxHeight / 2;
+    }
+    return;
+  }
+
+  const roll = rig.roll;
+  if (!roll) return;
+
+  const flat = roll.flatMesh.geometry as THREE.PlaneGeometry;
   const needsFlat =
     Math.abs(flat.parameters.width - bannerWidth) > 0.01 ||
     Math.abs(flat.parameters.height - bannerMaxHeight) > 0.01;
 
   if (needsFlat) {
-    rig.flatMesh.geometry.dispose();
-    rig.flatMesh.geometry = new THREE.PlaneGeometry(
+    roll.flatMesh.geometry.dispose();
+    roll.flatMesh.geometry = new THREE.PlaneGeometry(
       bannerWidth,
       bannerMaxHeight,
       1,
       16,
     );
-    rig.flatMesh.position.y = -bannerMaxHeight / 2;
+    roll.flatMesh.position.y = -bannerMaxHeight / 2;
 
-    rig.rollMesh.geometry.dispose();
-    rig.rollMesh.geometry = new THREE.CylinderGeometry(
+    roll.rollMesh.geometry.dispose();
+    roll.rollMesh.geometry = new THREE.CylinderGeometry(
       rollRadius,
       rollRadius,
       bannerWidth,
@@ -490,19 +580,70 @@ function syncRigLayout(
   }
 }
 
-function buildBannerRig(
+function buildBookParts(
   settings: BannerRollSettings,
-  scene: THREE.Object3D,
+  root: THREE.Group,
   opening: OpeningMetrics,
   texture: THREE.Texture,
-  textureAspect: number,
-): BannerRig {
-  const root = new THREE.Group();
-  root.name = settings.carrierName;
-  root.renderOrder = settings.renderOrder;
-  scene.add(root);
-  root.position.copy(opening.topAnchor);
+): BookParts {
+  const { bannerWidth, bannerMaxHeight } = opening;
+  const pageGeometry = new THREE.PlaneGeometry(
+    bannerWidth / 2,
+    bannerMaxHeight,
+    1,
+    1,
+  );
 
+  const leftMaterial = createBannerMaterial(
+    createBookPageTexture(texture, "left"),
+  );
+  const rightMaterial = createBannerMaterial(
+    createBookPageTexture(texture, "right"),
+  );
+
+  // Each page hinges on the spine: the group sits at the banner center and
+  // the mesh is offset by a quarter width, so rotation.y swings the page open.
+  const leftGroup = new THREE.Group();
+  const rightGroup = new THREE.Group();
+  leftGroup.position.y = -bannerMaxHeight / 2;
+  rightGroup.position.y = -bannerMaxHeight / 2;
+
+  const leftMesh = new THREE.Mesh(pageGeometry, leftMaterial);
+  leftMesh.name = `${settings.carrierName}_PageLeft`;
+  leftMesh.renderOrder = settings.renderOrder;
+  leftMesh.position.x = -bannerWidth / 4;
+
+  const rightMesh = new THREE.Mesh(pageGeometry, rightMaterial);
+  rightMesh.name = `${settings.carrierName}_PageRight`;
+  rightMesh.renderOrder = settings.renderOrder;
+  rightMesh.position.x = bannerWidth / 4;
+
+  leftGroup.add(leftMesh);
+  rightGroup.add(rightMesh);
+  root.add(leftGroup);
+  root.add(rightGroup);
+
+  const closedAngle = bookClosedAngle(settings);
+  leftGroup.rotation.y = closedAngle;
+  rightGroup.rotation.y = -closedAngle;
+
+  return {
+    leftGroup,
+    rightGroup,
+    leftMesh,
+    rightMesh,
+    leftMaterial,
+    rightMaterial,
+    closedAngle,
+  };
+}
+
+function buildRollParts(
+  settings: BannerRollSettings,
+  root: THREE.Group,
+  opening: OpeningMetrics,
+  texture: THREE.Texture,
+): RollParts {
   const flatMaterial = createBannerMaterial(texture);
   const rollMaterial = createBannerMaterial(
     texture,
@@ -535,18 +676,59 @@ function buildBannerRig(
 
   root.add(flatMesh);
   root.add(rollMesh);
+
+  return { flatMesh, rollMesh, flatMaterial, rollMaterial };
+}
+
+function buildBannerRig(
+  settings: BannerRollSettings,
+  scene: THREE.Object3D,
+  opening: OpeningMetrics,
+  texture: THREE.Texture,
+  textureAspect: number,
+): BannerRig {
+  const root = new THREE.Group();
+  root.name = settings.carrierName;
+  root.renderOrder = settings.renderOrder;
+  scene.add(root);
+  root.position.copy(opening.topAnchor);
+
+  const book = isBookReveal(settings)
+    ? buildBookParts(settings, root, opening, texture)
+    : null;
+  const roll = book ? null : buildRollParts(settings, root, opening, texture);
+
   root.visible = false;
 
   return {
     root,
-    flatMesh,
-    rollMesh,
-    flatMaterial,
-    rollMaterial,
     texture,
     textureAspect,
     opening,
+    roll,
+    book,
   };
+}
+
+function disposeBannerRig(rig: BannerRig) {
+  rig.root.parent?.remove(rig.root);
+
+  if (rig.roll) {
+    rig.roll.flatMesh.geometry.dispose();
+    rig.roll.rollMesh.geometry.dispose();
+    rig.roll.flatMaterial.dispose();
+    rig.roll.rollMaterial.dispose();
+  }
+
+  if (rig.book) {
+    rig.book.leftMesh.geometry.dispose();
+    rig.book.leftMaterial.map?.dispose();
+    rig.book.rightMaterial.map?.dispose();
+    rig.book.leftMaterial.dispose();
+    rig.book.rightMaterial.dispose();
+  }
+
+  rig.texture.dispose();
 }
 
 function beginRollAnimation(
@@ -648,12 +830,7 @@ export default function SceneBannerRoll({
       elapsedRef.current = 0;
       unrollRef.current = 0;
 
-      rig.root.parent?.remove(rig.root);
-      rig.flatMesh.geometry.dispose();
-      rig.rollMesh.geometry.dispose();
-      rig.flatMaterial.dispose();
-      rig.rollMaterial.dispose();
-      rig.texture.dispose();
+      disposeBannerRig(rig);
       restoreSubtreeRenderOrder(actorCarrierRef.current);
       actorCarrierRef.current = null;
       rigRef.current = null;

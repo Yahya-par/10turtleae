@@ -6,11 +6,14 @@ import {
   postJourneyScrollSettings,
   type PostJourneyTransition,
 } from "@features/portfolio/config/postJourneyScrollSettings";
+import { markJourneySeen } from "@features/portfolio/utils/journeyStorage";
 
 type PostJourneyBlankPageProps = {
   enabled: boolean;
   scrollProgress: RefObject<number>;
   scrollBounds: RefObject<ScrollProgressBounds>;
+  /** When true, plays the reveal regardless of scroll (e.g. final CTA click). */
+  forceRevealRef?: RefObject<boolean>;
 };
 
 /** Radius % that covers the viewport corner when centered (~√2/2 + pad). */
@@ -81,12 +84,14 @@ export default function PostJourneyBlankPage({
   enabled,
   scrollProgress,
   scrollBounds,
+  forceRevealRef,
 }: PostJourneyBlankPageProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastTRef = useRef(-1);
   const autoTRef = useRef(0);
   const lastTimeRef = useRef(0);
+  const redirectedRef = useRef(false);
   const transition = postJourneyScrollSettings.transition;
 
   useEffect(() => {
@@ -104,10 +109,12 @@ export default function PostJourneyBlankPage({
     const tick = () => {
       const panel = panelRef.current;
       if (panel) {
-        // Play toward 1 while parked at the journey end; reverse otherwise.
+        // Play toward 1 while parked at the journey end (or forced by the
+        // final CTA); reverse otherwise.
         const bounds = scrollBounds.current;
         const modelMin = bounds.modelMin ?? bounds.min;
         const atEnd =
+          forceRevealRef?.current === true ||
           (scrollProgress.current ?? 0) <= modelMin + AUTO_TRIGGER_EPSILON;
 
         const now = performance.now();
@@ -125,6 +132,22 @@ export default function PostJourneyBlankPage({
           lastTRef.current = postT;
           applyBlankPageStyle(panel, canvasRef.current, transition, postT);
         }
+
+        // Hand off to the external site the moment the reveal completes, so
+        // the website appears as the natural continuation of the transition.
+        const { redirectUrl } = postJourneyScrollSettings;
+        if (
+          redirectUrl &&
+          !redirectedRef.current &&
+          autoTRef.current >= 1 &&
+          atEnd
+        ) {
+          redirectedRef.current = true;
+          // The journey counts as "seen" only once this final transition
+          // actually fires the redirect (not on the CTA click).
+          markJourneySeen();
+          window.location.assign(redirectUrl);
+        }
       }
       frameId = window.requestAnimationFrame(tick);
     };
@@ -136,11 +159,12 @@ export default function PostJourneyBlankPage({
         canvasRef.current.style.filter = "";
       }
     };
-  }, [enabled, scrollBounds, scrollProgress, transition]);
+  }, [enabled, forceRevealRef, scrollBounds, scrollProgress, transition]);
 
   if (!enabled || !postJourneyScrollSettings.enabled) return null;
 
   const usesOpacityReveal = transition === "fade" || transition === "blurFade";
+  const { redirectUrl } = postJourneyScrollSettings;
 
   return (
     <div
@@ -154,6 +178,28 @@ export default function PostJourneyBlankPage({
         pointerEvents: "none",
       }}
       aria-hidden
-    />
+    >
+      {redirectUrl && postJourneyScrollSettings.redirectPreviewSrc ? (
+        // Snapshot of the destination site (it blocks iframes via
+        // X-Frame-Options), shown through the transition so the iris opens
+        // onto the website and the redirect at 100% lands on the same view.
+        <img
+          src={postJourneyScrollSettings.redirectPreviewSrc}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "top center",
+            display: "block",
+            pointerEvents: "none",
+          }}
+          draggable={false}
+          aria-hidden
+        />
+      ) : null}
+    </div>
   );
 }

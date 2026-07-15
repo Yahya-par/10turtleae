@@ -56,6 +56,14 @@ export const newAtlantisBannerSettings = {
   gapAboveFrameText: 0.08,
   rollRadiusFromOpening: 0.035,
 
+  /**
+   * Unveil style: the banner splits into two halves hinged on a central
+   * vertical spine and swings open toward the camera, like opening a book.
+   */
+  revealStyle: "book" as const,
+  /** Page angle (degrees) when the book is fully closed. 90 = edge-on. */
+  bookClosedAngleDeg: 88,
+
   /** Yacht track progress while in front of Atlantis (full shinywater corridor). */
   yachtTravelProgressMin: 0.25,
   yachtTravelProgressMax: 1,
