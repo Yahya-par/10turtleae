@@ -2,10 +2,11 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { metroTrainSettings } from "@features/portfolio/config/metroTrainSettings";
-import {
-  createThemedBannerMesh,
-  disposeThemedBannerMesh,
-} from "@features/portfolio/utils/themedBannerTexture";
+// Metro Automation banner — temporarily disabled
+// import {
+//   createThemedBannerMesh,
+//   disposeThemedBannerMesh,
+// } from "@features/portfolio/utils/themedBannerTexture";
 
 type MetroBounds = {
   start: THREE.Vector3;
@@ -210,20 +211,21 @@ function syncMetroBanner(
   );
 }
 
-function createMetroBannerRoot(carrier: THREE.Group) {
-  const { banner } = metroTrainSettings;
-  const root = new THREE.Group();
-  root.name = "MetroBannerRoot";
-
-  const mesh = createThemedBannerMesh(banner, banner.width, banner.height, {
-    depthTest: true,
-    renderOrder: 0,
-  });
-  root.add(mesh);
-  carrier.add(root);
-
-  return { root, mesh };
-}
+// Metro Automation banner — temporarily disabled
+// function createMetroBannerRoot(carrier: THREE.Group) {
+//   const { banner } = metroTrainSettings;
+//   const root = new THREE.Group();
+//   root.name = "MetroBannerRoot";
+//
+//   const mesh = createThemedBannerMesh(banner, banner.width, banner.height, {
+//     depthTest: true,
+//     renderOrder: 0,
+//   });
+//   root.add(mesh);
+//   carrier.add(root);
+//
+//   return { root, mesh };
+// }
 
 function getTrainHalfLength(train: THREE.Object3D) {
   train.updateMatrixWorld(true);
@@ -393,9 +395,10 @@ export default function MetroTrainAnimation({
     boundsRef.current = { start, end };
     carrier.position.copy(start);
 
-    const banner = createMetroBannerRoot(carrier);
-    bannerRootRef.current = banner.root;
-    bannerMeshRef.current = banner.mesh;
+    // Metro Automation banner — temporarily disabled
+    // const banner = createMetroBannerRoot(carrier);
+    // bannerRootRef.current = banner.root;
+    // bannerMeshRef.current = banner.mesh;
 
     if (process.env.NODE_ENV === "development") {
       console.info("[MetroTrainAnimation] Ready:", {
@@ -411,23 +414,24 @@ export default function MetroTrainAnimation({
     }
 
     return () => {
-      if (bannerMeshRef.current) {
-        disposeThemedBannerMesh(bannerMeshRef.current);
-      }
-      bannerRootRef.current?.removeFromParent();
-      bannerRootRef.current = null;
-      bannerMeshRef.current = null;
+      // Metro Automation banner — temporarily disabled
+      // if (bannerMeshRef.current) {
+      //   disposeThemedBannerMesh(bannerMeshRef.current);
+      // }
+      // bannerRootRef.current?.removeFromParent();
+      // bannerRootRef.current = null;
+      // bannerMeshRef.current = null;
       trainRef.current = null;
       carrierRef.current = null;
       boundsRef.current = null;
     };
   }, [scene, nodes]);
 
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     const carrier = carrierRef.current;
-    const train = trainRef.current;
+    // const train = trainRef.current;
     const bounds = boundsRef.current;
-    const bannerRoot = bannerRootRef.current;
+    // const bannerRoot = bannerRootRef.current;
     if (!carrier || !bounds) return;
 
     elapsedRef.current += delta;
@@ -441,17 +445,18 @@ export default function MetroTrainAnimation({
     tempPositionRef.current.copy(bounds.start).lerp(bounds.end, t);
     carrier.position.copy(tempPositionRef.current);
 
-    if (bannerRoot && train) {
-      syncMetroBanner(
-        carrier,
-        train,
-        bannerRoot,
-        state.camera,
-        bannerLookMatrixRef.current,
-        bannerWorldQuatRef.current,
-        bannerCarrierQuatRef.current,
-      );
-    }
+    // Metro Automation banner — temporarily disabled
+    // if (bannerRoot && train) {
+    //   syncMetroBanner(
+    //     carrier,
+    //     train,
+    //     bannerRoot,
+    //     state.camera,
+    //     bannerLookMatrixRef.current,
+    //     bannerWorldQuatRef.current,
+    //     bannerCarrierQuatRef.current,
+    //   );
+    // }
   });
 
   return null;

@@ -532,8 +532,8 @@ function beginTransferToBoatFromCar(rig: CamelRig, scene: THREE.Object3D) {
   rig.transferProgress = 0;
   rig.onCar = false;
   rig.onBoat = false;
+  captureCarDockedHandoffX(rig);
   carPassState.carToBoatTransfer = true;
-  carPassState.carDockedHandoffX = null;
   carPassState.carBoardScrollProgress = null;
 }
 
@@ -753,6 +753,7 @@ function resolveAtlantisTransferYacht(
 
 function isTurtleInCarPhase(
   rig: CamelRig,
+  turtleOnBoatRef: RefObject<boolean>,
   turtleOnCarRef: RefObject<boolean>,
   carTravelProgressRef: RefObject<number>,
   turtleOnJetskiRef: RefObject<boolean>,
@@ -761,6 +762,18 @@ function isTurtleInCarPhase(
   yachtTravelProgressRef: RefObject<number>,
   turtleOnSafariCamelRef: RefObject<boolean>,
 ) {
+  const parentIsBoat = Boolean(
+    rig.turtle && rig.boat && rig.turtle.parent === rig.boat,
+  );
+  if (
+    rig.onBoat ||
+    rig.mount === "boat" ||
+    parentIsBoat ||
+    turtleOnBoatRef.current
+  ) {
+    return false;
+  }
+
   if (
     isTurtleInYachtPhase(rig, turtleOnYachtRef, yachtTravelProgressRef, turtleOnSafariCamelRef) ||
     isTurtleInJetskiPhase(
@@ -1033,6 +1046,35 @@ function buildRig(
     if (leg) {
       attachObjectToCarrier(carrier, leg);
     }
+  }
+
+  // Drop body (+ rider) in WORLD space so camel001 sits on the legs.
+  // camel.001 has negative Blender scale, which the carrier inherits — a
+  // local Y nudge would move the body the wrong way (up instead of down).
+  camel.position.set(0, 0, 0);
+  camel.updateMatrixWorld(true);
+  const bodyWorld = new THREE.Vector3();
+  camel.getWorldPosition(bodyWorld);
+  bodyWorld.y += camelScrollSettings.bodyOffsetY;
+  setObjectWorldPosition(camel, bodyWorld);
+
+  if (turtle) {
+    if (!carrier.userData.__turtleSeatLocal) {
+      carrier.userData.__turtleSeatLocal = turtle.position.clone();
+      carrier.userData.__turtleSeatQuat = turtle.quaternion.clone();
+      carrier.userData.__turtleSeatScale = turtle.scale.clone();
+    } else {
+      turtle.position.copy(carrier.userData.__turtleSeatLocal as THREE.Vector3);
+      turtle.quaternion.copy(
+        carrier.userData.__turtleSeatQuat as THREE.Quaternion,
+      );
+      turtle.scale.copy(carrier.userData.__turtleSeatScale as THREE.Vector3);
+    }
+    turtle.updateMatrixWorld(true);
+    const turtleWorld = new THREE.Vector3();
+    turtle.getWorldPosition(turtleWorld);
+    turtleWorld.y += camelScrollSettings.bodyOffsetY;
+    setObjectWorldPosition(turtle, turtleWorld);
   }
 
   const car = findScrollCarBody(scene, nodes);
@@ -1986,6 +2028,7 @@ export default function CamelScrollMovement({
 
     const turtleInCarPhase = isTurtleInCarPhase(
       rig,
+      turtleOnBoatRef,
       turtleOnCarRef,
       carTravelProgressRef,
       turtleOnJetskiRef,
@@ -2118,6 +2161,7 @@ export default function CamelScrollMovement({
       ) &&
       !isTurtleInCarPhase(
         rig,
+        turtleOnBoatRef,
         turtleOnCarRef,
         carTravelProgressRef,
         turtleOnJetskiRef,
@@ -2149,6 +2193,7 @@ export default function CamelScrollMovement({
       !isTurtleInYachtPhase(rig, turtleOnYachtRef, yachtTravelProgressRef, turtleOnSafariCamelRef) &&
       !isTurtleInCarPhase(
         rig,
+        turtleOnBoatRef,
         turtleOnCarRef,
         carTravelProgressRef,
         turtleOnJetskiRef,

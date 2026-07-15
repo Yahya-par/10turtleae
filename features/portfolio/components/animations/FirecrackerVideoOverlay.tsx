@@ -11,6 +11,7 @@ import {
 } from "@features/portfolio/components/camera/CameraPath";
 import { firecrackerVideoSettings } from "@features/portfolio/config/firecrackerVideoSettings";
 import { useFirecrackerVideoSettingsHmr } from "@features/portfolio/hooks/useFirecrackerVideoSettingsHmr";
+import { audioManager } from "@features/portfolio/utils/audioManager";
 import {
   sampleFirecrackerTextGlyphs,
   type FirecrackerTextGlyph,
@@ -101,6 +102,7 @@ type FirecrackerDisplay = {
   particles: Particle[];
   burstCores: BurstCore[];
   wasVisible: boolean;
+  audioPlayed: boolean;
 };
 
 const vertexShader = /* glsl */ `
@@ -561,6 +563,7 @@ function resetDisplay(display: FirecrackerDisplay, glyphs: FirecrackerTextGlyph[
   display.rockets = createRockets(canvasWidth, canvasHeight);
   display.glyphs = scheduleGlyphs(glyphs);
   display.burstCores = [];
+  display.audioPlayed = false;
   for (const particle of display.particles) {
     particle.active = false;
   }
@@ -614,6 +617,10 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
     );
 
     if (rocket.y <= burstLineY) {
+      if (!display.audioPlayed) {
+        display.audioPlayed = true;
+        audioManager.playFirecrackerCue();
+      }
       spawnPeonyBurst(
         display.particles,
         display.burstCores,
@@ -731,6 +738,7 @@ function createDisplay(
     particles: createParticlePool(),
     burstCores: [],
     wasVisible: false,
+    audioPlayed: false,
   };
 }
 

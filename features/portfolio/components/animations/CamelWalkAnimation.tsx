@@ -7,6 +7,7 @@ import { type SceneFrame } from "@features/portfolio/components/camera/CameraPat
 import {
   findSceneObject,
   resolveScene1CamelTrack,
+  setObjectWorldPosition,
   type Scene1CamelTrack,
 } from "@features/portfolio/utils/sceneObjectUtils";
 
@@ -45,6 +46,19 @@ const swingWorldAxis = {
   y: new THREE.Vector3(0, 1, 0),
   z: new THREE.Vector3(0, 0, 1),
 } as const;
+
+const bodyOffsetWorld = new THREE.Vector3();
+
+/** Keep camel001 dropped toward the legs in world space (carrier has negative scale). */
+function applyBodyWorldOffset(body: THREE.Object3D) {
+  if (!body.parent) return;
+  body.position.set(0, 0, 0);
+  body.parent.updateMatrixWorld(true);
+  body.updateMatrixWorld(true);
+  body.getWorldPosition(bodyOffsetWorld);
+  bodyOffsetWorld.y += camelScrollSettings.bodyOffsetY;
+  setObjectWorldPosition(body, bodyOffsetWorld);
+}
 
 function findLeg(
   scene: THREE.Object3D,
@@ -452,6 +466,7 @@ function applySwing(rig: WalkRig, walkPhase: number, isWalking: boolean) {
   }
 
   if (rig.body && rig.bodyBaseRotation) {
+    applyBodyWorldOffset(rig.body);
     const rock = isWalking
       ? Math.sin(walkPhase) * camelWalkSettings.bodyRockAngle
       : 0;

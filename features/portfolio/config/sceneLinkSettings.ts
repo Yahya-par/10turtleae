@@ -6,11 +6,13 @@ export type SceneLinkConfig = {
   blenderObjectName: string;
   objectMaterial: string;
   url: string;
+  /** When false, this link is ignored. Defaults to true. */
+  enabled?: boolean;
 };
 
 export const sceneLinkSettings = {
   /** Master switch for all clickable scene-object CTAs. */
-  enabled: false,
+  enabled: true,
   dragThreshold: 6,
   links: [
     {
@@ -19,6 +21,7 @@ export const sceneLinkSettings = {
       blenderObjectName: assetNames.perfectBuildings.blenderName,
       objectMaterial: assetNames.perfectBuildings.material,
       url: "https://10turtle.ae/branding/brand-identity",
+      enabled: false,
     },
     {
       id: "dubaiFrame",
@@ -26,6 +29,7 @@ export const sceneLinkSettings = {
       blenderObjectName: "proper_dubaiframe.001",
       objectMaterial: "proper_dubaiframe",
       url: "https://10turtle.ae/web/website-redesign",
+      enabled: false,
     },
     {
       id: "metro",
@@ -33,6 +37,7 @@ export const sceneLinkSettings = {
       blenderObjectName: "Metro.001",
       objectMaterial: "Metro",
       url: "https://10turtle.ae/ai-automation/workflow-automation",
+      enabled: false,
     },
     {
       id: "futureMuseum",
@@ -40,6 +45,7 @@ export const sceneLinkSettings = {
       blenderObjectName: "futuremuseum.001",
       objectMaterial: "futuremuseum",
       url: "https://10turtle.ae/ai-automation/ai-agents",
+      enabled: false,
     },
     {
       id: "bigFountain",
@@ -47,6 +53,7 @@ export const sceneLinkSettings = {
       blenderObjectName: "BigFountain.001",
       objectMaterial: "BigFountain",
       url: "https://10turtle.ae/web/custom-development",
+      enabled: false,
     },
     {
       id: "burjAlArab",
@@ -54,6 +61,7 @@ export const sceneLinkSettings = {
       blenderObjectName: "burjalarab.001",
       objectMaterial: "burjalarab",
       url: "https://10turtle.ae/web/ui-ux-design",
+      enabled: false,
     },
     {
       id: "finalcta001",
@@ -61,6 +69,7 @@ export const sceneLinkSettings = {
       blenderObjectName: "finalcta.001",
       objectMaterial: "finalcta",
       url: "https://10turtle.ae",
+      enabled: true,
     },
   ] satisfies SceneLinkConfig[],
 } as const;

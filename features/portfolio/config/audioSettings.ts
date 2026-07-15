@@ -72,4 +72,10 @@ export const audioSettings = {
     loop: false,
     volume: 0.55,
   },
+  firecracker: {
+    /** Marina / Blue Waters sky text — plays when the firecracker show starts */
+    cue: audioSrc("/Audios/firecrackersound.mp3"),
+    loop: false,
+    volume: 0.7,
+  },
 } as const;

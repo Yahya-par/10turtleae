@@ -13,7 +13,7 @@ import { assetNames } from "./assetNames";
  * screen.width = display width in px (height follows GIF portrait ratio)
  */
 export const desertSafariVideoSettings = {
-  videoUrl: "/Videos/BELLYDANCERVIDEO.gif",
+  // videoUrl: "/Videos/BELLYDANCERVIDEO.gif",
   overlayName: "DesertSafariBellyDancerVideoOverlay",
 
   anchorAsset: assetNames.safari.land,
