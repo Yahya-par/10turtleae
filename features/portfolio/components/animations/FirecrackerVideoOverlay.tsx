@@ -72,6 +72,8 @@ type Rocket = {
   vy: number;
   launchAt: number;
   active: boolean;
+  /** Guards against re-launch after bursting within the same cycle. */
+  exploded: boolean;
 };
 
 type BurstCore = {
@@ -372,15 +374,20 @@ function scheduleGlyphs(glyphs: FirecrackerTextGlyph[]): ScheduledGlyph[] {
 }
 
 function createRockets(canvasWidth: number, canvasHeight: number): Rocket[] {
-  const { rocketCount, launchDuration } = firecrackerVideoSettings;
+  const { rocketCount, launchDuration, rocketSpeedScale } =
+    firecrackerVideoSettings;
   const baseY = canvasHeight * 0.97;
 
   return Array.from({ length: rocketCount }, (_, index) => ({
     x: randomBetween(canvasWidth * 0.1, canvasWidth * 0.9),
     y: baseY,
-    vy: randomBetween(canvasHeight * 0.52, canvasHeight * 0.68) / launchDuration,
+    vy:
+      (randomBetween(canvasHeight * 0.52, canvasHeight * 0.68) /
+        launchDuration) *
+      rocketSpeedScale,
     launchAt: (index / rocketCount) * launchDuration * 0.88,
     active: false,
+    exploded: false,
   }));
 }
 
@@ -590,6 +597,7 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
   for (const rocket of display.rockets) {
     if (
       !rocket.active &&
+      !rocket.exploded &&
       cycleTime >= rocket.launchAt &&
       cycleTime < launchDuration + 0.5
     ) {
@@ -620,6 +628,7 @@ function updateDisplay(display: FirecrackerDisplay, delta: number) {
         rocket.y,
       );
       rocket.active = false;
+      rocket.exploded = true;
     }
   }
 

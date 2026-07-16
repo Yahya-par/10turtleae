@@ -17,8 +17,6 @@ type SkyBounds = {
   maxY: number;
 };
 
-type BannerStyle = (typeof lanternAnimationSettings)["banner"];
-
 type LanternRig = {
   root: THREE.Group;
   configIndex: number;
@@ -30,8 +28,8 @@ type LanternRig = {
   flameOuter: THREE.Mesh;
   flameCore: THREE.Mesh;
   halo: THREE.Mesh;
-  banner: THREE.Sprite;
-  stringMesh: THREE.Mesh;
+  threadMesh: THREE.Mesh;
+  labelSprite: THREE.Sprite;
   baseX: number;
   baseY: number;
   baseZ: number;
@@ -68,40 +66,45 @@ const paperFragmentShader = /* glsl */ `
   void main() {
     float y = vUv.y;
 
-    // Warm amber-orange gradient — avoid harsh white/yellow
-    vec3 hotBase = vec3(0.96, 0.62, 0.18);
-    vec3 goldenOrange = vec3(0.92, 0.52, 0.14);
-    vec3 warmOrange = vec3(0.84, 0.42, 0.12);
-    vec3 burntOrange = vec3(0.72, 0.33, 0.1);
-    vec3 topTerracotta = vec3(0.58, 0.26, 0.09);
+    // Desert dusk palette — terracotta crown, honey body, cream flame glow
+    vec3 topDeep = vec3(0.66, 0.30, 0.20);
+    vec3 midRose = vec3(0.82, 0.44, 0.24);
+    vec3 warmAmber = vec3(0.94, 0.60, 0.26);
+    vec3 honeyGold = vec3(0.98, 0.78, 0.38);
+    vec3 creamGlow = vec3(1.0, 0.93, 0.74);
 
-    vec3 color = mix(topTerracotta, burntOrange, smoothstep(0.88, 0.58, y));
-    color = mix(color, warmOrange, smoothstep(0.68, 0.38, y));
-    color = mix(color, goldenOrange, smoothstep(0.48, 0.18, y));
-    color = mix(color, hotBase, smoothstep(0.22, 0.0, y));
+    vec3 color = mix(topDeep, midRose, smoothstep(0.96, 0.64, y));
+    color = mix(color, warmAmber, smoothstep(0.74, 0.40, y));
+    color = mix(color, honeyGold, smoothstep(0.46, 0.16, y));
+    color = mix(color, creamGlow, smoothstep(0.24, 0.0, y));
 
-    float emissive = pow(1.0 - y, 1.6) * 0.28 * uFlicker;
-    color += vec3(0.95, 0.52, 0.12) * emissive;
+    // Soft inner bloom from the flame
+    float bloom = pow(1.0 - y, 2.0) * uFlicker;
+    color = mix(color, creamGlow, bloom * 0.42);
+    color += vec3(1.0, 0.84, 0.48) * bloom * 0.22;
 
-    float bottomHot = pow(1.0 - y, 3.5) * 0.16 * uFlicker;
-    color += vec3(0.98, 0.68, 0.22) * bottomHot;
+    float bottomHot = pow(1.0 - y, 3.0) * 0.16 * uFlicker;
+    color += vec3(1.0, 0.90, 0.62) * bottomHot;
 
-    // Subtle paper grain
+    // Gentle paper texture
     float paper =
-      sin(vUv.x * 26.0 + vUv.y * 16.0) *
-      sin(vUv.y * 22.0 + 1.3) *
-      0.01;
+      sin(vUv.x * 22.0 + vUv.y * 13.0) *
+      sin(vUv.y * 18.0 + 1.1) *
+      0.008;
     color *= 1.0 + paper;
 
-    // Soft translucent edge glow
+    // Warm golden edge catch — reads against the peachy sky
     vec3 viewDir = normalize(cameraPosition - vWorldPos);
-    float fresnel = pow(1.0 - max(dot(normalize(vNormalW), viewDir), 0.0), 3.4);
-    color += vec3(0.95, 0.55, 0.12) * fresnel * 0.08;
+    float ndv = max(dot(normalize(vNormalW), viewDir), 0.0);
+    float fresnel = pow(1.0 - ndv, 2.6);
+    color += vec3(1.0, 0.74, 0.34) * fresnel * 0.09;
+    color *= mix(1.0, 0.82, pow(1.0 - ndv, 4.8) * 0.42);
 
-    color *= mix(0.88, 1.0, smoothstep(0.82, 0.28, y));
+    // Upper paper stays slightly deeper for silhouette depth
+    color = mix(color, topDeep * 1.04, smoothstep(0.42, 0.94, y) * 0.14);
 
-    float alpha = mix(0.62, 0.9, pow(1.0 - y, 1.7));
-    alpha = mix(alpha, 0.82, smoothstep(0.18, 0.62, y));
+    float alpha = mix(0.74, 0.92, pow(1.0 - y, 1.2));
+    alpha = mix(alpha, 0.86, smoothstep(0.14, 0.58, y));
     gl_FragColor = vec4(color, alpha);
   }
 `;
@@ -173,23 +176,38 @@ function getSkyBounds(
 }
 
 /**
- * Side-profile half-width — subtle belly in lower third, not a wide center bulge.
+ * Soft barrel silhouette traced from the reference kongming lantern:
+ * continuous convex sides, widest mid-upper, gentle taper to a round open base.
+ * `t` is 0 at the bottom opening, 1 at the top rim.
  */
 function getHalfExtentAt(t: number) {
-  const base = 0.262;
-  const belly = 0.302;
-  const top = 0.252;
+  // [height, half-width] — rounded vase, not a trapezoid taper
+  const keys: Array<[number, number]> = [
+    [0.0, 0.186],
+    [0.06, 0.208],
+    [0.16, 0.252],
+    [0.28, 0.292],
+    [0.42, 0.322],
+    [0.55, 0.338],
+    [0.68, 0.334],
+    [0.8, 0.318],
+    [0.9, 0.302],
+    [1.0, 0.29],
+  ];
 
-  if (t <= 0.08) {
-    return THREE.MathUtils.lerp(base * 0.98, base, t / 0.08);
+  if (t <= keys[0][0]) return keys[0][1];
+  if (t >= keys[keys.length - 1][0]) return keys[keys.length - 1][1];
+
+  for (let i = 0; i < keys.length - 1; i += 1) {
+    const [t0, w0] = keys[i];
+    const [t1, w1] = keys[i + 1];
+    if (t >= t0 && t <= t1) {
+      const u = (t - t0) / (t1 - t0);
+      const s = u * u * (3 - 2 * u);
+      return THREE.MathUtils.lerp(w0, w1, s);
+    }
   }
-  if (t <= 0.34) {
-    return THREE.MathUtils.lerp(base, belly, (t - 0.08) / 0.26);
-  }
-  if (t <= 0.8) {
-    return THREE.MathUtils.lerp(belly, top, (t - 0.34) / 0.46);
-  }
-  return THREE.MathUtils.lerp(top, top, (t - 0.8) / 0.2);
+  return keys[keys.length - 1][1];
 }
 
 function superellipseXZ(
@@ -223,10 +241,10 @@ function sampleCrossSection(
   return { x, z };
 }
 
-/** Rounded-rectangle pillow body — soft corners, wide open base. */
+/** Rounded kongming body — soft barrel sides, open oval base, arched top. */
 function createLanternBodyGeometry(height: number) {
   const { radialSegments, heightSegments } = lanternAnimationSettings;
-  const bottomTrim = 0.04;
+  const bottomTrim = 0;
 
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -271,51 +289,83 @@ function createLanternBodyGeometry(height: number) {
 function createLanternTopCapGeometry(height: number) {
   const { radialSegments } = lanternAnimationSettings;
   const halfW = getHalfExtentAt(1);
-  const shape = new THREE.Shape();
+  const domeHeight = height * 0.055;
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
 
-  for (let ir = 0; ir <= radialSegments; ir += 1) {
-    const theta = (ir / radialSegments) * Math.PI * 2;
-    const { x, z } = sampleCrossSection(theta, halfW, halfW);
-    if (ir === 0) shape.moveTo(x, z);
-    else shape.lineTo(x, z);
+  // Soft arched top like the reference
+  positions.push(0, height + domeHeight, 0);
+  uvs.push(0.5, 1);
+
+  const rings = 8;
+  for (let ring = 1; ring <= rings; ring += 1) {
+    const rt = ring / rings;
+    // Cosine dome — fuller round top, not a flat lid
+    const y = height + domeHeight * Math.cos((rt * Math.PI) / 2);
+
+    for (let ir = 0; ir < radialSegments; ir += 1) {
+      const theta = (ir / radialSegments) * Math.PI * 2;
+      const { x, z } = sampleCrossSection(theta, halfW * rt, halfW * rt);
+      positions.push(x, y, z);
+      uvs.push(0.5, 1);
+    }
   }
-  shape.closePath();
 
-  const geometry = new THREE.ShapeGeometry(shape, radialSegments);
-  geometry.rotateX(-Math.PI / 2);
-  geometry.translate(0, height, 0);
-
-  const topUvs = new Float32Array(geometry.attributes.position.count * 2);
-  for (let i = 0; i < topUvs.length; i += 2) {
-    topUvs[i] = 0.5;
-    topUvs[i + 1] = 1;
+  for (let ir = 0; ir < radialSegments; ir += 1) {
+    const next = (ir + 1) % radialSegments;
+    indices.push(0, 1 + ir, 1 + next);
   }
-  geometry.setAttribute("uv", new THREE.BufferAttribute(topUvs, 2));
+
+  for (let ring = 0; ring < rings - 1; ring += 1) {
+    const rowA = 1 + ring * radialSegments;
+    const rowB = 1 + (ring + 1) * radialSegments;
+    for (let ir = 0; ir < radialSegments; ir += 1) {
+      const next = (ir + 1) % radialSegments;
+      const a = rowA + ir;
+      const b = rowA + next;
+      const c = rowB + ir;
+      const d = rowB + next;
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
 }
 
+/** Thin oval rim + short inner lip so the base reads as an open hole. */
 function createLanternBottomRimGeometry() {
   const { radialSegments } = lanternAnimationSettings;
-  const halfW = getHalfExtentAt(0.04);
-  const innerScale = 0.72;
-  const y = 0.018;
+  const halfW = getHalfExtentAt(0);
+  const tube = 0.007;
+  const lipDepth = 0.028;
   const positions: number[] = [];
   const indices: number[] = [];
 
+  // Outer rim ring (y ≈ 0) and inner lip dropping slightly inside
   for (let ir = 0; ir <= radialSegments; ir += 1) {
     const theta = (ir / radialSegments) * Math.PI * 2;
-    const outer = sampleCrossSection(theta, halfW, halfW);
-    const inner = sampleCrossSection(theta, halfW * innerScale, halfW * innerScale);
-    positions.push(outer.x, y, outer.z, inner.x, y * 0.35, inner.z);
-  }
-
-  for (let ir = 0; ir < radialSegments; ir += 1) {
-    const o0 = ir * 2;
-    const i0 = o0 + 1;
-    const o1 = ((ir + 1) % radialSegments) * 2;
-    const i1 = o1 + 1;
-    indices.push(o0, o1, i0, i0, o1, i1);
+    const outer = sampleCrossSection(theta, halfW + tube, halfW + tube);
+    const mid = sampleCrossSection(theta, halfW, halfW);
+    const inner = sampleCrossSection(theta, halfW * 0.82, halfW * 0.82);
+    const base = ir * 3;
+    positions.push(
+      outer.x, tube * 0.6, outer.z,
+      mid.x, 0, mid.z,
+      inner.x, -lipDepth, inner.z,
+    );
+    if (ir < radialSegments) {
+      const next = (ir + 1) * 3;
+      // outer → mid band
+      indices.push(base, next, base + 1, base + 1, next, next + 1);
+      // mid → inner lip
+      indices.push(base + 1, next + 1, base + 2, base + 2, next + 1, next + 2);
+    }
   }
 
   const geometry = new THREE.BufferGeometry();
@@ -323,175 +373,6 @@ function createLanternBottomRimGeometry() {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
-}
-
-function measureVerticalLabelHeight(
-  context: CanvasRenderingContext2D,
-  label: string,
-  fontSize: number,
-) {
-  const letterSpacing = fontSize * 1.08;
-  const chars = label.replace(/\s+/g, "").split("");
-  return chars.length * letterSpacing;
-}
-
-function createHorizontalBannerTexture(label: string, style: BannerStyle) {
-  const canvas = document.createElement("canvas");
-  const width = 1024;
-  const height = 288;
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("[LanternAnimation] Failed to create banner canvas context");
-  }
-
-  const gradient = context.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, style.background);
-  gradient.addColorStop(0.55, style.background);
-  gradient.addColorStop(1, style.backgroundDark);
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, width, height);
-
-  const trimInset = 14;
-  context.strokeStyle = style.trimColor;
-  context.lineWidth = 8;
-  context.strokeRect(trimInset, trimInset, width - trimInset * 2, height - trimInset * 2);
-
-  context.fillStyle = style.textColor;
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-
-  let fontSize = Math.floor(height * 0.52);
-  do {
-    context.font = `700 ${fontSize}px ${style.textFontFamily}`;
-    fontSize -= 1;
-  } while (
-    fontSize > 22 &&
-    context.measureText(label).width > width * 0.86
-  );
-
-  context.font = `700 ${fontSize}px ${style.textFontFamily}`;
-  context.fillText(label, width * 0.5, height * 0.53);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function createVerticalBannerTexture(label: string, style: BannerStyle) {
-  const canvas = document.createElement("canvas");
-  const width = 384;
-  const height = 1024;
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("[LanternAnimation] Failed to create banner canvas context");
-  }
-
-  const gradient = context.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, style.background);
-  gradient.addColorStop(0.55, style.background);
-  gradient.addColorStop(1, style.backgroundDark);
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, width, height);
-
-  const trimInset = 16;
-  context.strokeStyle = style.trimColor;
-  context.lineWidth = 8;
-  context.strokeRect(trimInset, trimInset, width - trimInset * 2, height - trimInset * 2);
-
-  context.fillStyle = style.textColor;
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-
-  const compactLabel = label.replace(/\s+/g, "");
-  let fontSize = Math.floor(width * 0.58);
-  do {
-    context.font = `700 ${fontSize}px ${style.textFontFamily}`;
-    fontSize -= 1;
-  } while (
-    fontSize > 22 &&
-    measureVerticalLabelHeight(context, compactLabel, fontSize) >
-      height * 0.84
-  );
-
-  context.font = `700 ${fontSize}px ${style.textFontFamily}`;
-
-  const letterSpacing = fontSize * 1.06;
-  const chars = compactLabel.split("");
-  const totalHeight = chars.length * letterSpacing;
-  let y = height * 0.5 - totalHeight * 0.5 + letterSpacing * 0.5;
-
-  for (const char of chars) {
-    context.fillText(char, width * 0.5, y);
-    y += letterSpacing;
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function createLanternBannerRig(
-  config: LanternConfig,
-  lanternWorldHeight: number,
-) {
-  const style = lanternAnimationSettings.banner;
-  const hang = new THREE.Group();
-  hang.position.y = -lanternWorldHeight * 0.5 - style.gapBelowLantern;
-  hang.frustumCulled = false;
-
-  const stringMesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(style.stringRadius, style.stringRadius, style.stringLength, 8),
-    new THREE.MeshBasicMaterial({
-      color: style.stringColor,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-    }),
-  );
-  stringMesh.position.y = -style.stringLength * 0.5;
-  stringMesh.frustumCulled = false;
-  stringMesh.renderOrder = style.renderOrder;
-
-  const isHorizontal =
-    "orientation" in config && config.orientation === "horizontal";
-  const bannerTexture = isHorizontal
-    ? createHorizontalBannerTexture(config.service, style)
-    : createVerticalBannerTexture(config.service, style);
-  const banner = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      map: bannerTexture,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-    }),
-  );
-  banner.center.set(0.5, 1);
-  banner.position.y = -style.stringLength;
-  if (isHorizontal) {
-    banner.scale.set(style.horizontalWidth, style.horizontalHeight, 1);
-  } else {
-    banner.scale.set(style.width, style.height, 1);
-  }
-  banner.frustumCulled = false;
-  banner.renderOrder = style.renderOrder;
-
-  hang.add(stringMesh, banner);
-
-  return { hang, banner, stringMesh };
 }
 
 function createPaperMaterial() {
@@ -508,6 +389,90 @@ function createPaperMaterial() {
   });
 }
 
+function splitLabelToLines(label: string): [string, string] {
+  const words = label.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return ["", ""];
+  if (words.length === 1) return [words[0], ""];
+  if (words.length === 2) return [words[0], words[1]];
+  return [words.slice(0, -1).join(" "), words[words.length - 1]];
+}
+
+function createLanternLabelSprite(label: string) {
+  const style = lanternAnimationSettings.hangingLabel;
+  const canvas = document.createElement("canvas");
+  const width = 1024;
+  const height = 320;
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("[LanternAnimation] Failed to create label canvas context");
+  }
+
+  context.clearRect(0, 0, width, height);
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.lineJoin = "round";
+  context.miterLimit = 2;
+
+  const text = label.trim();
+  const fontSize = style.fontSize;
+  context.font = `700 ${fontSize}px ${style.fontFamily}`;
+
+  const y = height * 0.53;
+  const textGradient = context.createLinearGradient(0, y - fontSize, 0, y + fontSize * 0.35);
+  textGradient.addColorStop(0, "#fff9de");
+  textGradient.addColorStop(0.55, style.textColor);
+  textGradient.addColorStop(1, "#f7c76e");
+
+  // Warm outer glow
+  context.shadowColor = style.glowColor;
+  context.shadowBlur = Math.max(14, Math.floor(fontSize * 0.28));
+  context.lineWidth = Math.max(4, Math.floor(fontSize * 0.08));
+  context.strokeStyle = style.strokeColor;
+  context.strokeText(text, width * 0.5, y);
+
+  // Main fill
+  context.fillStyle = textGradient;
+  context.fillText(text, width * 0.5, y);
+
+  // Subtle glitter specks around letters
+  context.shadowBlur = 0;
+  context.globalAlpha = 0.8;
+  for (let i = 0; i < 26; i += 1) {
+    const x = width * 0.18 + Math.random() * width * 0.64;
+    const yy = y - fontSize * 0.8 + Math.random() * fontSize * 1.2;
+    const r = 1 + Math.random() * 2.2;
+    context.fillStyle = i % 2 === 0 ? "#fff8dc" : "#ffd587";
+    context.beginPath();
+    context.arc(x, yy, r, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.globalAlpha = 1;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+  );
+  sprite.frustumCulled = false;
+  sprite.renderOrder = 16;
+
+  return sprite;
+}
+
 function createLanternRig(config: LanternConfig, configIndex: number): LanternRig {
   const {
     bodyHeight,
@@ -519,10 +484,10 @@ function createLanternRig(config: LanternConfig, configIndex: number): LanternRi
     heightScale,
     widthScale,
   } = lanternAnimationSettings;
+  const labelStyle = lanternAnimationSettings.hangingLabel;
 
   const root = new THREE.Group();
   const uniform = config.scale * sizeScale;
-  const lanternWorldHeight = bodyHeight * uniform * heightScale;
 
   const lanternScaled = new THREE.Group();
   lanternScaled.scale.set(uniform * widthScale, uniform * heightScale, uniform * widthScale);
@@ -559,33 +524,35 @@ function createLanternRig(config: LanternConfig, configIndex: number): LanternRi
   bottomRim.renderOrder = 13;
 
   const flame = new THREE.Group();
-  flame.position.y = bodyHeight * 0.038;
+  flame.position.y = bodyHeight * 0.022;
   flame.frustumCulled = false;
 
+  // Soft warm bloom around the flame dot
   const flameOuter = new THREE.Mesh(
-    new THREE.SphereGeometry(0.048, 10, 10),
+    new THREE.SphereGeometry(0.028, 12, 12),
     new THREE.MeshBasicMaterial({
       color: flameColor,
       transparent: true,
-      opacity: 0.62,
+      opacity: 0.64,
       toneMapped: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
     }),
   );
-  flameOuter.scale.set(1, 1.3, 1);
-
+  flameOuter.scale.set(1.15, 0.85, 1.15);
   flameOuter.renderOrder = 14;
 
+  // Bright white-yellow core — matches the reference flame speck
   const flameCore = new THREE.Mesh(
-    new THREE.SphereGeometry(0.024, 8, 8),
+    new THREE.SphereGeometry(0.012, 10, 10),
     new THREE.MeshBasicMaterial({
       color: flameCoreColor,
       transparent: true,
-      opacity: 0.82,
+      opacity: 0.9,
       toneMapped: false,
+      depthWrite: false,
     }),
   );
-  flameCore.scale.set(1, 1.15, 1);
-
   flameCore.renderOrder = 15;
 
   flame.add(flameOuter, flameCore);
@@ -595,24 +562,52 @@ function createLanternRig(config: LanternConfig, configIndex: number): LanternRi
     new THREE.MeshBasicMaterial({
       color: haloColor,
       transparent: true,
-      opacity: 0.05,
+      opacity: 0.075,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       toneMapped: false,
     }),
   );
-  halo.position.y = bodyHeight * 0.44;
-  halo.scale.set(0.56, 0.72, 0.52);
+  halo.position.y = bodyHeight * 0.4;
+  halo.scale.set(0.52, 0.82, 0.52);
 
   halo.frustumCulled = false;
   halo.renderOrder = 11;
 
-  lanternScaled.add(paper, topCap, bottomRim, flame, halo);
+  const halfWAtBody = getHalfExtentAt(0.58);
+  const threadAnchorY = -labelStyle.gapBelowLantern;
+  const threadLength = labelStyle.threadLength;
+  const labelSprite = createLanternLabelSprite(config.label);
+  labelSprite.position.set(0, threadAnchorY - threadLength - labelStyle.textYOffset, 0);
+  labelSprite.scale.set(
+    halfWAtBody * 2 * labelStyle.widthScale,
+    bodyHeight * labelStyle.heightScale,
+    1,
+  );
 
-  const { hang, banner, stringMesh } = createLanternBannerRig(config, lanternWorldHeight);
+  const threadMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      labelStyle.threadRadius,
+      labelStyle.threadRadius,
+      threadLength,
+      8,
+    ),
+    new THREE.MeshBasicMaterial({
+      color: labelStyle.threadColor,
+      transparent: true,
+      opacity: 0.95,
+      toneMapped: false,
+      depthWrite: false,
+    }),
+  );
+  threadMesh.position.set(0, threadAnchorY - threadLength * 0.5, 0);
+  threadMesh.renderOrder = 15;
+  threadMesh.frustumCulled = false;
+
+  lanternScaled.add(paper, topCap, bottomRim, flame, halo, threadMesh, labelSprite);
 
   root.frustumCulled = false;
-  root.add(lanternScaled, hang);
+  root.add(lanternScaled);
 
   return {
     root,
@@ -625,8 +620,8 @@ function createLanternRig(config: LanternConfig, configIndex: number): LanternRi
     flameOuter,
     flameCore,
     halo,
-    banner,
-    stringMesh,
+    threadMesh,
+    labelSprite,
     baseX: 0,
     baseY: 0,
     baseZ: 0,
@@ -686,13 +681,13 @@ function updateLantern(
   rig.paperMaterial.uniforms.uFlicker.value = flicker;
 
   const flameOuterMaterial = rig.flameOuter.material as THREE.MeshBasicMaterial;
-  flameOuterMaterial.opacity = 0.56 + flicker * 0.08;
+  flameOuterMaterial.opacity = 0.56 + flicker * 0.1;
 
   const flameCoreMaterial = rig.flameCore.material as THREE.MeshBasicMaterial;
-  flameCoreMaterial.opacity = 0.78 + flicker * 0.06;
+  flameCoreMaterial.opacity = 0.84 + flicker * 0.07;
 
   const haloMaterial = rig.halo.material as THREE.MeshBasicMaterial;
-  haloMaterial.opacity = 0.032 + flicker * 0.02;
+  haloMaterial.opacity = 0.055 + flicker * 0.028;
 }
 
 function disposeLantern(rig: LanternRig) {
@@ -707,11 +702,12 @@ function disposeLantern(rig: LanternRig) {
   (rig.flameCore.material as THREE.Material).dispose();
   rig.halo.geometry.dispose();
   (rig.halo.material as THREE.Material).dispose();
-  rig.stringMesh.geometry.dispose();
-  (rig.stringMesh.material as THREE.Material).dispose();
-  const bannerMaterial = rig.banner.material as THREE.SpriteMaterial;
-  bannerMaterial.map?.dispose();
-  bannerMaterial.dispose();
+  rig.threadMesh.geometry.dispose();
+  (rig.threadMesh.material as THREE.Material).dispose();
+
+  const labelMaterial = rig.labelSprite.material as THREE.SpriteMaterial;
+  labelMaterial.map?.dispose();
+  labelMaterial.dispose();
 }
 
 export default function LanternAnimation({ scene, nodes }: LanternAnimationProps) {
@@ -722,7 +718,6 @@ export default function LanternAnimation({ scene, nodes }: LanternAnimationProps
 
   const settingsVersion = JSON.stringify({
     lanterns: lanternAnimationSettings.lanterns,
-    banner: lanternAnimationSettings.banner,
     skyMinOffset: lanternAnimationSettings.skyMinOffset,
     skyMaxOffset: lanternAnimationSettings.skyMaxOffset,
     pathInset: lanternAnimationSettings.pathInset,
@@ -730,6 +725,14 @@ export default function LanternAnimation({ scene, nodes }: LanternAnimationProps
     bodyHeight: lanternAnimationSettings.bodyHeight,
     heightScale: lanternAnimationSettings.heightScale,
     widthScale: lanternAnimationSettings.widthScale,
+    shapeExponent: lanternAnimationSettings.shapeExponent,
+    depthScale: lanternAnimationSettings.depthScale,
+    sideBow: lanternAnimationSettings.sideBow,
+    hangingLabel: lanternAnimationSettings.hangingLabel,
+    flameColor: lanternAnimationSettings.flameColor,
+    flameCoreColor: lanternAnimationSettings.flameCoreColor,
+    haloColor: lanternAnimationSettings.haloColor,
+    rimColor: lanternAnimationSettings.rimColor,
   });
 
   useLayoutEffect(() => {

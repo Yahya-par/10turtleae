@@ -68,8 +68,10 @@ export const firecrackerVideoSettings = {
   /** Max fraction of canvas width the full line may use (prevents edge clip). */
   textMaxWidthRatio: 0.9,
 
-  cycleDuration: 12,
+  cycleDuration: 6,
   launchDuration: 3.2,
+  /** Multiplier on rocket rise speed (1 = default; higher = blast sooner). */
+  rocketSpeedScale: 1,
   /** Fewer rockets → larger, cleaner peony peals like the reference. */
   rocketCount: 7,
   textRevealStart: 0.9,
