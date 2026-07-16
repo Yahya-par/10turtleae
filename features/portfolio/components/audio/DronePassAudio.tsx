@@ -27,6 +27,7 @@ export default function DronePassAudio({ scene, nodes }: DronePassAudioProps) {
       nodes,
       droneAnimationSettings.droneName,
       droneAnimationSettings.droneBlenderName,
+      ...droneAnimationSettings.droneAliases,
     );
 
     targetRef.current = droneCarrier ?? drone;

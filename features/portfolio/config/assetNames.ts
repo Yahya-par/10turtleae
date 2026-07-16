@@ -198,8 +198,8 @@ export const assetNames = {
     frame: "frametext001",
     frameBlender: "frametext.001",
     /** Blender: dolphintext.001 — spinning dolphin sign */
-    dolphin: "dolphintext001",
-    dolphinBlender: "dolphintext.001",
+    dolphin: "newdolphin001",
+    dolphinBlender: "newdolphin.001",
   },
   cameraWaypoints: /^Empty\.\d+$/,
   sceneMeshes:

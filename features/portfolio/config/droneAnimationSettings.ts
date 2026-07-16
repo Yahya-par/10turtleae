@@ -1,7 +1,13 @@
 export const droneAnimationSettings = {
   /** Drone object to animate (runtime + Blender aliases). */
-  droneName: "drone001",
-  droneBlenderName: "drone.001",
+  // New asset name (Blender: dronewithbanner.001)
+  droneName: "dronewithbanner001",
+  droneBlenderName: "dronewithbanner.001",
+  /**
+   * Backward-compatible aliases (older drone exports).
+   * Keep these so the animation still works if a different GLB is loaded.
+   */
+  droneAliases: ["drone001", "drone.001"] as const,
 
   /** Road object where the drone should arrive before looping. */
   roadName: "ROAD001",

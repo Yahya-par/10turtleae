@@ -14,6 +14,8 @@ import { carScrollSettings } from "./carScrollSettings";
  *   z negative = pull toward camera
  *
  * Bottom edge stops `gapAboveFrameText` above the gold frametext plaque.
+ *
+ * The banner unveils from top to bottom in roll style.
  */
 export const dubaiFrameBannerSettings = {
   frameAsset: assetNames.scenes.dubaiFrameLandmark,
@@ -40,13 +42,16 @@ export const dubaiFrameBannerSettings = {
   /** Gap between banner bottom and the gold frametext plaque. */
   gapAboveFrameText: 0.08,
 
-  rollRadiusFromOpening: 0.035,
   /** Car travel progress while still at the Dubai Frame dock (0 = parked). */
   carArrivalProgress: 0.28,
   scrollProgressPadding: 0.05,
   frameCenterXPadding: 2.8,
 
-  unrollDuration: 3.4,
+  /** Roll cylinder radius as a fraction of banner opening height. */
+  rollRadiusFromOpening: 0.035,
+  /** Duration of the top-to-bottom roll unveil in seconds. */
+  unrollDuration: 4.4,
+
   /** Banner draw order — keep below foregroundActorRenderOrder. */
   renderOrder: 4,
   /** Car + turtle draw above the banner while it is visible. */
@@ -57,9 +62,11 @@ export const dubaiFrameBannerSettings = {
   placeholder: {
     headline: "BANNER",
     subline: "Content coming soon",
-    background: "#8f2d14",
-    accent: "#f5c842",
-    text: "#fff8eb",
-    back: "#e8dcc8",
+    // Warm curtain-like tint with stronger, still-see-through opacity.
+    background: "rgba(228, 212, 184, 0.58)",
+    back: "rgba(210, 191, 160, 0.66)",
+    accent: "rgba(78, 143, 138, 0.62)",
+    text: "#000000",
+    textShadow: "rgba(0, 0, 0, 0)",
   },
 };

@@ -645,10 +645,9 @@ function buildRollParts(
   texture: THREE.Texture,
 ): RollParts {
   const flatMaterial = createBannerMaterial(texture);
-  const rollMaterial = createBannerMaterial(
-    texture,
-    new THREE.Color(settings.placeholder.back),
-  );
+  // Use a neutral tint so placeholder configs can make `back` transparent
+  // without breaking THREE.Color parsing.
+  const rollMaterial = createBannerMaterial(texture);
 
   const flatMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(opening.bannerWidth, opening.bannerMaxHeight, 1, 16),

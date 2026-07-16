@@ -80,10 +80,10 @@ export const birdAnimationSettings = {
   /** Two birds flying in formation with a shared banner between them. */
   bannerCarriers: {
     text: "Brands people line up for.",
-    bannerColor: "#7B2D3B",
-    bannerColorDark: "#5A2230",
-    textColor: "#F7F0E8",
-    trimColor: "#C9A66B",
+    bannerColor: "#C97B4F",      // terracotta, matches the UI accent
+    bannerColorDark: "#9C5A36",  // burnt sienna shading
+    textColor: "#FFF6E8",        // warm cream, same family as #f7f4ef
+    trimColor: "#F2D3A0", 
     textFontFamily: 'Georgia, "Times New Roman", serif',
     bannerWidth: 3.4,
     bannerHeight: 0.62,

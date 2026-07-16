@@ -5,12 +5,12 @@
  * loop. `riseHeight` is the full bottom→top travel in world units.
  */
 export const hotAirBalloonAnimationSettings = {
-  objectName: "mutedhotairballoon001",
-  objectBlenderName: "mutedhotairballoon.001",
+  objectName: "mutedhotairballoons001",
+  objectBlenderName: "mutedhotairballoons.001",
   carrierName: "HotAirBalloonCarrier001",
 
   /** Full vertical travel (world units) from lowest to highest point. */
-  riseHeight: 3.5,
+  riseHeight: 1.2,
   /** Seconds for one full cycle (bottom → top → bottom). */
   cycleSeconds: 35,
   /** Gentle horizontal drift while floating (world units, 0 = none). */

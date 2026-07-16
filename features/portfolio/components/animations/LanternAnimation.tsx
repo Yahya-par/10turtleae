@@ -335,6 +335,55 @@ function measureVerticalLabelHeight(
   return chars.length * letterSpacing;
 }
 
+function createHorizontalBannerTexture(label: string, style: BannerStyle) {
+  const canvas = document.createElement("canvas");
+  const width = 1024;
+  const height = 288;
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("[LanternAnimation] Failed to create banner canvas context");
+  }
+
+  const gradient = context.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, style.background);
+  gradient.addColorStop(0.55, style.background);
+  gradient.addColorStop(1, style.backgroundDark);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+
+  const trimInset = 14;
+  context.strokeStyle = style.trimColor;
+  context.lineWidth = 8;
+  context.strokeRect(trimInset, trimInset, width - trimInset * 2, height - trimInset * 2);
+
+  context.fillStyle = style.textColor;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+
+  let fontSize = Math.floor(height * 0.52);
+  do {
+    context.font = `700 ${fontSize}px ${style.textFontFamily}`;
+    fontSize -= 1;
+  } while (
+    fontSize > 22 &&
+    context.measureText(label).width > width * 0.86
+  );
+
+  context.font = `700 ${fontSize}px ${style.textFontFamily}`;
+  context.fillText(label, width * 0.5, height * 0.53);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function createVerticalBannerTexture(label: string, style: BannerStyle) {
   const canvas = document.createElement("canvas");
   const width = 384;
@@ -417,7 +466,11 @@ function createLanternBannerRig(
   stringMesh.frustumCulled = false;
   stringMesh.renderOrder = style.renderOrder;
 
-  const bannerTexture = createVerticalBannerTexture(config.service, style);
+  const isHorizontal =
+    "orientation" in config && config.orientation === "horizontal";
+  const bannerTexture = isHorizontal
+    ? createHorizontalBannerTexture(config.service, style)
+    : createVerticalBannerTexture(config.service, style);
   const banner = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: bannerTexture,
@@ -428,7 +481,11 @@ function createLanternBannerRig(
   );
   banner.center.set(0.5, 1);
   banner.position.y = -style.stringLength;
-  banner.scale.set(style.width, style.height, 1);
+  if (isHorizontal) {
+    banner.scale.set(style.horizontalWidth, style.horizontalHeight, 1);
+  } else {
+    banner.scale.set(style.width, style.height, 1);
+  }
   banner.frustumCulled = false;
   banner.renderOrder = style.renderOrder;
 

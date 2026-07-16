@@ -35,6 +35,7 @@ function resolveDroneRig(
     nodes,
     droneAnimationSettings.droneName,
     droneAnimationSettings.droneBlenderName,
+    ...droneAnimationSettings.droneAliases,
   );
   const road = findSceneObject(
     scene,
