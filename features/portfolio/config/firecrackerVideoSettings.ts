@@ -72,7 +72,7 @@ export const firecrackerVideoSettings = {
   launchDuration: 3.2,
   /** Fewer rockets → larger, cleaner peony peals like the reference. */
   rocketCount: 7,
-  textRevealStart: 3.9,
+  textRevealStart: 0.9,
   textRevealDuration: 2.4,
   letterStagger: 0.14,
   glyphSparkCount: 900,
@@ -83,7 +83,7 @@ export const firecrackerVideoSettings = {
   maxParticles: 2600,
   /** Dense radial peony streaks (classic sphere burst). */
   burstSparks: 180,
-  burstSpeed: 165,
+  burstSpeed: 565,
   burstLifeMin: 1.05,
   burstLifeMax: 1.65,
   /** Keep low early so the sphere stays round like the reference. */

@@ -762,6 +762,7 @@ export default function SceneBannerRoll({
   const animatingRef = useRef(false);
   const elapsedRef = useRef(0);
   const unrollRef = useRef(0);
+  const persistAfterRevealRef = useRef(false);
   const logTag = settings.carrierName;
 
   useLayoutEffect(() => {
@@ -828,6 +829,7 @@ export default function SceneBannerRoll({
       animatingRef.current = false;
       elapsedRef.current = 0;
       unrollRef.current = 0;
+      persistAfterRevealRef.current = false;
 
       disposeBannerRig(rig);
       restoreSubtreeRenderOrder(actorCarrierRef.current);
@@ -873,13 +875,22 @@ export default function SceneBannerRoll({
       turtleOnYachtRef,
       yachtTravelProgressRef,
     );
+    const keepAfterReveal =
+      "stayVisibleAfterUnroll" in settings && settings.stayVisibleAfterUnroll;
     const wasArrived = arrivedRef.current;
 
     if (shouldRoll && !wasArrived) {
       beginRollAnimation(arrivedRef, animatingRef, elapsedRef, unrollRef);
     }
 
-    if (!shouldRoll && wasArrived) {
+    // For sticky banners, once unveiling starts we do not collapse back even if
+    // trigger conditions become false mid-animation (e.g. actor moves ahead).
+    if (
+      !shouldRoll &&
+      wasArrived &&
+      !persistAfterRevealRef.current &&
+      !keepAfterReveal
+    ) {
       arrivedRef.current = false;
       animatingRef.current = false;
       elapsedRef.current = 0;
@@ -892,7 +903,10 @@ export default function SceneBannerRoll({
       elapsedRef.current += delta;
       const linear = Math.min(1, elapsedRef.current / settings.unrollDuration);
       unrollRef.current = easeOutCubic(linear);
-      if (unrollRef.current >= 1) animatingRef.current = false;
+      if (unrollRef.current >= 1) {
+        animatingRef.current = false;
+        if (keepAfterReveal) persistAfterRevealRef.current = true;
+      }
     }
 
     updateBannerGeometry(rig, unrollRef.current);

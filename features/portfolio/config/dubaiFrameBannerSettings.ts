@@ -51,6 +51,8 @@ export const dubaiFrameBannerSettings = {
   rollRadiusFromOpening: 0.035,
   /** Duration of the top-to-bottom roll unveil in seconds. */
   unrollDuration: 4.4,
+  /** Keep the banner visible once fully unrolled. */
+  stayVisibleAfterUnroll: true,
 
   /** Banner draw order — keep below foregroundActorRenderOrder. */
   renderOrder: 4,

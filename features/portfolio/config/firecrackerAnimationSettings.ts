@@ -49,7 +49,7 @@ export const firecrackerAnimationSettings = {
 
   launchSpread: 1.1,
   launchHeight: -0.35,
-  launchDuration: 0.65,
+  launchDuration: 0.05,
   burstDuration: 0.22,
   holdDuration: 2.4,
   cyclePause: 0.7,
