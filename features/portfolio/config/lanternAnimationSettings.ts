@@ -1,14 +1,14 @@
 import { assetNames } from "./assetNames";
 
 /**
- * Safari sky lanterns + service banners — edit this file, save, and hot-reload to tune.
+ * Safari sky lanterns — edit this file, save, and hot-reload to tune.
  *
  * Per-lantern position on the mountain backdrop (0–1):
  *   u = left → right
  *   v = back → front (toward camera)
  *   h = lower sky → higher sky
  *
- * `banner` sizes are world units (not scaled with the lantern mesh).
+ * `label` is reserved for on-lantern text (applied later).
  */
 export const lanternAnimationSettings = {
   land: assetNames.safari.land,
@@ -21,57 +21,57 @@ export const lanternAnimationSettings = {
   /** Inset from mountain backdrop edges. */
   pathInset: 0.6,
 
-  flameColor: "#e07818",
-  flameCoreColor: "#f0a830",
-  haloColor: "#e86a14",
-  rimColor: "#2a1006",
+  flameColor: "#ffd98a",
+  flameCoreColor: "#fff6dc",
+  haloColor: "#ffbe6e",
+  rimColor: "#4a2414",
 
   /** Global size multiplier applied on top of per-lantern scale. */
-  sizeScale: 0.48,
-  bodyHeight: 0.76,
-  /** Stretch local mesh — taller silhouette without widening. */
+  sizeScale: 0.6,
+  bodyHeight: 0.78,
+  /** Stretch local mesh — keep near 1:1 so the barrel silhouette holds. */
   heightScale: 1,
-  widthScale: 0.86,
+  widthScale: 0.94,
 
   /** Sky band above mountain peaks (world units). */
   skyMinOffset: 0.6,
   skyMaxOffset: 4.2,
 
-  shapeExponent: 4.6,
-  radialSegments: 36,
-  heightSegments: 32,
-  depthScale: 0.8,
-  sideBow: 0.018,
+  /** ~2 = circular cross-section (avoids the paper-bag look). */
+  shapeExponent: 2.15,
+  radialSegments: 48,
+  heightSegments: 40,
+  depthScale: 1,
+  sideBow: 0,
 
-  /** Vertical service banner hanging below each lantern (world units). */
-  banner: {
-    width: 0.5,
-    height: 2,
-    stringLength: 0.002,
-    stringRadius: 0.005,
-    gapBelowLantern: 0.1,
-    background: "#7B2D3B",
-    backgroundDark: "#5A2230",
-    textColor: "#FFF8EB",
-    trimColor: "#C9A66B",
-    stringColor: "#3d2814",
-    textFontFamily: '"Arial Black", Arial, "Helvetica Neue", sans-serif',
-    renderOrder: 100,
+  /** Hanging text under each lantern (thread + glitter text). */
+  hangingLabel: {
+    /** Manual control in canvas pixels. Increase/decrease as needed. */
+    fontSize: 84,
+    fontFamily: '"Arial Black", Arial, "Helvetica Neue", sans-serif',
+    textColor: "#fff1bb",
+    glowColor: "#ffd88a",
+    strokeColor: "#7a4c1d",
+    threadColor: "#a47a3a",
+    threadLength: 0.28,
+    threadRadius: 0.0028,
+    gapBelowLantern: 0.025,
+    textYOffset: 0.02,
+    widthScale: 4.5,
+    heightScale: 1,
   },
 
   /**
    * u/v = position on mountain backdrop (0–1).
    * h = height within sky band (0 = lower sky, 1 = higher).
-   * service = vertical label on the hanging banner.
+   * label = text for the lantern body (applied later).
    */
   lanterns: [
-    { u: 0.2, v: 0.55, h: 0.35, scale: 1.0, phase: 0, sway: 0.102, bob: 0.073, service: "UI/UX" },
-    { u: 0.38, v: 0.72, h: 0.58, scale: 1.08, phase: 1.4, sway: 0.095, bob: 0.064, service: "AI AUTOMATION" },
-    { u: 0.55, v: 0.48, h: 0.42, scale: 0.92, phase: 2.8, sway: 0.088, bob: 0.057, service: "WEB DEV" },
-    { u: 0.72, v: 0.65, h: 0.78, scale: 1.04, phase: 4.1, sway: 0.108, bob: 0.069, service: "MOBILE APP" },
-    { u: 0.28, v: 0.82, h: 0.9, scale: 0.96, phase: 5.5, sway: 0.079, bob: 0.054, service: "GRAPHICS & DESIGN" },
-    { u: 0.48, v: 0.42, h: 0.22, scale: 1.12, phase: 0.9, sway: 0.101, bob: 0.072, service: "DIGITAL MARKETING" },
-    { u: 0.84, v: 0.58, h: 0.52, scale: 0.9, phase: 3.3, sway: 0.09, bob: 0.06, service: "VIDEO & ANIMATION" },
-    { u: 0.62, v: 0.75, h: 0.68, scale: 1.0, phase: 6.2, sway: 0.097, bob: 0.066, service: "BRANDING" },
+    { u: 0.2, v: 0.55, h: 0.35, scale: 1.0, phase: 0, sway: 0.102, bob: 0.073, label: "Modern Design" },
+    { u: 0.38, v: 0.72, h: 0.58, scale: 1.08, phase: 1.4, sway: 0.095, bob: 0.064, label: "Full Branding" },
+    { u: 0.55, v: 0.48, h: 0.42, scale: 0.92, phase: 2.8, sway: 0.088, bob: 0.057, label: "Website Redesign" },
+    { u: 0.72, v: 0.65, h: 0.78, scale: 1.04, phase: 4.1, sway: 0.108, bob: 0.069, label: "Built to Convert" },
+    { u: 0.28, v: 0.82, h: 0.9, scale: 0.96, phase: 5.5, sway: 0.079, bob: 0.054, label: "Fast Delievery" },
+    { u: 0.48, v: 0.42, h: 0.22, scale: 1.12, phase: 0.9, sway: 0.101, bob: 0.072, label: "Ongoing Support" },
   ],
 } as const;
