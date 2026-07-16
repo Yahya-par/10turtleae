@@ -1,8 +1,8 @@
-import type { dubaiFrameBannerSettings } from "./dubaiFrameBannerSettings";
 import type { futureMuseumBannerSettings } from "./futureMuseumBannerSettings";
 import type { newAtlantisBannerSettings } from "./newAtlantisBannerSettings";
+import type { dubaiFrameBannerSettings } from "./dubaiFrameBannerSettings";
 
 export type BannerRollSettings =
-  | typeof dubaiFrameBannerSettings
   | typeof futureMuseumBannerSettings
-  | typeof newAtlantisBannerSettings;
+  | typeof newAtlantisBannerSettings
+  | typeof dubaiFrameBannerSettings;

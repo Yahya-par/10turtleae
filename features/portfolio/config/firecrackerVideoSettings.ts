@@ -50,20 +50,23 @@ export const firecrackerVideoSettings = {
 
   planeWidth: 14,
   planeHeight: 6.2,
-  canvasSize: [960, 428] as const,
+  canvasSize: [1280, 428] as const,
 
-  text: "10Turtle",
+  text: "UAE's #1 web & branding agency",
   /** Spacing between outline light dots (Ain Dubai style). */
-  textSampleGap: 4,
+  textSampleGap: 3,
   textFontFamily: 'Arial, "Helvetica Neue", sans-serif',
   textFontWeight: 800,
-  textLetterSpacing: 12,
+  /** Extra px between characters — keep at 0 for long lines. */
+  textLetterSpacing: 0,
   textStrokeWidth: 2,
   /** Vertical band on the sky plane (0–1 from top). Lower = higher in the sky. */
   textBandTop: 0.12,
-  textBandHeight: 0.22,
-  /** Extra scale for font size inside the band (1 = fill the band). */
-  textFontScale: 0.72,
+  textBandHeight: 0.2,
+  /** Starting font scale inside the band; auto-shrinks to fit width. */
+  textFontScale: 0.82,
+  /** Max fraction of canvas width the full line may use (prevents edge clip). */
+  textMaxWidthRatio: 0.9,
 
   cycleDuration: 6,
   launchDuration: 3.2,
@@ -74,7 +77,7 @@ export const firecrackerVideoSettings = {
   textRevealStart: 3.9,
   textRevealDuration: 2.4,
   letterStagger: 0.14,
-  glyphSparkCount: 560,
+  glyphSparkCount: 900,
   textHoldDuration: 2.0,
   textFadeDuration: 1.6,
   holdDuration: 4.2,

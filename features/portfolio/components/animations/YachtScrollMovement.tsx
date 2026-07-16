@@ -9,6 +9,7 @@ import {
 } from "@features/portfolio/components/camera/CameraPath";
 import {
   attachAnimationCarrier,
+  attachObjectToCarrier,
   findObjectByNamePattern,
   findSceneObject,
   getObjectBounds,
@@ -313,6 +314,16 @@ function buildRig(
     yachtPattern,
   );
   if (!yachtObject?.parent) return null;
+
+  const isAtlantisYacht = carrierName === "YachtScrollCarrier001";
+  if (isAtlantisYacht) {
+    const yachtBanner =
+      findSceneObject(scene, nodes, "yachtbanner001", "yachtbanner.001") ??
+      findObjectByNamePattern(scene, /yachtbanner/i);
+    if (yachtBanner) {
+      attachObjectToCarrier(yachtObject, yachtBanner);
+    }
+  }
 
   const carrier =
     yachtObject.parent.name === carrierName

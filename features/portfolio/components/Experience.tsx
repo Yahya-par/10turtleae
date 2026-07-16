@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import * as THREE from "three";
 import { cameraSettings } from "@features/portfolio/config/cameraSettings";
 import { isJourneyDevMode } from "@features/portfolio/config/journeySettings";
+import { isJourneyCooldownActive } from "@features/portfolio/utils/journeyStorage";
 import { sceneLinkSettings, type SceneLinkConfig } from "@features/portfolio/config/sceneLinkSettings";
 import { renderSettings } from "@features/portfolio/config/renderSettings";
 import { useScrollNavigation } from "@features/portfolio/hooks/useScrollNavigation";
@@ -29,9 +30,6 @@ const isScrollMode = cameraSettings.mode === "scroll";
 const FINAL_CTA_ID = "finalcta001";
 const REDIRECT_SECONDS = 3;
 const REPEAT_REDIRECT_DELAY_MS = 1400;
-const HAS_SEEN_JOURNEY_KEY = "hasSeenJourney";
-const HAS_SEEN_JOURNEY_AT_KEY = "hasSeenJourneyAt";
-const JOURNEY_TTL_MS = 24 * 60 * 60 * 1000;
 const FULLSCREEN_NOTICE_MS = 2800;
 const IOS_FULLSCREEN_GUIDE_MS = 9000;
 
@@ -103,6 +101,8 @@ export default function Experience() {
   const fullscreenNoticeTimerRef = useRef<number | null>(null);
   const wasPortraitRef = useRef(isPortrait);
   const initialLandscapeOfferRef = useRef(false);
+  /** Plays the post-journey reveal when the final CTA is clicked. */
+  const ctaRevealRef = useRef(false);
 
   useLayoutEffect(() => {
     initialLandscapeOfferRef.current = false;
@@ -205,13 +205,7 @@ export default function Experience() {
 
   useEffect(() => {
     if (isJourneyDevMode) return;
-
-    const now = Date.now();
-    const hasSeenJourney = localStorage.getItem(HAS_SEEN_JOURNEY_KEY) === "true";
-    const lastSeenAt = Number(localStorage.getItem(HAS_SEEN_JOURNEY_AT_KEY) ?? "0");
-    const isWithinCooldown = hasSeenJourney && lastSeenAt > 0 && now - lastSeenAt < JOURNEY_TTL_MS;
-
-    if (!isWithinCooldown) return;
+    if (!isJourneyCooldownActive()) return;
 
     setRedirectModalMode("repeat");
     setShowRedirectModal(true);
@@ -255,6 +249,8 @@ export default function Experience() {
   useEffect(() => {
     const handlePageShow = (event: PageTransitionEvent) => {
       setShowRedirectModal(false);
+      // Un-cover the scene when returning via back navigation (bfcache).
+      ctaRevealRef.current = false;
       initialLandscapeOfferRef.current = false;
       wasPortraitRef.current = window.matchMedia("(orientation: portrait)").matches;
 
@@ -302,26 +298,24 @@ export default function Experience() {
   const handleTargetOpen = useCallback((target: SceneLinkConfig) => {
     if (target.id !== FINAL_CTA_ID) return true;
 
+    // Start the post-journey reveal; the redirect flow plays over it.
+    ctaRevealRef.current = true;
+
     if (isJourneyDevMode) {
       setRedirectModalMode("countdown");
       setShowRedirectModal(true);
       return false;
     }
 
-    const now = Date.now();
-    const hasSeenJourney = localStorage.getItem(HAS_SEEN_JOURNEY_KEY) === "true";
-    const lastSeenAt = Number(localStorage.getItem(HAS_SEEN_JOURNEY_AT_KEY) ?? "0");
-    const isWithinCooldown = hasSeenJourney && lastSeenAt > 0 && now - lastSeenAt < JOURNEY_TTL_MS;
-
-    if (isWithinCooldown) {
+    if (isJourneyCooldownActive()) {
       setRedirectModalMode("repeat");
       setShowRedirectModal(true);
       scheduleRepeatRedirect(target.url);
       return false;
     }
 
-    localStorage.setItem(HAS_SEEN_JOURNEY_KEY, "true");
-    localStorage.setItem(HAS_SEEN_JOURNEY_AT_KEY, String(now));
+    // hasSeenJourney is marked by the final redirect transition itself
+    // (PostJourneyBlankPage), not by this CTA click.
     setRedirectModalMode("countdown");
     setShowRedirectModal(true);
     return false;
@@ -369,6 +363,7 @@ export default function Experience() {
         enabled={loaderDone && isScrollMode}
         scrollProgress={navigation.scrollProgress}
         scrollBounds={navigation.scrollBounds}
+        forceRevealRef={ctaRevealRef}
       />
       {!loaderDone && (
         <LoaderSelector

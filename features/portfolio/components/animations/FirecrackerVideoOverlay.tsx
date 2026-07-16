@@ -846,6 +846,7 @@ function getGlyphs() {
       textLetterSpacing,
       textStrokeWidth,
       textFontScale,
+      textMaxWidthRatio,
       glyphSparkCount,
       textBandTop,
       textBandHeight,
@@ -863,6 +864,7 @@ function getGlyphs() {
       textLetterSpacing,
       textStrokeWidth,
       textFontScale,
+      textMaxWidthRatio,
       glyphSparkCount,
     }).map((glyph) => ({
       ...glyph,

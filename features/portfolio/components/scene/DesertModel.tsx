@@ -8,6 +8,7 @@ import MetroTrainAnimation from "../animations/MetroTrainAnimation";
 import CarAnimation from "../animations/CarAnimation";
 import CloudAnimation from "../animations/CloudAnimation";
 import AinAnimation from "../animations/AinAnimation";
+import HotAirBalloonAnimation from "../animations/HotAirBalloonAnimation";
 import DolphinTextAnimation from "../animations/DolphinTextAnimation";
 import CampfireSmoke from "../animations/CampfireSmoke";
 import SafariCampWind from "../animations/SafariCampWind";
@@ -29,8 +30,8 @@ import FirecrackerVideoOverlay from "../animations/FirecrackerVideoOverlay";
 import BurjKhalifaVideoOverlay from "../animations/BurjKhalifaVideoOverlay";
 // import FutureMuseumBannerRoll from "../animations/FutureMuseumBannerRoll";
 import DubaiFrameBannerRoll from "../animations/DubaiFrameBannerRoll";
-import WaterBalloonAnimation from "../animations/WaterBalloonAnimation";
-import NewAtlantisBannerRoll from "../animations/NewAtlantisBannerRoll";
+// import WaterBalloonAnimation from "../animations/WaterBalloonAnimation";
+// import NewAtlantisBannerRoll from "../animations/NewAtlantisBannerRoll";
 import DesertSafariVideoPositionTracker from "../animations/DesertSafariVideoPositionTracker";
 import AudioRuntime from "../audio/AudioRuntime";
 import CarPassAudio from "../audio/CarPassAudio";
@@ -43,7 +44,7 @@ import FrameTextAudio from "../audio/FrameTextAudio";
 import SafariCampTextAudio from "../audio/SafariCampTextAudio";
 import PlaneTextAudio from "../audio/PlaneTextAudio";
 
-const MODEL_PATH = "/Models/testmodel.glb";
+const MODEL_PATH = "/Models/mymodel.glb";
 
 type DesertModelProps = {
   onFrameReady: (frame: SceneFrame) => void;
@@ -271,6 +272,7 @@ export default function DesertModel({
         carTravelProgressRef={carTravelProgressRef}
       />
       */}
+      {/* Water label balloons — removed, keeping only the hot air balloon
       <WaterBalloonAnimation
         scene={scene}
         nodes={nodes}
@@ -279,6 +281,8 @@ export default function DesertModel({
         targetScrollProgress={targetScrollProgress}
         lerpFactor={lerpFactor}
       />
+      */}
+      {/* Atlantis (newatlantis001) banner — temporarily disabled
       <NewAtlantisBannerRoll
         scene={scene}
         nodes={nodes}
@@ -291,6 +295,7 @@ export default function DesertModel({
         turtleOnYachtRef={turtleOnYachtRef}
         yachtTravelProgressRef={yachtTravelProgressRef}
       />
+      */}
       <DesertSafariVideoPositionTracker
         scene={scene}
         nodes={nodes}
@@ -301,6 +306,7 @@ export default function DesertModel({
       <DroneAnimation scene={scene} nodes={nodes} />
       <BirdAnimation scene={scene} nodes={nodes} />
       <AinAnimation scene={scene} nodes={nodes} />
+      <HotAirBalloonAnimation scene={scene} nodes={nodes} />
       <DolphinTextAnimation scene={scene} nodes={nodes} />
       <CarPassAudio scene={scene} nodes={nodes} />
       <MetroPassAudio scene={scene} nodes={nodes} />
