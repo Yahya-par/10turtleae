@@ -39,7 +39,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-
+package-lock.json
 
 public/Models/Model6.blend
 public/Models/Modelv1 2.glb
