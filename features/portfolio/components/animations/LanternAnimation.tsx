@@ -389,67 +389,69 @@ function createPaperMaterial() {
   });
 }
 
-function splitLabelToLines(label: string): [string, string] {
-  const words = label.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return ["", ""];
-  if (words.length === 1) return [words[0], ""];
-  if (words.length === 2) return [words[0], words[1]];
-  return [words.slice(0, -1).join(" "), words[words.length - 1]];
+function drawGlowLabelText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+) {
+  const style = lanternAnimationSettings.hangingLabel;
+  const blurScale = Math.max(style.glowBlur, 0.4);
+
+  context.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.globalCompositeOperation = "lighter";
+
+  // Stack blurred fills so the entire glyph body glows — not just an outer rim.
+  const passes: Array<[number, string, number]> = [
+    [fontSize * 0.44 * blurScale, style.glowColor, 0.32],
+    [fontSize * 0.3 * blurScale, "#ffe566", 0.42],
+    [fontSize * 0.18 * blurScale, "#fff08a", 0.55],
+    [fontSize * 0.1 * blurScale, "#fff8c8", 0.72],
+    [fontSize * 0.04 * blurScale, style.textColor, 0.88],
+    [0, "#fffff5", 1],
+  ];
+
+  for (const [blur, color, alpha] of passes) {
+    context.filter = blur > 0 ? `blur(${blur}px)` : "none";
+    context.fillStyle = color;
+    context.globalAlpha = alpha;
+    context.fillText(text, x, y);
+  }
+
+  context.filter = "none";
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 1;
 }
 
 function createLanternLabelSprite(label: string) {
   const style = lanternAnimationSettings.hangingLabel;
+  const text = label.trim();
+  const fontSize = style.fontSize;
+
+  const measureCanvas = document.createElement("canvas");
+  const measureContext = measureCanvas.getContext("2d");
+  if (!measureContext) {
+    throw new Error("[LanternAnimation] Failed to create label measure context");
+  }
+  measureContext.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+  const textWidth = measureContext.measureText(text).width;
+
+  const padX = fontSize * 0.72;
+  const padY = fontSize * 0.82;
   const canvas = document.createElement("canvas");
-  const width = 1024;
-  const height = 320;
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = Math.ceil(textWidth + padX * 2);
+  canvas.height = Math.ceil(fontSize + padY * 2);
 
   const context = canvas.getContext("2d");
   if (!context) {
     throw new Error("[LanternAnimation] Failed to create label canvas context");
   }
 
-  context.clearRect(0, 0, width, height);
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.lineJoin = "round";
-  context.miterLimit = 2;
-
-  const text = label.trim();
-  const fontSize = style.fontSize;
-  context.font = `700 ${fontSize}px ${style.fontFamily}`;
-
-  const y = height * 0.53;
-  const textGradient = context.createLinearGradient(0, y - fontSize, 0, y + fontSize * 0.35);
-  textGradient.addColorStop(0, "#fff9de");
-  textGradient.addColorStop(0.55, style.textColor);
-  textGradient.addColorStop(1, "#f7c76e");
-
-  // Warm outer glow
-  context.shadowColor = style.glowColor;
-  context.shadowBlur = Math.max(14, Math.floor(fontSize * 0.28));
-  context.lineWidth = Math.max(4, Math.floor(fontSize * 0.08));
-  context.strokeStyle = style.strokeColor;
-  context.strokeText(text, width * 0.5, y);
-
-  // Main fill
-  context.fillStyle = textGradient;
-  context.fillText(text, width * 0.5, y);
-
-  // Subtle glitter specks around letters
-  context.shadowBlur = 0;
-  context.globalAlpha = 0.8;
-  for (let i = 0; i < 26; i += 1) {
-    const x = width * 0.18 + Math.random() * width * 0.64;
-    const yy = y - fontSize * 0.8 + Math.random() * fontSize * 1.2;
-    const r = 1 + Math.random() * 2.2;
-    context.fillStyle = i % 2 === 0 ? "#fff8dc" : "#ffd587";
-    context.beginPath();
-    context.arc(x, yy, r, 0, Math.PI * 2);
-    context.fill();
-  }
-  context.globalAlpha = 1;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  drawGlowLabelText(context, text, canvas.width * 0.5, canvas.height * 0.5, fontSize);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -470,7 +472,7 @@ function createLanternLabelSprite(label: string) {
   sprite.frustumCulled = false;
   sprite.renderOrder = 16;
 
-  return sprite;
+  return { sprite, canvasWidth: canvas.width, canvasHeight: canvas.height };
 }
 
 function createLanternRig(config: LanternConfig, configIndex: number): LanternRig {
@@ -574,16 +576,16 @@ function createLanternRig(config: LanternConfig, configIndex: number): LanternRi
   halo.frustumCulled = false;
   halo.renderOrder = 11;
 
-  const halfWAtBody = getHalfExtentAt(0.58);
   const threadAnchorY = -labelStyle.gapBelowLantern;
   const threadLength = labelStyle.threadLength;
-  const labelSprite = createLanternLabelSprite(config.label);
+  // Cancel per-lantern scale so every label uses the same world size.
+  const labelSizeNorm = 1 / config.scale;
+  const { sprite: labelSprite, canvasWidth, canvasHeight } = createLanternLabelSprite(config.label);
   labelSprite.position.set(0, threadAnchorY - threadLength - labelStyle.textYOffset, 0);
-  labelSprite.scale.set(
-    halfWAtBody * 2 * labelStyle.widthScale,
-    bodyHeight * labelStyle.heightScale,
-    1,
-  );
+
+  const labelWorldHeight = bodyHeight * labelStyle.heightScale * labelSizeNorm;
+  const labelWorldWidth = labelWorldHeight * (canvasWidth / canvasHeight);
+  labelSprite.scale.set(labelWorldWidth, labelWorldHeight, 1);
 
   const threadMesh = new THREE.Mesh(
     new THREE.CylinderGeometry(
@@ -601,6 +603,7 @@ function createLanternRig(config: LanternConfig, configIndex: number): LanternRi
     }),
   );
   threadMesh.position.set(0, threadAnchorY - threadLength * 0.5, 0);
+  threadMesh.scale.set(labelSizeNorm, labelSizeNorm, labelSizeNorm);
   threadMesh.renderOrder = 15;
   threadMesh.frustumCulled = false;
 

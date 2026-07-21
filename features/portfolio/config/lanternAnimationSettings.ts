@@ -44,20 +44,22 @@ export const lanternAnimationSettings = {
   depthScale: 1,
   sideBow: 0,
 
-  /** Hanging text under each lantern (thread + glitter text). */
+  /** Hanging text under each lantern (thread + glow text). */
   hangingLabel: {
     /** Manual control in canvas pixels. Increase/decrease as needed. */
-    fontSize: 84,
-    fontFamily: '"Arial Black", Arial, "Helvetica Neue", sans-serif',
-    textColor: "#fff1bb",
-    glowColor: "#ffd88a",
-    strokeColor: "#7a4c1d",
-    threadColor: "#a47a3a",
+    fontSize: 120,
+    fontWeight: 500,
+    fontFamily: 'Arial, "Helvetica Neue", sans-serif',
+    textColor: "#fffce0",
+    glowColor: "#ffd84a",
+    /** Glow spread — higher = softer, more luminous letter bodies. */
+    glowBlur: 1,
+    threadColor: "#c89850",
     threadLength: 0.28,
     threadRadius: 0.0028,
     gapBelowLantern: 0.025,
     textYOffset: 0.02,
-    widthScale: 4.5,
+    /** World height multiplier for all labels (same size on every lantern). */
     heightScale: 1,
   },
 

@@ -2,10 +2,20 @@ import { assetNames } from "./assetNames";
 
 /**
  * Procedural firecracker sky — edit this file, save, and hot-reload to tune.
- * Rockets rise → peony bursts → "10Turtle" forms from sparkler particles.
+ * Rockets rise → colored peony bursts → sparkler text forms.
+ *
+ * Palettes (match reference night fireworks):
+ * - gold: dense golden chrysanthemum
+ * - teal: bright cyan / aqua burst
+ * - goldTeal: gold near core → aqua tips
  */
+export type FireworkPalette = "gold" | "teal" | "goldTeal";
+
 export const firecrackerVideoSettings = {
   alphaCutoff: 0.05,
+
+  /** Cycle through these for each rocket peal. */
+  palettes: ["gold", "teal", "goldTeal"] as const satisfies readonly FireworkPalette[],
 
   marinaAnchor: {
     object: assetNames.yacht.marinaWater,
@@ -42,15 +52,17 @@ export const firecrackerVideoSettings = {
   marinaManualPosition: null as { x: number; y: number; z: number } | null,
   blueWatersManualPosition: null as { x: number; y: number; z: number } | null,
 
-  skyOffsetY: 4.2,
-  skyDepthZ: -0.35,
+  /** Plane center above water — keep inside camera frame (lookAt.y ≈ 6.5). */
+  skyOffsetY: 5.0,
+  skyDepthZ: -0.4,
 
   renderOrder: 9,
   depthTest: false,
 
-  planeWidth: 14,
-  planeHeight: 6.2,
-  canvasSize: [1280, 428] as const,
+  planeWidth: 11,
+  /** Tall enough for rockets + peals, short enough to stay on-screen. */
+  planeHeight: 5.0,
+  canvasSize: [1280, 520] as const,
 
   text: "UAE's #1 web & branding agency",
   /** Spacing between outline light dots (Ain Dubai style). */
@@ -60,36 +72,51 @@ export const firecrackerVideoSettings = {
   /** Extra px between characters — keep at 0 for long lines. */
   textLetterSpacing: 0,
   textStrokeWidth: 2,
-  /** Vertical band on the sky plane (0–1 from top). Lower = higher in the sky. */
-  textBandTop: 0.12,
-  textBandHeight: 0.2,
+  /** Burst / text band — keep below the top edge so peals don't clip. */
+  textBandTop: 0.24,
+  textBandHeight: 0.22,
   /** Starting font scale inside the band; auto-shrinks to fit width. */
   textFontScale: 0.82,
   /** Max fraction of canvas width the full line may use (prevents edge clip). */
-  textMaxWidthRatio: 0.9,
+  textMaxWidthRatio: 0.88,
 
-  cycleDuration: 6,
-  launchDuration: 3.2,
-  /** Multiplier on rocket rise speed (1 = default; higher = blast sooner). */
-  rocketSpeedScale: 1,
+  /**
+   * Rockets launch from this canvas Y fraction (0 = top).
+   * Mid-lower sky — above water, still fully on screen.
+   */
+  rocketLaunchY: 0.86,
+  /** Kill falling sparks below this fraction so they don't rain onto the water. */
+  sparkFloorY: 0.94,
+  /** Inset from canvas edges — sparks die if they leave this pad. */
+  sparkEdgePad: 0.04,
+
+  cycleDuration: 5,
+  /** How long the launch window lasts (rockets stagger within this). */
+  launchDuration: 5,
+  /** Multiplier on rocket rise speed (1 ≈ 0.4s climb; higher = faster). */
+  rocketSpeedScale: 1.45,
   /** Fewer rockets → larger, cleaner peony peals like the reference. */
   rocketCount: 7,
-  textRevealStart: 0.9,
-  textRevealDuration: 2.4,
+  textRevealStart: 0.7,
+  textRevealDuration: 2.2,
   letterStagger: 0.14,
   glyphSparkCount: 900,
   textHoldDuration: 2.0,
   textFadeDuration: 1.6,
-  holdDuration: 4.2,
+  holdDuration: 3,
 
-  maxParticles: 2600,
-  /** Dense radial peony streaks (classic sphere burst). */
+  maxParticles: 3600,
+  /** Dense radial peony streaks (classic chrysanthemum sphere). */
   burstSparks: 180,
-  burstSpeed: 565,
-  burstLifeMin: 1.05,
-  burstLifeMax: 1.65,
-  /** Keep low early so the sphere stays round like the reference. */
-  burstGravity: 200,
-  burstDrag: 0.996,
+  /** Keep peal radius inside the plane (lower = less edge clip). */
+  burstSpeed: 260,
+  burstLifeMin: 0.85,
+  burstLifeMax: 1.35,
+  /** Soft droop after the sphere forms. */
+  burstGravity: 210,
+  burstDrag: 0.988,
+  /** Brief flash at detonation — keep small so it doesn't look like a cloud. */
+  burstCoreLife: 0.18,
+  burstCoreRadius: 11,
   textPinSize: 1.35,
 } as const;
