@@ -33,6 +33,9 @@ export const assetNames = {
     /** Blender: paachadnutyre.001 (back tyre) */
     backWheel: "paachadnutyre001",
     backWheelBlender: "paachadnutyre.001",
+    /** Blender: turtlecartext.001 — text sticker on the scroll car body */
+    turtleCarText: "turtlecartext001",
+    turtleCarTextBlender: "turtlecartext.001",
   },
   clouds: {
     /** Blender: cloud.001 */
@@ -65,20 +68,20 @@ export const assetNames = {
     inland: "inlanddunes001",
     inlandBlender: "inlanddunes.001",
   },
-  safari: {
-    /** Blender: SafariCamp.001 */
-    camp: "SafariCamp001",
-    campBlender: "SafariCamp.001",
-    campMaterial: "SafariCamp",
-    /** Blender: safariland.001 */
-    land: "safariland001",
-    landBlender: "safariland.001",
-    mountains: "safarimountains001",
-    mountainsBlender: "safarimountains.001",
-    /** Blender: lahbbabimageasset.001 — desert camp image billboard */
-    bellyDancerBillboard: "lahbbabimageasset001",
-    bellyDancerBillboardBlender: "lahbbabimageasset.001",
-  },
+  safari: {                   
+    /** Blender: SafariCamp.001 */                   
+    camp: "SafariCamp001",                   
+    campBlender: "SafariCamp.001",                   
+    campMaterial: "SafariCamp",                   
+    /** Blender: safariland.001 */                   
+    land: "safariland001",                   
+    landBlender: "safariland.001",                   
+    mountains: "safarimountains001",                   
+    mountainsBlender: "safarimountains.001",                   
+    /** Blender: lahbbabimageasset.001 — desert camp image billboard */                   
+    bellyDancerBillboard: "lahbbabimageasset001",                   
+    bellyDancerBillboardBlender: "lahbbabimageasset.001",                   
+  },                   
   camel: {
     /** Lahbab / safari end-scene camel (Blender: camel.002) — ornate saddle by sign. */
     safariBody: "camel002",
@@ -142,6 +145,9 @@ export const assetNames = {
     object: "Perfect_Buildings001",
     blenderName: "Perfect_Buildings.001",
     material: "Perfect_Buildings",
+    /** Blender: s2banner.001 — carried by scene 1 birds */
+    s2Banner: "s2banner001",
+    s2BannerBlender: "s2banner.001",
   },
   scenes: {
     /** Scene 1 continuity panel in Modelv1 (Blender: continuefloor.001) */
@@ -201,6 +207,12 @@ export const assetNames = {
     dolphin: "newdolphin001",
     dolphinBlender: "newdolphin.001",
   },
+  /** Blender: arrowfountain.001 — growth-arrow fountain billboard */
+  arrowFountain: {
+    object: "arrowfountain001",
+    blenderName: "arrowfountain.001",
+  },
+
   cameraWaypoints: /^Empty\.\d+$/,
   sceneMeshes:
     /^(Plane|Sand_Dunes|Cloud|Desert_Scene_Floor|Floor_Img|Backdrop)/,

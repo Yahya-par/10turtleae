@@ -77,18 +77,24 @@ export const birdAnimationSettings = {
     },
   ],
 
-  /** Two birds flying in formation with a shared banner between them. */
+  /** Two birds flying in formation with s2banner001 between them. */
   bannerCarriers: {
-    text: "Brands people line up for.",
-    bannerColor: "#C97B4F",      // terracotta, matches the UI accent
-    bannerColorDark: "#9C5A36",  // burnt sienna shading
-    textColor: "#FFF6E8",        // warm cream, same family as #f7f4ef
-    trimColor: "#F2D3A0", 
-    textFontFamily: 'Georgia, "Times New Roman", serif',
-    bannerWidth: 3.4,
-    bannerHeight: 0.62,
-    birdSpacing: 3.9,
-    bannerDrop: 0.42,
+    bannerObject: assetNames.perfectBuildings.s2Banner,
+    bannerBlender: assetNames.perfectBuildings.s2BannerBlender,
+    /** Nudge the GLB banner after attach (x, y, z) in carrier local space. */
+    bannerLocalOffset: [0, 0, 0] as const,
+    /** Inset birds from the banner top-left / top-right corners (horizontal). */
+    birdCornerInset: 0.02,
+    /**
+     * Vertical bird nudge in carrier space.
+     * Negative = closer to the banner (e.g. -0.12, -0.2).
+     */
+    birdYOffset: -0.52,
+    /**
+     * Horizontal bird nudge from each top corner toward/away from center.
+     * Positive = both birds move inward, negative = both move outward.
+     */
+    birdXOffset: 0.4,
     birdScale: 0.9,
     /** Tighter inset — banner formation stays over Perfect_Buildings only. */
     patrolInset: 1.2,

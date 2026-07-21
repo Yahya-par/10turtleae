@@ -4,6 +4,8 @@ import type { CarBodyWheelSettings } from "./carBodyAnimationSettings";
 export const carScrollSettings = {
   body: assetNames.cars.body,
   bodyBlender: assetNames.cars.bodyBlender,
+  turtleCarText: assetNames.cars.turtleCarText,
+  turtleCarTextBlender: assetNames.cars.turtleCarTextBlender,
   carrierName: "CarScrollCarrier001",
 
   scene2Floor: assetNames.scenes.continuityFloor,

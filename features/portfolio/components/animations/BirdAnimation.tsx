@@ -4,8 +4,13 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { birdAnimationSettings } from "../../config/birdAnimationSettings";
-import { getScene1BirdFlightBounds } from "../../utils/sceneObjectUtils";
-import { createThemedBannerTexture } from "../../utils/themedBannerTexture";
+import {
+  attachObjectToCarrier,
+  findObjectByNamePattern,
+  findSceneObject,
+  getObjectBounds,
+  getScene1BirdFlightBounds,
+} from "../../utils/sceneObjectUtils";
 
 type BirdConfig = (typeof birdAnimationSettings.birds)[number];
 type BannerCarrierConfig = (typeof birdAnimationSettings)["bannerCarriers"];
@@ -39,7 +44,8 @@ type BannerCarrierRig = {
   rightOrient: THREE.Group;
   leftWingPivot: THREE.Group;
   rightWingPivot: THREE.Group;
-  banner: THREE.Mesh;
+  banner: THREE.Object3D;
+  bannerOriginalParent: THREE.Object3D | null;
   lapDuration: number;
   phaseOffset: number;
   heightOffset: number;
@@ -54,6 +60,8 @@ type BirdAnimationProps = {
   scene: THREE.Object3D;
   nodes: Record<string, THREE.Object3D>;
 };
+
+const tempCorner = new THREE.Vector3();
 
 function getFlightBounds(
   scene: THREE.Object3D,
@@ -140,41 +148,141 @@ function addWingPair(orient: THREE.Group, material: THREE.Material) {
   return { leftWingPivot, rightWingPivot };
 }
 
-function createBannerTexture(config: BannerCarrierConfig) {
-  return createThemedBannerTexture(config);
+function layoutBirdsOnBannerCorners(
+  root: THREE.Group,
+  leftOrient: THREE.Group,
+  rightOrient: THREE.Group,
+  banner: THREE.Object3D,
+  cornerInset: number,
+  birdXOffset: number,
+  birdYOffset: number,
+) {
+  root.updateMatrixWorld(true);
+  banner.updateMatrixWorld(true);
+
+  const bounds = getObjectBounds(banner);
+  const centerZ = (bounds.min.z + bounds.max.z) * 0.5;
+
+  tempCorner.set(bounds.min.x, bounds.max.y, centerZ);
+  root.worldToLocal(tempCorner);
+  leftOrient.position.set(
+    tempCorner.x + cornerInset + birdXOffset,
+    tempCorner.y + birdYOffset,
+    tempCorner.z,
+  );
+
+  tempCorner.set(bounds.max.x, bounds.max.y, centerZ);
+  root.worldToLocal(tempCorner);
+  rightOrient.position.set(
+    tempCorner.x - cornerInset - birdXOffset,
+    tempCorner.y + birdYOffset,
+    tempCorner.z,
+  );
 }
 
-function createBannerCarrierRig(config: BannerCarrierConfig): BannerCarrierRig {
+function prepareBannerMesh(banner: THREE.Object3D) {
+  banner.visible = true;
+  banner.traverse((child) => {
+    if (!(child as THREE.Mesh).isMesh) return;
+
+    const mesh = child as THREE.Mesh;
+    mesh.renderOrder = 21;
+    mesh.frustumCulled = false;
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
+    for (const material of materials) {
+      material.side = THREE.DoubleSide;
+      material.depthWrite = false;
+      // Horizontal UV flip — fixes backwards text without fighting the mesh transform.
+      const textured = material as THREE.MeshStandardMaterial;
+      if (textured.map) {
+        const flipped = textured.map.clone();
+        flipped.wrapS = THREE.RepeatWrapping;
+        flipped.repeat.x = -1;
+        flipped.offset.x = 1;
+        flipped.needsUpdate = true;
+        textured.map = flipped;
+      }
+      material.needsUpdate = true;
+    }
+  });
+}
+
+/**
+ * Keep Blender's upright orientation; only slide the mesh so its bounds
+ * center sits at the carrier origin (flight path drives `root.position`).
+ */
+function recenterBannerOnCarrier(root: THREE.Group, banner: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  banner.updateMatrixWorld(true);
+
+  const worldCenter = getObjectBounds(banner).getCenter(new THREE.Vector3());
+  root.worldToLocal(worldCenter);
+  banner.position.sub(worldCenter);
+}
+
+function createBannerCarrierRig(
+  scene: THREE.Object3D,
+  nodes: Record<string, THREE.Object3D>,
+  flock: THREE.Group,
+  config: BannerCarrierConfig,
+): BannerCarrierRig | null {
+  const banner =
+    findSceneObject(scene, nodes, config.bannerObject, config.bannerBlender) ??
+    findObjectByNamePattern(scene, /s2banner/i);
+
+  if (!banner) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[BirdAnimation] Missing banner mesh:", config.bannerObject);
+    }
+    return null;
+  }
+
+  const bannerOriginalParent = banner.parent;
   const root = new THREE.Group();
   root.name = "BannerCarrierUnit";
+  flock.add(root);
 
   const birdMaterial = createBirdMaterial();
-  const halfSpacing = config.birdSpacing * 0.5;
 
   const leftOrient = new THREE.Group();
-  leftOrient.position.set(-halfSpacing, 0, 0);
   leftOrient.scale.setScalar(config.birdScale);
   const leftWings = addWingPair(leftOrient, birdMaterial);
 
   const rightOrient = new THREE.Group();
-  rightOrient.position.set(halfSpacing, 0, 0);
   rightOrient.scale.setScalar(config.birdScale);
   const rightWings = addWingPair(rightOrient, birdMaterial);
 
-  const bannerTexture = createBannerTexture(config);
-  const banner = new THREE.Mesh(
-    new THREE.PlaneGeometry(config.bannerWidth, config.bannerHeight),
-    new THREE.MeshBasicMaterial({
-      map: bannerTexture,
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-  );
-  banner.position.y = -config.bannerDrop;
-  banner.renderOrder = 21;
+  root.add(leftOrient, rightOrient);
 
-  root.add(leftOrient, rightOrient, banner);
+  // Attach under root while preserving world pose (correct upright text from Blender),
+  // then recenter so flight updates move the banner itself.
+  banner.updateMatrixWorld(true);
+  const worldCenter = getObjectBounds(banner).getCenter(new THREE.Vector3());
+  root.position.copy(worldCenter);
+  root.quaternion.identity();
+  root.updateMatrixWorld(true);
+  attachObjectToCarrier(root, banner);
+  prepareBannerMesh(banner);
+  recenterBannerOnCarrier(root, banner);
+  // Vertical flip only — keeps text upright without mirroring left/right.
+  banner.scale.y *= -1;
+
+  const [offsetX, offsetY, offsetZ] = config.bannerLocalOffset;
+  banner.position.x += offsetX;
+  banner.position.y += offsetY;
+  banner.position.z += offsetZ;
+
+  layoutBirdsOnBannerCorners(
+    root,
+    leftOrient,
+    rightOrient,
+    banner,
+    config.birdCornerInset,
+    config.birdXOffset,
+    config.birdYOffset,
+  );
 
   return {
     root,
@@ -183,6 +291,7 @@ function createBannerCarrierRig(config: BannerCarrierConfig): BannerCarrierRig {
     leftWingPivot: leftWings.leftWingPivot,
     rightWingPivot: rightWings.rightWingPivot,
     banner,
+    bannerOriginalParent,
     lapDuration: config.lapDuration,
     phaseOffset: config.phaseOffset,
     heightOffset: config.heightOffset,
@@ -241,15 +350,16 @@ type FlightActor = {
   zDrift: number;
 };
 
-function disposeBannerCarrier(rig: BannerCarrierRig | null) {
+function restoreBannerToScene(rig: BannerCarrierRig | null) {
   if (!rig) return;
 
-  const bannerMaterial = rig.banner.material;
-  if (bannerMaterial instanceof THREE.MeshBasicMaterial) {
-    bannerMaterial.map?.dispose();
-    bannerMaterial.dispose();
+  if (rig.banner.parent === rig.root) {
+    if (rig.bannerOriginalParent) {
+      rig.bannerOriginalParent.attach(rig.banner);
+    } else {
+      rig.root.remove(rig.banner);
+    }
   }
-  rig.banner.geometry.dispose();
 }
 
 function updateBirdFlight(
@@ -313,14 +423,17 @@ function mountBirdFlock(
   });
 
   const bannerCarrier = createBannerCarrierRig(
+    scene,
+    nodes,
+    flock,
     birdAnimationSettings.bannerCarriers,
   );
-  flock.add(bannerCarrier.root);
 
   if (process.env.NODE_ENV === "development") {
     console.info("[BirdAnimation] Ready:", {
       count: birds.length,
-      bannerCarriers: 1,
+      bannerCarriers: bannerCarrier ? 1 : 0,
+      banner: bannerCarrier?.banner.name,
       bounds,
     });
   }
@@ -361,7 +474,7 @@ export default function BirdAnimation({ scene, nodes }: BirdAnimationProps) {
     bannerBoundsRef.current = mounted.bannerBounds;
 
     return () => {
-      disposeBannerCarrier(mounted.bannerCarrier);
+      restoreBannerToScene(mounted.bannerCarrier);
       mounted.flock.removeFromParent();
       flockRef.current = null;
       birdsRef.current = [];

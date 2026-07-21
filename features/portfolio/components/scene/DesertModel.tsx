@@ -10,6 +10,7 @@ import CloudAnimation from "../animations/CloudAnimation";
 import AinAnimation from "../animations/AinAnimation";
 import HotAirBalloonAnimation from "../animations/HotAirBalloonAnimation";
 import DolphinTextAnimation from "../animations/DolphinTextAnimation";
+import ArrowFountainText from "../animations/ArrowFountainText";
 import CampfireSmoke from "../animations/CampfireSmoke";
 import SafariCampWind from "../animations/SafariCampWind";
 import DroneAnimation from "../animations/DroneAnimation";
@@ -308,6 +309,7 @@ export default function DesertModel({
       <AinAnimation scene={scene} nodes={nodes} />
       <HotAirBalloonAnimation scene={scene} nodes={nodes} />
       <DolphinTextAnimation scene={scene} nodes={nodes} />
+      <ArrowFountainText scene={scene} nodes={nodes} />
       <CarPassAudio scene={scene} nodes={nodes} />
       <MetroPassAudio scene={scene} nodes={nodes} />
       <PlanePassAudio scene={scene} nodes={nodes} />

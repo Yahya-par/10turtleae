@@ -10,7 +10,9 @@ import { carPassState } from "@features/portfolio/config/carPassState";
 import type { CarBodyWheelSettings } from "@features/portfolio/config/carBodyAnimationSettings";
 import {
   attachAnimationCarrier,
+  attachObjectToCarrier,
   findAlRabScenePanel,
+  findObjectByNamePattern,
   findScrollCarRoadMesh,
   findSceneObject,
   findScrollCarBody,
@@ -455,6 +457,22 @@ function buildRig(
     bodyMesh.parent.name === carrierName
       ? (bodyMesh.parent as THREE.Group)
       : attachAnimationCarrier(bodyMesh, carrierName);
+
+  const carText =
+    findSceneObject(
+      scene,
+      nodes,
+      carScrollSettings.turtleCarText,
+      carScrollSettings.turtleCarTextBlender,
+    ) ?? findObjectByNamePattern(scene, /turtlecartext/i);
+  if (carText) {
+    attachObjectToCarrier(bodyMesh, carText);
+  } else if (process.env.NODE_ENV === "development") {
+    console.warn(
+      "[CarScrollMovement] Missing turtlecartext:",
+      carScrollSettings.turtleCarText,
+    );
+  }
 
   const wheels: WheelRig[] = [];
 
