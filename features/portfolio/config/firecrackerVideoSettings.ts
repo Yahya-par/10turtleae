@@ -96,7 +96,7 @@ export const firecrackerVideoSettings = {
   /** Multiplier on rocket rise speed (1 ≈ 0.4s climb; higher = faster). */
   rocketSpeedScale: 1.45,
   /** Fewer rockets → larger, cleaner peony peals like the reference. */
-  rocketCount: 7,
+  rocketCount: 25,
   textRevealStart: 0.7,
   textRevealDuration: 2.2,
   letterStagger: 0.14,

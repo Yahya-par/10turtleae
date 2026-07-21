@@ -662,21 +662,54 @@ function getFlicker(elapsed: number, phase: number) {
   );
 }
 
+function wrapAxis(value: number, min: number, max: number) {
+  const span = max - min;
+  if (span <= 0) return min;
+  return min + ((((value - min) % span) + span) % span);
+}
+
 function syncLanternBasePosition(
   rig: LanternRig,
   bounds: SkyBounds,
   config: LanternConfig,
+  elapsed = 0,
 ) {
-  rig.baseX = THREE.MathUtils.lerp(bounds.minX, bounds.maxX, config.u);
-  rig.baseZ = THREE.MathUtils.lerp(bounds.minZ, bounds.maxZ, config.v);
-  rig.baseY = THREE.MathUtils.lerp(bounds.minY, bounds.maxY, config.h);
+  const startX = THREE.MathUtils.lerp(bounds.minX, bounds.maxX, config.u);
+  const startZ = THREE.MathUtils.lerp(bounds.minZ, bounds.maxZ, config.v);
+  const startY = THREE.MathUtils.lerp(bounds.minY, bounds.maxY, config.h);
+  const { movement } = lanternAnimationSettings;
+
+  if (!movement.enabled) {
+    rig.baseX = startX;
+    rig.baseZ = startZ;
+    rig.baseY = startY;
+  } else {
+    const lapDuration = Math.max(movement.lapDuration, 1);
+    const lap = (elapsed + rig.phase) / lapDuration;
+    const spanX = bounds.maxX - bounds.minX;
+    const spanZ = bounds.maxZ - bounds.minZ;
+    const spanY = bounds.maxY - bounds.minY;
+
+    rig.baseX = wrapAxis(startX + lap * spanX, bounds.minX, bounds.maxX);
+    rig.baseZ = wrapAxis(
+      startZ + lap * spanZ * movement.forwardAmount,
+      bounds.minZ,
+      bounds.maxZ,
+    );
+    rig.baseY = wrapAxis(
+      startY + lap * spanY * movement.riseAmount,
+      bounds.minY,
+      bounds.maxY,
+    );
+  }
+
   rig.sway = config.sway;
   rig.bob = config.bob;
   rig.phase = config.phase;
 }
 
 function placeLantern(rig: LanternRig, bounds: SkyBounds, config: LanternConfig) {
-  syncLanternBasePosition(rig, bounds, config);
+  syncLanternBasePosition(rig, bounds, config, 0);
   rig.root.position.set(rig.baseX, rig.baseY, rig.baseZ);
 }
 
@@ -687,7 +720,7 @@ function updateLantern(
 ) {
   if (bounds) {
     const config = lanternAnimationSettings.lanterns[rig.configIndex];
-    if (config) syncLanternBasePosition(rig, bounds, config);
+    if (config) syncLanternBasePosition(rig, bounds, config, elapsed);
   }
 
   const flicker = getFlicker(elapsed, rig.phase);
@@ -755,6 +788,7 @@ export default function LanternAnimation({ scene, nodes }: LanternAnimationProps
     flameCoreColor: lanternAnimationSettings.flameCoreColor,
     haloColor: lanternAnimationSettings.haloColor,
     rimColor: lanternAnimationSettings.rimColor,
+    movement: lanternAnimationSettings.movement,
   });
 
   useLayoutEffect(() => {

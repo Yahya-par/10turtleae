@@ -32,10 +32,10 @@ export const arrowFountainTextSettings = {
   /** Fraction of sampled arc length used for glyphs (leaves padding at ends). */
   pathFill: 0.92,
 
-  fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  fontFamily: 'Georgia, "Times New Roman", serif',
   fontWeight: 700,
   /** Starting size as a fraction of image height; auto-shrinks to fit the arc. */
-  fontSizeFromHeight: 0.038,
+  fontSizeFromHeight: 1.038,
   minFontSize: 22,
   letterSpacing: 1.2,
 

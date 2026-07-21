@@ -24,7 +24,7 @@ export const dolphinTextAnimationSettings = {
   jumpTravel: { x: 2.6, y: 0, z: 0 } as const,
 
   /** Seconds for exit → air → re-entry. */
-  jumpDuration: 2.0,
+  jumpDuration: 4.0,
 
   /** Pause submerged between leaps. */
   jumpRest: 1.0,

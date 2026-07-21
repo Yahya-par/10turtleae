@@ -3,12 +3,13 @@ import { assetNames } from "./assetNames";
 /**
  * Safari sky lanterns — edit this file, save, and hot-reload to tune.
  *
- * Per-lantern position on the mountain backdrop (0–1):
+ * Per-lantern spawn on the mountain backdrop (0–1):
  *   u = left → right
  *   v = back → front (toward camera)
  *   h = lower sky → higher sky
  *
- * `label` is reserved for on-lantern text (applied later).
+ * With `movement.enabled`, each lantern drifts from its spawn across the
+ * safari sky corridor and wraps inside the sky bounds.
  */
 export const lanternAnimationSettings = {
   land: assetNames.safari.land,
@@ -44,6 +45,20 @@ export const lanternAnimationSettings = {
   depthScale: 1,
   sideBow: 0,
 
+  /**
+   * Slow drift across the safari sky corridor (wraps inside sky bounds).
+   * Each lantern's u/v/h is its spawn point; movement offsets from there each lap.
+   */
+  movement: {
+    enabled: true,
+    /** Seconds for one full pass across the sky bounds. */
+    lapDuration: 92,
+    /** Fraction of sky depth traveled per lap (toward camera). */
+    forwardAmount: 0.38,
+    /** Fraction of sky height gained per lap. */
+    riseAmount: 0.32,
+  },
+
   /** Hanging text under each lantern (thread + glow text). */
   hangingLabel: {
     /** Manual control in canvas pixels. Increase/decrease as needed. */
@@ -55,9 +70,9 @@ export const lanternAnimationSettings = {
     /** Glow spread — higher = softer, more luminous letter bodies. */
     glowBlur: 1,
     /** 0–1 — lower = more see-through, blends with sky. */
-    fillOpacity: 0.68,
+    fillOpacity: 1,
     glowOpacity: 1.5,
-    labelOpacity: 0.9,
+    labelOpacity: 1,
     threadColor: "#c89850",
     threadLength: 0.28,
     threadRadius: 0.0028,
