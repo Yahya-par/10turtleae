@@ -50,10 +50,14 @@ export const lanternAnimationSettings = {
     fontSize: 120,
     fontWeight: 500,
     fontFamily: 'Arial, "Helvetica Neue", sans-serif',
-    textColor: "#fffce0",
-    glowColor: "#ffd84a",
+    textColor: "#fff0d8",
+    glowColor: "#f5c87f",
     /** Glow spread — higher = softer, more luminous letter bodies. */
     glowBlur: 1,
+    /** 0–1 — lower = more see-through, blends with sky. */
+    fillOpacity: 0.68,
+    glowOpacity: 1.5,
+    labelOpacity: 0.9,
     threadColor: "#c89850",
     threadLength: 0.28,
     threadRadius: 0.0028,

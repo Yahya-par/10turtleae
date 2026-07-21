@@ -398,31 +398,49 @@ function drawGlowLabelText(
 ) {
   const style = lanternAnimationSettings.hangingLabel;
   const blurScale = Math.max(style.glowBlur, 0.4);
+  const glowStrength = style.glowOpacity;
+  const fillOpacity = style.fillOpacity;
 
   context.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.globalCompositeOperation = "lighter";
 
-  // Stack blurred fills so the entire glyph body glows — not just an outer rim.
-  const passes: Array<[number, string, number]> = [
-    [fontSize * 0.44 * blurScale, style.glowColor, 0.32],
-    [fontSize * 0.3 * blurScale, "#ffe566", 0.42],
-    [fontSize * 0.18 * blurScale, "#fff08a", 0.55],
-    [fontSize * 0.1 * blurScale, "#fff8c8", 0.72],
-    [fontSize * 0.04 * blurScale, style.textColor, 0.88],
-    [0, "#fffff5", 1],
+  // Wide soft bloom — screen blends with the sky instead of punching opaque holes.
+  context.globalCompositeOperation = "screen";
+  const bloomPasses: Array<[number, string, number]> = [
+    [fontSize * 0.52 * blurScale, style.glowColor, 0.16 * glowStrength],
+    [fontSize * 0.34 * blurScale, "#ffe8a8", 0.22 * glowStrength],
+    [fontSize * 0.2 * blurScale, "#fff4cc", 0.28 * glowStrength],
   ];
 
-  for (const [blur, color, alpha] of passes) {
+  for (const [blur, color, alpha] of bloomPasses) {
     context.filter = blur > 0 ? `blur(${blur}px)` : "none";
     context.fillStyle = color;
     context.globalAlpha = alpha;
     context.fillText(text, x, y);
   }
 
+  // Luminous letter body — softer layers, not a solid white core.
+  context.globalCompositeOperation = "lighter";
+  const bodyPasses: Array<[number, string, number]> = [
+    [fontSize * 0.14 * blurScale, "#ffecc0", 0.32 * glowStrength],
+    [fontSize * 0.06 * blurScale, style.textColor, 0.42 * fillOpacity],
+  ];
+
+  for (const [blur, color, alpha] of bodyPasses) {
+    context.filter = blur > 0 ? `blur(${blur}px)` : "none";
+    context.fillStyle = color;
+    context.globalAlpha = alpha;
+    context.fillText(text, x, y);
+  }
+
+  // Glassy cream core — semi-transparent so background shows through.
   context.filter = "none";
   context.globalCompositeOperation = "source-over";
+  context.fillStyle = style.textColor;
+  context.globalAlpha = fillOpacity * 0.82;
+  context.fillText(text, x, y);
+
   context.globalAlpha = 1;
 }
 
@@ -464,6 +482,7 @@ function createLanternLabelSprite(label: string) {
     new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
+      opacity: style.labelOpacity,
       depthTest: false,
       depthWrite: false,
       toneMapped: false,
